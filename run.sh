@@ -3,7 +3,7 @@
 
 # @cmd build cmake
 # @alias b
-build() {
+buildit() {
     CURR_DIR=$(pwd)
     if [[ ! -d "$TOP_HEAD/build" ]] then
         mkdir "$TOP_HEAD/build";
@@ -19,7 +19,7 @@ build() {
 
 # @cmd make project
 # @alias m
-make() {
+makeit() {
     CURR_DIR=$(pwd)
     cd "$TOP_HEAD/build"
     make
