@@ -1,7 +1,14 @@
 #include "multiverse/world.hpp"
 
 namespace mv {
+    World::World() {
+        muli::WorldSettings settings;
+        world = std::make_unique<muli::World>(settings);
+    }
 
-    int is_working() { return 0; }
+    World::~World() { world.reset(); }
 
+    void World::init() {}
+
+    void World::tick() {}
 } // namespace mv

@@ -8,6 +8,15 @@
 
 namespace mv {
 
-    int is_working();
+    class World {
+      private:
+        std::unique_ptr<muli::World> world;
 
+      public:
+        World();
+        ~World();
+
+        void init();
+        void tick();
+    };
 } // namespace mv
