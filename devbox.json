@@ -2,6 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.1/.schema/devbox.schema.json",
   "packages": [
     "cmake@latest",
+    "xorg.libX11@latest",
+    "clang@latest",
+    "clang-tools@latest"
   ],
   "shell": {
     "init_hook": [

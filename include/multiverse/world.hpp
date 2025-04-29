@@ -5,3 +5,9 @@
 #include "muli/rigidbody.h"
 #include "muli/settings.h"
 #include "muli/world.h"
+
+namespace mv {
+
+    int is_working();
+
+} // namespace mv

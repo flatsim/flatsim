@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
-project(concord VERSION 0.1.0 LANGUAGES CXX)
 
-project(multiverse)
+project(multiverse VERSION 0.1.1 LANGUAGES CXX)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -30,3 +29,30 @@ target_include_directories(multiverse INTERFACE
 )
 
 target_link_libraries(multiverse INTERFACE muli)
+
+install(
+    DIRECTORY include/
+    DESTINATION include
+)
+include_directories(include)
+
+set(exe
+  src/main.cpp
+)
+
+set(lib
+  src/world/world.cpp
+)
+
+set(exec_names)
+
+foreach(src_file IN LISTS exe)
+  get_filename_component(exec_name "${src_file}" NAME_WE)
+  add_executable(${exec_name} "${src_file}")
+  foreach(lib_file IN LISTS lib)
+    target_sources(${exec_name} PRIVATE "${lib_file}")
+  endforeach()
+  target_link_libraries(${exec_name} multiverse)
+  install(TARGETS ${exec_name} DESTINATION bin)
+  list(APPEND exec_names ${exec_name})
+endforeach()

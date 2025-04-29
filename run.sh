@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-# @cmd build cargo project
+# @cmd build cmake
 # @alias b
 build() {
-    # cargo build --release
+    CURR_DIR=$(pwd)
     if [[ ! -d "$TOP_HEAD/build" ]] then
         mkdir "$TOP_HEAD/build";
     else
@@ -13,6 +13,17 @@ build() {
     fi
     cd "$TOP_HEAD/build"
     cmake ..
+    cd "$CURR_DIR"
+}
+
+
+# @cmd make project
+# @alias m
+make() {
+    CURR_DIR=$(pwd)
+    cd "$TOP_HEAD/build"
+    make
+    cd "$CURR_DIR"
 }
 
 
@@ -50,7 +61,6 @@ release() {
 
 
 # @cmd compile mdbook
-# @alias m
 # @option    --dest_dir <dir>    Destination directory
 # @flag      --monitor        Monitor after upload
 mdbook() {
