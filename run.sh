@@ -4,7 +4,15 @@
 # @cmd build cargo project
 # @alias b
 build() {
-    cargo build --release
+    # cargo build --release
+    if [[ ! -d "$TOP_HEAD/build" ]] then
+        mkdir "$TOP_HEAD/build";
+    else
+        rm -rf "$TOP_HEAD/build"
+        mkdir "$TOP_HEAD/build"
+    fi
+    cd "$TOP_HEAD/build"
+    cmake ..
 }
 
 
@@ -12,10 +20,9 @@ build() {
 # @alias r
 # @arg type![patch|minor|major] Release type
 release() {
-    # echo "release $1"
-    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+    CURRENT_VERSION=$(grep -E '^project\(.*VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt \
+        | sed -E 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
     IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-    echo $argc_type
     case $argc_type in
         major)
             MAJOR=$((MAJOR + 1))
@@ -31,7 +38,7 @@ release() {
             ;;
     esac
     version="$MAJOR.$MINOR.$PATCH"
-    sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+    sed -i -E "s/(project\(.*VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1$version/" CMakeLists.txt
     git cliff --tag $version > CHANGELOG.md
     changelog=$(git cliff --unreleased --strip all)
     git add -A && git commit -m "chore(release): prepare for $version"
@@ -47,8 +54,8 @@ release() {
 # @option    --dest_dir <dir>    Destination directory
 # @flag      --monitor        Monitor after upload
 mdbook() {
-    mdbook build book --dest-dir ../docs
-    git add -A && git commit -m "docs: building website/mdbook"
+    mdbook build $TOP_HEAD/book --dest-dir $TOP_HEAD/docs
+    git add --all && git commit -m "docs: building website/mdbook"
 }
 
 
