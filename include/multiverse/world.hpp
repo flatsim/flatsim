@@ -40,7 +40,7 @@ namespace mvs {
       private:
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::unique_ptr<muli::World> world;
+        std::shared_ptr<muli::World> world;
         std::vector<std::vector<Square>> grid;
 
       public:
