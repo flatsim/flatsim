@@ -12,7 +12,7 @@ buildit() {
         mkdir "$TOP_HEAD/build"
     fi
     cd "$TOP_HEAD/build"
-    cmake ..
+    cmake -Wno-dev ..
     cd "$CURR_DIR"
 }
 
