@@ -18,6 +18,12 @@ namespace mvs {
         float grid_size;
     };
 
+    struct Square {
+        float x_center;
+        float y_center;
+        float side;
+    };
+
     class WorldSettings : public muli::WorldSettings {
       private:
         concord::Datum world_datum_;
@@ -35,7 +41,7 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::unique_ptr<muli::World> world;
-        // std::vector<
+        std::vector<std::vector<Square>> grid;
 
       public:
         World(std::shared_ptr<rerun::RecordingStream> rec, WorldSettings settings);
@@ -44,11 +50,11 @@ namespace mvs {
         void init(WorldSettings settings);
         void tick(float dt);
         void visualize_once();
+        void visualize();
 
       private:
-        std::vector<std::vector<std::array<float, 3>>> grid_;
         std::vector<std::array<float, 3>> enu_corners_;
-        std::vector<std::array<float, 3>> grid_2;
+        std::vector<std::array<float, 3>> enu_grid_;
         std::vector<rerun::LatLon> wgs_corners_;
     };
 } // namespace mvs

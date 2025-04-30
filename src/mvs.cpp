@@ -24,7 +24,7 @@ int main() {
     mvs::Size world_size;
     world_size.width = 100.0f;
     world_size.height = 100.0f;
-    world_size.grid_size = 2.0f;
+    world_size.grid_size = 1.0f;
 
     mvs::WorldSettings settings(world_datum, world_size);
     mvs::World world(rec, settings);
@@ -43,7 +43,7 @@ int main() {
 
         // (Optional) tiny sleep so you don't spin at full CPU—
         // adjust or remove if you want completely time-driven stepping
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         //
         // rec->log("batch", rerun::Boxes3D::from_centers_and_half_sizes(
         //                       {{2.0f, 20.0f, 0.0f}, {-2.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 2.0f}}, {{2.0f, 2.0f, 0.0f}})

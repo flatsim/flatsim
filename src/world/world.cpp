@@ -38,21 +38,27 @@ namespace mvs {
         }
 
         // create a grid that goes from -width/2 to width/2 and -height/2 to height/2
-        for (int i = -width / 2; i < width / 2; i += settings.get_size().grid_size) {
-            for (int j = -height / 2; j < height / 2; j += settings.get_size().grid_size) {
-                float x = static_cast<float>(i);
-                float y = static_cast<float>(j);
+        for (float i = -width / 2; i < width / 2; i += settings.get_size().grid_size) {
+            std::vector<Square> row;
+            for (float j = -height / 2; j < height / 2; j += settings.get_size().grid_size) {
                 auto grid_size = settings.get_size().grid_size;
-                grid_.push_back({{x, y, 0},
-                                 {x + grid_size, y, 0},
-                                 {x + grid_size, y + grid_size, 0},
-                                 {x, y + grid_size, 0},
-                                 {x, y, 0}});
-                float x_center = x + grid_size / 2.0f;
-                float y_center = y + grid_size / 2.0f;
-                grid_2.push_back({x_center, y_center, 0});
+                float x = static_cast<float>(i) + grid_size / 2.0f;
+                float y = static_cast<float>(j) + grid_size / 2.0f;
+                row.push_back({x, y, grid_size});
+                // enu_grid_.push_back({x, y, 0});
+                // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
+                // body->Translate({x, y});
+                // row.push_back(body);
+            }
+            grid.push_back(row);
+        }
+
+        for (auto &row : grid) {
+            for (auto &square : row) {
+                enu_grid_.push_back({square.x_center, square.y_center, 0});
             }
         }
+
         visualize_once();
     }
     void World::tick(float dt) { world->Step(dt); }
@@ -63,17 +69,11 @@ namespace mvs {
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
-        //
-        // for (unsigned int i = 0; i < grid_.size(); i++) {
-        //     auto grd = rerun::components::LineStrip3D(grid_[i]);
-        //     rec->log_static("grid" + std::to_string(i),
-        //                     rerun::LineStrips3D(grd).with_colors({{255, 0, 0}}).with_radii({{0.01f}}));
-        // }
 
         auto gs = settings.get_size().grid_size / 2;
-        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(grid_2, {{gs, gs, 0.0f}})
+        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gs, gs, 0.0f}})
                              .with_colors({{200, 55, 155}})
-                             .with_radii({{0.03f}}));
+                             .with_radii({{0.01f}}));
     }
 
 } // namespace mvs
