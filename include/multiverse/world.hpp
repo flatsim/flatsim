@@ -40,13 +40,12 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::unique_ptr<muli::World> world;
-        float dt = 1.0f / 60.0f;
 
       public:
-        World(rerun::RecordingStream &rec);
+        World(std::shared_ptr<rerun::RecordingStream> rec);
         ~World();
 
         void init(WorldSettings settings);
-        void tick();
+        void tick(float dt);
     };
 } // namespace mvs

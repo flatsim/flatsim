@@ -4,10 +4,12 @@
 #include <rerun.hpp>
 
 int main() {
-    mvs::World world;
+    auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
+    mvs::World world(rec);
     mvs::WorldSettings settings;
 
-    while (true) {
-        world.tick();
+    float dt = 1.0f / 60.0f;
+    for (int i = 0; i < 60; ++i) {
+        world.tick(dt);
     }
 }
