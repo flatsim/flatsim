@@ -11,7 +11,6 @@
 #include <rerun.hpp>
 
 namespace mvs {
-
     struct Size {
         float width;
         float height;
@@ -44,9 +43,10 @@ namespace mvs {
         std::vector<std::vector<Square>> grid;
 
       public:
-        World(std::shared_ptr<rerun::RecordingStream> rec, WorldSettings settings);
+        World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size size);
         ~World();
 
+        const WorldSettings &get_settings() const { return settings; }
         void init(WorldSettings settings);
         void tick(float dt);
         void visualize_once();

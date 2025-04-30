@@ -26,8 +26,7 @@ int main() {
     world_size.height = 100.0f;
     world_size.grid_size = 1.0f;
 
-    mvs::WorldSettings settings(world_datum, world_size);
-    mvs::World world(rec, settings);
+    mvs::World world(rec, world_datum, world_size);
 
     auto last_time = std::chrono::steady_clock::now();
     while (true) {

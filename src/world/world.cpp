@@ -11,11 +11,10 @@ namespace mvs {
             corners.push_back(concord::ENU(-width / 2.0f, -height / 2.0f, 0.0f));
             return corners;
         }
-
-        // std::vector<concord::Polygon>
-
     } // namespace utl
-    World::World(std::shared_ptr<rerun::RecordingStream> rec, WorldSettings settings) : settings(settings), rec(rec) {
+
+    World::World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size size)
+        : settings(datum, size), rec(rec) {
         init(settings);
     }
     World::~World() { world.reset(); }
@@ -37,7 +36,6 @@ namespace mvs {
             wgs_corners_.push_back({lat, lon});
         }
 
-        // create a grid that goes from -width/2 to width/2 and -height/2 to height/2
         for (float i = -width / 2; i < width / 2; i += settings.get_size().grid_size) {
             std::vector<Square> row;
             for (float j = -height / 2; j < height / 2; j += settings.get_size().grid_size) {
@@ -45,7 +43,6 @@ namespace mvs {
                 float x = static_cast<float>(i) + grid_size / 2.0f;
                 float y = static_cast<float>(j) + grid_size / 2.0f;
                 row.push_back({x, y, grid_size});
-                // enu_grid_.push_back({x, y, 0});
                 // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
                 // body->Translate({x, y});
                 // row.push_back(body);
