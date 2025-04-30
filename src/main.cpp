@@ -3,6 +3,8 @@
 #include "rerun/recording_stream.hpp"
 #include <rerun.hpp>
 
+#include "rerun/archetypes/line_strips3d.hpp"
+
 int main() {
     auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
     auto rec_running = rec->connect_grpc("rerun+http://127.0.0.1:9876");

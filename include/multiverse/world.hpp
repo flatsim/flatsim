@@ -26,8 +26,8 @@ namespace mvs {
       public:
         WorldSettings(concord::Datum world_datum, Size world_size)
             : muli::WorldSettings(), world_datum_(world_datum), world_size_(world_size) {}
-        void set_datum(const concord::Datum &datum);
-        void set_size(const Size &size);
+        concord::Datum get_datum() const { return world_datum_; }
+        Size get_size() const { return world_size_; }
     };
 
     class World {
@@ -42,5 +42,10 @@ namespace mvs {
 
         void init(WorldSettings settings);
         void tick(float dt);
+        void visualize();
+
+      private:
+        std::vector<std::array<float, 3>> enu_corners_;
+        std::vector<rerun::LatLon> wgs_corners_;
     };
 } // namespace mvs
