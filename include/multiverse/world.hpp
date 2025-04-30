@@ -10,16 +10,28 @@
 
 namespace mv {
 
+    struct Size {
+        float width;
+        float height;
+    };
+
+    struct Grid {
+        float col;
+        float row;
+    };
+
     class World {
       private:
         std::unique_ptr<muli::World> world;
-        concord::WGS world_datum;
+        concord::Datum world_datum;
+        Size world_size;
+        Grid world_grid;
 
       public:
         World();
         ~World();
 
-        void init();
+        void init(concord::Datum datum, Size size, Grid grid);
         void tick();
     };
 } // namespace mv
