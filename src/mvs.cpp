@@ -25,5 +25,6 @@ int main() {
     float dt = 1.0f / 60.0f;
     while (true) {
         world.tick(dt);
+        std::cout << "tick" << std::endl;
     }
 }

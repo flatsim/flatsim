@@ -33,7 +33,10 @@ namespace mvs {
             wgs_corners_.push_back({lat, lon});
         }
     }
-    void World::tick(float dt) { world->Step(dt); }
+    void World::tick(float dt) {
+        world->Step(dt);
+        visualize();
+    }
 
     void World::visualize() {
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
