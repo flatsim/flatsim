@@ -14,9 +14,9 @@ buildit() {
     fi
     cd "$TOP_HEAD/build"
     if ! [ -z "$argc_gui" ]; then
-        cmake -Wno-dev ..
-    else
         cmake -Wno-dev -DMAKE_GUI=ON ..
+    else
+        cmake -Wno-dev ..
     fi
     cd "$CURR_DIR"
 }

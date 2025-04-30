@@ -20,6 +20,13 @@ fetchcontent_declare(
 FetchContent_MakeAvailable(muli)
 include_directories(${muli_SOURCE_DIR}/include)
 
+FetchContent_Declare(
+  concord
+  GIT_REPOSITORY https://github.com/bresilla/concord.git
+  GIT_TAG        main
+)
+FetchContent_MakeAvailable(concord)
+
 option(MAKE_GUI "Enable gui support" OFF)
 if(MAKE_GUI)
     set(IMGUI_VERSION 1.91.8)
@@ -75,6 +82,7 @@ target_include_directories(multiverse INTERFACE
 )
 
 target_link_libraries(multiverse INTERFACE muli)
+target_link_libraries(multiverse INTERFACE concord::concord)
 
 install(
     DIRECTORY include/
