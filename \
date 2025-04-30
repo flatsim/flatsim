@@ -48,32 +48,34 @@ namespace mvs {
                                  {x + grid_size, y + grid_size, 0},
                                  {x, y + grid_size, 0},
                                  {x, y, 0}});
-                float x_center = x + grid_size / 2.0f;
-                float y_center = y + grid_size / 2.0f;
-                grid_2.push_back({x_center, y_center, 0});
             }
         }
-        visualize_once();
     }
-    void World::tick(float dt) { world->Step(dt); }
+    void World::tick(float dt) {
+        world->Step(dt);
+        visualize();
+    }
 
-    void World::visualize_once() {
+    void World::visualize() {
+        if (is_visualized_) {
+            return;
+        }
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
-        //
-        // for (unsigned int i = 0; i < grid_.size(); i++) {
-        //     auto grd = rerun::components::LineStrip3D(grid_[i]);
-        //     rec->log_static("grid" + std::to_string(i),
-        //                     rerun::LineStrips3D(grd).with_colors({{255, 0, 0}}).with_radii({{0.01f}}));
-        // }
 
-        auto gs = settings.get_size().grid_size / 2;
-        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(grid_2, {{gs, gs, 0.0f}})
-                             .with_colors({{200, 55, 155}})
-                             .with_radii({{0.03f}}));
+        for (unsigned int i = 0; i < grid_.size(); i++) {
+            auto grd = rerun::components::LineStrip3D(grid_[i]);
+            rec->log_static("grid" + std::to_string(i),
+                            rerun::LineStrips3D(grd).with_colors({{255, 0, 0}}).with_radii({{0.01f}}));
+        }
+
+        // rec->log("batch", rerun::Boxes3D::from_centers_and_half_sizes(
+        //                       {{2.0f, 20.0f, 0.0f}, {-2.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 2.0f}}, {{2.0f, 2.0f, 0.0f}})
+        //                       .with_labels({"red", "green", "blue"}));
+        is_visualized_ = true;
     }
 
 } // namespace mvs
