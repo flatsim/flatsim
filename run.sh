@@ -3,6 +3,7 @@
 
 # @cmd build cmake
 # @alias b
+# # @flag      --gui        Enable gui support
 buildit() {
     CURR_DIR=$(pwd)
     if [[ ! -d "$TOP_HEAD/build" ]] then
@@ -12,7 +13,11 @@ buildit() {
         mkdir "$TOP_HEAD/build"
     fi
     cd "$TOP_HEAD/build"
-    cmake -Wno-dev ..
+    if ! [ -z "$argc_gui" ]; then
+        cmake -Wno-dev ..
+    else
+        cmake -Wno-dev -DMAKE_GUI=ON ..
+    fi
     cd "$CURR_DIR"
 }
 
@@ -62,7 +67,6 @@ release() {
 
 # @cmd compile mdbook
 # @option    --dest_dir <dir>    Destination directory
-# @flag      --monitor        Monitor after upload
 mdbook() {
     mdbook build $TOP_HEAD/book --dest-dir $TOP_HEAD/docs
     git add --all && git commit -m "docs: building website/mdbook"
