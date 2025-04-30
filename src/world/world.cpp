@@ -1,18 +1,13 @@
 #include "multiverse/world.hpp"
 
-namespace mv {
-    World::World() {
-        muli::WorldSettings settings;
+namespace mvs {
+    World::World() {}
+    World::~World() { world.reset(); }
+
+    void World::init(WorldSettings settings) {
+        settings.apply_gravity = false;
         world = std::make_unique<muli::World>(settings);
     }
 
-    World::~World() { world.reset(); }
-
-    void World::init(concord::Datum datum, Size size, Grid grid) {
-        world_datum = datum;
-        world_size = size;
-        world_grid = grid;
-    }
-
     void World::tick() {}
-} // namespace mv
+} // namespace mvs

@@ -8,7 +8,7 @@
 
 #include "concord/types.hpp"
 
-namespace mv {
+namespace mvs {
 
     struct Size {
         float width;
@@ -20,18 +20,30 @@ namespace mv {
         float row;
     };
 
-    class World {
+    class WorldSettings : public muli::WorldSettings {
       private:
-        std::unique_ptr<muli::World> world;
         concord::Datum world_datum;
         Size world_size;
         Grid world_grid;
 
       public:
+        WorldSettings() : muli::WorldSettings() {}
+        void set_datum(const concord::Datum &datum);
+        void set_size(const Size &size);
+        void set_grid(const Grid &grid);
+    };
+
+    class World {
+      private:
+        WorldSettings settings;
+        std::unique_ptr<muli::World> world;
+        float dt = 1.0f / 60.0f;
+
+      public:
         World();
         ~World();
 
-        void init(concord::Datum datum, Size size, Grid grid);
+        void init(WorldSettings settings);
         void tick();
     };
-} // namespace mv
+} // namespace mvs
