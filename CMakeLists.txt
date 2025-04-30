@@ -52,7 +52,7 @@ install(
 include_directories(include)
 
 set(exe
-  src/main.cpp
+  src/mvs.cpp
 )
 
 set(lib
