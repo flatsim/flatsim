@@ -1,7 +1,9 @@
 #include "multiverse/world.hpp"
 
 namespace mvs {
-    World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
+    World::World(std::shared_ptr<rerun::RecordingStream> rec, WorldSettings settings) : settings(settings), rec(rec) {
+        init(settings);
+    }
     World::~World() { world.reset(); }
 
     void World::init(WorldSettings settings) {

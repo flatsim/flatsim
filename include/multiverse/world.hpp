@@ -15,24 +15,19 @@ namespace mvs {
     struct Size {
         float width;
         float height;
-    };
-
-    struct Grid {
-        float col;
-        float row;
+        float grid_size;
     };
 
     class WorldSettings : public muli::WorldSettings {
       private:
-        concord::Datum world_datum;
-        Size world_size;
-        Grid world_grid;
+        concord::Datum world_datum_;
+        Size world_size_;
 
       public:
-        WorldSettings() : muli::WorldSettings() {}
+        WorldSettings(concord::Datum world_datum, Size world_size)
+            : muli::WorldSettings(), world_datum_(world_datum), world_size_(world_size) {}
         void set_datum(const concord::Datum &datum);
         void set_size(const Size &size);
-        void set_grid(const Grid &grid);
     };
 
     class World {
@@ -42,7 +37,7 @@ namespace mvs {
         std::unique_ptr<muli::World> world;
 
       public:
-        World(std::shared_ptr<rerun::RecordingStream> rec);
+        World(std::shared_ptr<rerun::RecordingStream> rec, WorldSettings settings);
         ~World();
 
         void init(WorldSettings settings);

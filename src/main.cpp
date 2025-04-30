@@ -5,11 +5,23 @@
 
 int main() {
     auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
-    mvs::World world(rec);
-    mvs::WorldSettings settings;
+    auto rec_running = rec->connect_grpc("rerun+http://127.0.0.1:9876");
+
+    concord::Datum world_datum;
+    world_datum.lat = 51.987305;
+    world_datum.lon = 5.663625;
+    world_datum.alt = 53.801823;
+
+    mvs::Size world_size;
+    world_size.width = 100.0f;
+    world_size.height = 100.0f;
+    world_size.grid_size = 1.0f;
+
+    mvs::WorldSettings settings(world_datum, world_size);
+    mvs::World world(rec, settings);
 
     float dt = 1.0f / 60.0f;
-    for (int i = 0; i < 60; ++i) {
+    while (true) {
         world.tick(dt);
     }
 }
