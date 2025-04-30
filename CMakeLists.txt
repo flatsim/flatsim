@@ -49,7 +49,7 @@ if(MAKE_GUI)
         set(GLAD_GENERATOR "c" CACHE STRING "Language to generate the binding for")
         add_subdirectory(${glad_SOURCE_DIR} ${glad_BINARY_DIR})
     endif()
-    
+
     set(GLFW_BUILD_X11 OFF CACHE INTERNAL "Build the GLFW X11 backend")
     FetchContent_Declare(
         glfw
@@ -99,6 +99,11 @@ foreach(src_file IN LISTS exe)
     target_sources(${exec_name} PRIVATE "${lib_file}")
   endforeach()
   target_link_libraries(${exec_name} multiverse)
+  if(MAKE_GUI)
+      target_link_libraries(${exec_name} imgui)
+      target_link_libraries(${exec_name} glad)
+      target_link_libraries(${exec_name} glfw)
+  endif()
   install(TARGETS ${exec_name} DESTINATION bin)
   list(APPEND exec_names ${exec_name})
 endforeach()
