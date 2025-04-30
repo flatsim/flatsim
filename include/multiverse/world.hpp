@@ -8,6 +8,8 @@
 
 #include "concord/types.hpp"
 
+#include <rerun.hpp>
+
 namespace mvs {
 
     struct Size {
@@ -36,11 +38,12 @@ namespace mvs {
     class World {
       private:
         WorldSettings settings;
+        std::shared_ptr<rerun::RecordingStream> rec;
         std::unique_ptr<muli::World> world;
         float dt = 1.0f / 60.0f;
 
       public:
-        World();
+        World(rerun::RecordingStream &rec);
         ~World();
 
         void init(WorldSettings settings);

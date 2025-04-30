@@ -6,10 +6,8 @@
     "clang-tools@latest",
     "gcc@latest",
     "stdenv@latest",
-    "x11@latest",
-    "wayland@latest",
-    "emscripten@latest",
-    "libGL@latest",
+    "arrow-cpp@latest",
+    "rerun@latest"
   ],
   "shell": {
     "init_hook": [

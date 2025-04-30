@@ -1,7 +1,7 @@
 #include "multiverse/world.hpp"
 
 namespace mvs {
-    World::World() {}
+    World::World(rerun::RecordingStream &rec) : rec(&rec) {}
     World::~World() { world.reset(); }
 
     void World::init(WorldSettings settings) {

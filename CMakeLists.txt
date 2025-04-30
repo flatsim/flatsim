@@ -27,6 +27,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(concord)
 
+option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build Arrow" OFF)
 FetchContent_Declare(
     rerun_sdk 
     URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
