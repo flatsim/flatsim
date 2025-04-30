@@ -6,11 +6,14 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
+#include "concord/types.hpp"
+
 namespace mv {
 
     class World {
       private:
         std::unique_ptr<muli::World> world;
+        concord::WGS world_datum;
 
       public:
         World();
