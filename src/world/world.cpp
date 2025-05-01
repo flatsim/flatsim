@@ -38,11 +38,15 @@ namespace mvs {
 
         for (float i = -width / 2; i < width / 2; i += settings.get_size().grid_size) {
             std::vector<Square> row;
+            // std::vector<muli::Shape *> shape_row;
             for (float j = -height / 2; j < height / 2; j += settings.get_size().grid_size) {
                 auto grid_size = settings.get_size().grid_size;
                 float x = static_cast<float>(i) + grid_size / 2.0f;
                 float y = static_cast<float>(j) + grid_size / 2.0f;
                 row.push_back({x, y, grid_size});
+                //--------------------------------------------------------------------------------
+                // std::unique_ptr<muli::Shape> shape;
+                // shape.reset(new muli::Polygon(grid_size / 2.0f));
                 // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
                 // body->Translate({x, y});
                 // row.push_back(body);

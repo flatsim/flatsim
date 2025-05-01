@@ -56,5 +56,6 @@ namespace mvs {
         std::vector<std::array<float, 3>> enu_corners_;
         std::vector<std::array<float, 3>> enu_grid_;
         std::vector<rerun::LatLon> wgs_corners_;
+        // std::vector<std::vector<muli::Shape *>> grid_;
     };
 } // namespace mvs
