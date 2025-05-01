@@ -6,16 +6,12 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "concord/types.hpp"
+#include "concord/types_basic.hpp"
 
 #include <rerun.hpp>
 
 namespace mvs {
-    struct Size {
-        float width;
-        float height;
-        float grid_size;
-    };
+    using Size = concord::Size;
 
     struct Square {
         float x_center;
@@ -33,13 +29,15 @@ namespace mvs {
     class WorldSettings : public muli::WorldSettings {
       private:
         concord::Datum world_datum_;
-        Size world_size_;
+        concord::Size world_size_;
+        concord::Size grid_size_;
 
       public:
-        WorldSettings(concord::Datum world_datum, Size world_size)
-            : muli::WorldSettings(), world_datum_(world_datum), world_size_(world_size) {}
+        WorldSettings(concord::Datum world_datum, Size world_size, Size grid_size)
+            : muli::WorldSettings(), world_datum_(world_datum), world_size_(world_size), grid_size_(grid_size) {}
         concord::Datum get_datum() const { return world_datum_; }
-        Size get_size() const { return world_size_; }
+        Size get_world_size() const { return world_size_; }
+        Size get_grid_size() const { return grid_size_; }
     };
 
     class World {
@@ -50,7 +48,7 @@ namespace mvs {
         theGrid grid;
 
       public:
-        World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size size);
+        World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size world_size, Size grid_size);
         ~World();
 
         const WorldSettings &get_settings() const { return settings; }

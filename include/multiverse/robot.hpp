@@ -6,7 +6,7 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "concord/types.hpp"
+#include "concord/types_basic.hpp"
 
 #include <rerun.hpp>
 
@@ -16,16 +16,20 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         muli::RigidBody *body;
+        concord::Point position;
 
       public:
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         ~Robot();
 
         void tick(float dt);
-        void visualize_once();
-        void visualize();
+        void init(concord::Point, std::string name);
+
+        void teleport(float x, float y);
+        const concord::Point &get_position() const { return position; }
 
       private:
-        std::vector<std::array<float, 3>> enu_corners_;
+        void visualize_once();
+        void visualize();
     };
 } // namespace mvs

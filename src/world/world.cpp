@@ -13,8 +13,8 @@ namespace mvs {
         }
     } // namespace utl
 
-    World::World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size size)
-        : settings(datum, size), rec(rec) {
+    World::World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size world_size, Size grid_size)
+        : settings(datum, world_size, grid_size), rec(rec) {
         init(settings);
     }
     World::~World() { world.reset(); }
@@ -22,8 +22,8 @@ namespace mvs {
     void World::init(WorldSettings settings) {
         settings.apply_gravity = false;
         world = std::make_unique<muli::World>(settings);
-        float width = settings.get_size().width;
-        float height = settings.get_size().height;
+        float width = settings.get_world_size().x;
+        float height = settings.get_world_size().y;
 
         for (auto corner : utl::build_corners(width, height)) {
             float x = static_cast<float>(corner.x);
@@ -36,13 +36,12 @@ namespace mvs {
             wgs_corners_.push_back({lat, lon});
         }
 
-        for (float i = -width / 2; i < width / 2; i += settings.get_size().grid_size) {
+        for (float i = -width / 2; i < width / 2; i += settings.get_grid_size().x) {
             std::vector<Square> row;
-            for (float j = -height / 2; j < height / 2; j += settings.get_size().grid_size) {
-                auto grid_size = settings.get_size().grid_size;
-                float x = static_cast<float>(i) + grid_size / 2.0f;
-                float y = static_cast<float>(j) + grid_size / 2.0f;
-                row.push_back({x, y, grid_size});
+            for (float j = -height / 2; j < height / 2; j += settings.get_grid_size().y) {
+                float x = static_cast<float>(i) + settings.get_grid_size().x / 2.0f;
+                float y = static_cast<float>(j) + settings.get_grid_size().y / 2.0f;
+                row.push_back({x, y, 0});
                 //--------------------------------------------------------------------------------
                 // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
                 // body->Translate({x, y});
@@ -68,8 +67,9 @@ namespace mvs {
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
-        auto gs = settings.get_size().grid_size / 2;
-        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gs, gs, 0.0f}})
+        auto gsx = float(settings.get_grid_size().x / 2);
+        auto gsy = float(settings.get_grid_size().z / 2);
+        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
                              .with_colors({{200, 55, 155}})
                              .with_radii({{0.01f}}));
     }

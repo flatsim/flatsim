@@ -22,11 +22,16 @@ int main() {
     world_datum.alt = 53.801823;
 
     mvs::Size world_size;
-    world_size.width = 100.0f;
-    world_size.height = 100.0f;
-    world_size.grid_size = 1.0f;
+    world_size.x = 100.0f;
+    world_size.y = 100.0f;
+    world_size.z = 100.0f;
 
-    mvs::World world(rec, world_datum, world_size);
+    mvs::Size grid_size;
+    grid_size.x = 1.0f;
+    grid_size.y = 1.0f;
+    grid_size.z = 1.0f;
+
+    mvs::World world(rec, world_datum, world_size, grid_size);
 
     auto last_time = std::chrono::steady_clock::now();
     while (true) {
