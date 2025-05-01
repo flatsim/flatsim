@@ -3,6 +3,7 @@
 
 #pragma once
 #include "muli/world.h"
+#include <cassert>
 
 namespace mvs {
 
@@ -20,7 +21,7 @@ namespace mvs {
             float maxLateralImpulse = 0.f;
             float dragCoefficient = 0.f;
 
-            void Init(World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter, float linearDamp,
+            void init(World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter, float linearDamp,
                       float angularDamp, float driveF, float latFric, float maxImp, float dragC) {
                 body = world->CreateCapsule(radius, radius);
                 body->SetCollisionFilter(filter);
@@ -46,7 +47,7 @@ namespace mvs {
                 lateral = Mul(body->GetRotation(), Vec2(1, 0));
                 Vec2 v = body->GetLinearVelocity();
 
-                // lateral friction (side-slip suppression)
+                // lateral friction
                 float latVel = Dot(v, lateral);
                 if (fabs(latVel) > 1e-3f) {
                     Vec2 j = -body->GetMass() * lateralFriction * latVel * lateral;
@@ -63,13 +64,119 @@ namespace mvs {
             }
         };
 
+        // Public API: unified init
+        void init(World *world, DriveMode mode, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+                  const Vec2 offsets[], size_t count, const CollisionFilter &filter) {
+            if (mode == DriveMode::Ackermann && count == 4) {
+                InitAckermann(world, chassisSize, chassisPose, wheelR, reinterpret_cast<const Vec2(&)[4]>(offsets),
+                              filter);
+            } else if (mode == DriveMode::Differential && count == 2) {
+                InitDifferential(world, chassisSize, chassisPose, wheelR, reinterpret_cast<const Vec2(&)[2]>(offsets),
+                                 filter);
+            } else {
+                assert(false && "Invalid drive mode or wheel count");
+            }
+        }
+
+        // Set desired linear (m/s) and angular (rad/s) velocity
+        void update(float linearVel, float angularVel) {
+            if (mode == DriveMode::Ackermann) {
+                float throttle = linearVel;
+                float delta = (fabs(linearVel) > 1e-3f) ? atan2(angularVel * wheelBase, linearVel)
+                                                        : (angularVel > 0 ? steerAngleMax : -steerAngleMax);
+                delta = fmaxf(fminf(delta, steerAngleMax), -steerAngleMax);
+                float steer[4] = {delta, delta, 0.f, 0.f};
+                ApplyControl(steer, throttle);
+            } else {
+                float vl = linearVel - angularVel * (trackWidth * 0.5f);
+                float vr = linearVel + angularVel * (trackWidth * 0.5f);
+                float m = fmaxf(fabs(vl), fabs(vr));
+                if (m > 1.f) {
+                    vl /= m;
+                    vr /= m;
+                }
+                float steer[4] = {vl, vr, 0.f, 0.f};
+                ApplyControl(steer, 0.f);
+            }
+        }
+
+        // Step simulation for each wheel
+        void tick() {
+            size_t cnt = (mode == DriveMode::Ackermann) ? 4 : 2;
+            for (size_t i = 0; i < cnt; ++i)
+                wheels[i].Step();
+        }
+
+        void teleport(const Vec2 &pos) { chassis->SetPosition(pos); }
+
+      private:
+        // Ackermann-specific init
+        void InitAckermann(World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+                           const Vec2 (&offs)[4], const CollisionFilter &filter) {
+            mode = DriveMode::Ackermann;
+            wheelRadius = wheelR;
+            wheelBase = fabs(offs[0].y - offs[2].y);
+            trackWidth = fabs(offs[0].x - offs[1].x);
+
+            chassis = world->CreateBox(chassisSize.x, chassisSize.y);
+            chassis->SetPosition(chassisPose);
+            chassis->SetCollisionFilter(filter);
+            chassis->SetLinearDamping(linearDamping);
+            chassis->SetAngularDamping(angularDamping);
+
+            for (int i = 0; i < 4; ++i) {
+                wheels[i].init(world, wheelRadius, offs[i], filter, linearDamping, angularDamping, driveForce,
+                               lateralFriction, maxLateralImpulse, dragCoefficient);
+                if (i < 2) {
+                    steerJoints[i] = world->CreateMotorJoint(chassis, wheels[i].body, wheels[i].body->GetPosition(),
+                                                             0.0f, steerTorque, 0.0f, 0.5f, chassis->GetMass());
+                } else {
+                    wheelJoints[i] = world->CreateRevoluteJoint(chassis, wheels[i].body, wheels[i].body->GetPosition());
+                }
+            }
+        }
+
+        // Differential-specific init
+        void InitDifferential(World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+                              const Vec2 (&offs)[2], const CollisionFilter &filter) {
+            mode = DriveMode::Differential;
+            wheelRadius = wheelR;
+            trackWidth = fabs(offs[0].x - offs[1].x);
+
+            chassis = world->CreateBox(chassisSize.x, chassisSize.y);
+            chassis->SetPosition(chassisPose);
+            chassis->SetCollisionFilter(filter);
+            chassis->SetLinearDamping(linearDamping);
+            chassis->SetAngularDamping(angularDamping);
+
+            for (int i = 0; i < 2; ++i) {
+                wheels[i].init(world, wheelRadius, offs[i], filter, linearDamping, angularDamping, driveForce,
+                               lateralFriction, maxLateralImpulse, dragCoefficient);
+                wheelJoints[i] = world->CreateRevoluteJoint(chassis, wheels[i].body, wheels[i].body->GetPosition());
+            }
+        }
+
+        // Apply steering/throttle inputs
+        void ApplyControl(const float steerIn[4], float throttle) {
+            if (mode == DriveMode::Ackermann) {
+                for (int i = 0; i < 2; ++i)
+                    steerJoints[i]->SetAngularOffset(steerIn[i]);
+                for (int i = 2; i < 4; ++i)
+                    wheels[i].ApplyDrive(throttle);
+            } else {
+                wheels[0].ApplyDrive(steerIn[0]);
+                wheels[1].ApplyDrive(steerIn[1]);
+            }
+        }
+
+        // Members
         DriveMode mode = DriveMode::Ackermann;
         RigidBody *chassis = nullptr;
-        Wheel wheels[4]; // 0=front-left,1=front-right,2=rear-left,3=rear-right
+        Wheel wheels[4];
         MotorJoint *steerJoints[2] = {nullptr, nullptr};
         Joint *wheelJoints[4] = {nullptr, nullptr, nullptr, nullptr};
 
-        // Physical and geometry parameters
+        // Parameters
         float linearDamping = 0.2f;
         float angularDamping = 2.0f;
         float wheelRadius = 0.2f;
@@ -77,111 +184,10 @@ namespace mvs {
         float lateralFriction = 0.4f;
         float maxLateralImpulse = 0.5f;
         float dragCoefficient = 0.5f;
-        float steerAngleMax = 35.0f * (3.1415926f / 180.0f); // max steering angle
+        float steerAngleMax = 35.0f * (3.1415926f / 180.0f);
         float steerTorque = 10.f;
-
-        // Derived kinematics parameters for steering computation
-        float wheelBase = 1.0f;  // distance between front and rear axle
-        float trackWidth = 1.0f; // distance between left and right wheels
-
-        // Initialize as 4-wheel Ackermann drive
-        // wheelOffsets: FL, FR, RL, RR (relative to chassis center)
-        void InitAckermann(World *world, const Vec2 &chassisSize, float wheelR, const Vec2 wheelOffsets[4],
-                           const CollisionFilter &filter) {
-            mode = DriveMode::Ackermann;
-            wheelRadius = wheelR;
-            // compute wheelBase and trackWidth from offsets
-            wheelBase = fabs(wheelOffsets[0].y - wheelOffsets[2].y);
-            trackWidth = fabs(wheelOffsets[0].x - wheelOffsets[1].x);
-
-            chassis = world->CreateBox(chassisSize.x, chassisSize.y);
-            chassis->SetCollisionFilter(filter);
-            chassis->SetLinearDamping(linearDamping);
-            chassis->SetAngularDamping(angularDamping);
-
-            for (int i = 0; i < 4; ++i) {
-                wheels[i].Init(world, wheelRadius, wheelOffsets[i], filter, linearDamping, angularDamping, driveForce,
-                               lateralFriction, maxLateralImpulse, dragCoefficient);
-                if (i < 2) {
-                    // front wheels: steering joints
-                    steerJoints[i] = world->CreateMotorJoint(chassis, wheels[i].body, wheels[i].body->GetPosition(),
-                                                             0.0f, steerTorque, 0.0f, 0.5f, chassis->GetMass());
-                } else {
-                    // rear wheels: free-spinning via revolute joints
-                    wheelJoints[i] = world->CreateRevoluteJoint(chassis, wheels[i].body, wheels[i].body->GetPosition());
-                }
-            }
-        }
-
-        // Initialize as 2-wheel Differential drive
-        // wheelOffsets: Left, Right
-        void InitDifferential(World *world, const Vec2 &chassisSize, const Vec2 wheelOffsets[2],
-                              const CollisionFilter &filter) {
-            mode = DriveMode::Differential;
-            wheelBase = 0.0f;
-            trackWidth = fabs(wheelOffsets[0].x - wheelOffsets[1].x);
-
-            chassis = world->CreateBox(chassisSize.x, chassisSize.y);
-            chassis->SetCollisionFilter(filter);
-            chassis->SetLinearDamping(linearDamping);
-            chassis->SetAngularDamping(angularDamping);
-
-            for (int i = 0; i < 2; ++i) {
-                wheels[i].Init(world, wheelRadius, wheelOffsets[i], filter, linearDamping, angularDamping, driveForce,
-                               lateralFriction, maxLateralImpulse, dragCoefficient);
-                wheelJoints[i] = world->CreateRevoluteJoint(chassis, wheels[i].body, wheels[i].body->GetPosition());
-            }
-        }
-
-        // Update desired linear (m/s) and angular (rad/s) velocity
-        void UpdateKinematics(float linearVel, float angularVel) {
-            if (mode == DriveMode::Ackermann) {
-                // throttle is proportional to forward velocity
-                float throttle = linearVel;
-                // compute steering angle delta = atan(omega * L / v)
-                float delta;
-                if (fabs(linearVel) > 1e-3f)
-                    delta = atan2(angularVel * wheelBase, linearVel);
-                else
-                    delta = (angularVel > 0 ? steerAngleMax : -steerAngleMax);
-                // clamp to max steer angle
-                delta = fmaxf(fminf(delta, steerAngleMax), -steerAngleMax);
-                // apply same steering to both front wheels
-                float steeringInputs[4] = {delta, delta, 0.f, 0.f};
-                UpdateControl(steeringInputs, throttle);
-            } else {
-                // differential: v_l = v - omega * (trackWidth/2)
-                float vl = linearVel - angularVel * (trackWidth * 0.5f);
-                float vr = linearVel + angularVel * (trackWidth * 0.5f);
-                // normalize if needed to [-1,1]
-                float mx = fmaxf(fabs(vl), fabs(vr));
-                if (mx > 1.f) {
-                    vl /= mx;
-                    vr /= mx;
-                }
-                float steeringInputs[4] = {vl, vr, 0.f, 0.f};
-                UpdateControl(steeringInputs, 0.f);
-            }
-        }
-
-        // internal legacy update (steering+throttle)
-        void UpdateControl(const float steeringInputs[4], float throttle) {
-            if (mode == DriveMode::Ackermann) {
-                for (int i = 0; i < 2; ++i)
-                    steerJoints[i]->SetAngularOffset(steeringInputs[i]);
-                for (int i = 2; i < 4; ++i)
-                    wheels[i].ApplyDrive(throttle);
-            } else {
-                wheels[0].ApplyDrive(steeringInputs[0]);
-                wheels[1].ApplyDrive(steeringInputs[1]);
-            }
-        }
-
-        void Step() {
-            int count = (mode == DriveMode::Ackermann) ? 4 : 2;
-            for (int i = 0; i < count; ++i)
-                wheels[i].Step();
-        }
+        float wheelBase = 1.0f;
+        float trackWidth = 1.0f;
     };
 
 } // namespace mvs

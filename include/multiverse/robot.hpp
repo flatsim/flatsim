@@ -7,6 +7,7 @@
 #include "muli/world.h"
 
 #include "concord/types_basic.hpp"
+#include "multiverse/driver/controller.hpp"
 #include "multiverse/sensors/sensor.hpp"
 
 #include <rerun.hpp>
@@ -17,7 +18,8 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
-        muli::RigidBody *body;
+        std::unique_ptr<VehicleController> chassis;
+
         concord::Pose position;
 
       public:
