@@ -13,13 +13,11 @@ namespace mvs {
         }
     } // namespace utl
 
-    World::World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size world_size, Size grid_size)
-        : settings(datum, world_size, grid_size), rec(rec) {
-        init(settings);
-    }
+    World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     World::~World() { world.reset(); }
 
-    void World::init(WorldSettings settings) {
+    void World::init(concord::Datum datum, Size world_size, Size grid_size) {
+        settings.init(datum, world_size, grid_size);
         settings.apply_gravity = false;
         world = std::make_unique<muli::World>(settings);
         float width = settings.get_world_size().x;

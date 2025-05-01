@@ -7,6 +7,7 @@
 #include "muli/world.h"
 
 #include "concord/types_basic.hpp"
+#include "multiverse/sensors/sensor.hpp"
 
 #include <rerun.hpp>
 
@@ -15,18 +16,19 @@ namespace mvs {
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
+        std::vector<std::unique_ptr<Sensor>> sensors;
         muli::RigidBody *body;
-        concord::Point position;
+        concord::Pose position;
 
       public:
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         ~Robot();
 
         void tick(float dt);
-        void init(concord::Point, std::string name);
+        void init(concord::Pose, std::string name);
 
         void teleport(float x, float y);
-        const concord::Point &get_position() const { return position; }
+        const concord::Pose &get_position() const { return position; }
 
       private:
         void visualize_once();

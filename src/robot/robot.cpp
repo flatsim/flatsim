@@ -5,11 +5,7 @@ namespace mvs {
         : rec(rec), world(world) {}
     Robot::~Robot() { delete body; }
 
-    void Robot::tick(float dt) {
-        for (auto &sensor : sensors) {
-            sensor->tick(dt, position);
-        }
-    }
+    void Robot::tick(float dt) { world->Step(dt); }
 
     void Robot::teleport(float x, float y) {
         auto tf = muli::Transform({x, y});

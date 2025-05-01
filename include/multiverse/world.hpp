@@ -23,8 +23,12 @@ namespace mvs {
         concord::Size grid_size_;
 
       public:
-        WorldSettings(concord::Datum world_datum, Size world_size, Size grid_size)
-            : muli::WorldSettings(), world_datum_(world_datum), world_size_(world_size), grid_size_(grid_size) {}
+        WorldSettings() = default;
+        void init(concord::Datum datum, Size world_size, Size grid_size) {
+            world_datum_ = datum;
+            world_size_ = world_size;
+            grid_size_ = grid_size;
+        }
         concord::Datum get_datum() const { return world_datum_; }
         Size get_world_size() const { return world_size_; }
         Size get_grid_size() const { return grid_size_; }
@@ -38,12 +42,12 @@ namespace mvs {
         theGrid grid;
 
       public:
-        World(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum, Size world_size, Size grid_size);
+        World(std::shared_ptr<rerun::RecordingStream> rec);
         ~World();
 
         const WorldSettings &get_settings() const { return settings; }
         const theGrid &get_grid() const { return grid; }
-        void init(WorldSettings settings);
+        void init(concord::Datum datum, Size world_size, Size grid_size);
         void tick(float dt);
         void visualize_once();
         void visualize();
