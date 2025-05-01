@@ -41,7 +41,9 @@ namespace mvs {
             for (float j = -height / 2; j < height / 2; j += settings.get_grid_size().y) {
                 float x = static_cast<float>(i) + settings.get_grid_size().x / 2.0f;
                 float y = static_cast<float>(j) + settings.get_grid_size().y / 2.0f;
-                row.push_back({x, y, 0});
+                auto enu = concord::ENU(x, y, 0.0f);
+                auto wgs = enu.toWGS(settings.get_datum());
+                row.push_back({{enu, wgs}, settings.get_grid_size().x});
                 //--------------------------------------------------------------------------------
                 // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
                 // body->Translate({x, y});
@@ -52,7 +54,7 @@ namespace mvs {
 
         for (auto &row : grid) {
             for (auto &square : row) {
-                enu_grid_.push_back({square.x_center, square.y_center, 0});
+                enu_grid_.push_back({float(square.center.enu.x), float(square.center.enu.y), 0});
             }
         }
 

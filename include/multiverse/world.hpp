@@ -7,23 +7,13 @@
 #include "muli/world.h"
 
 #include "concord/types_basic.hpp"
+#include "concord/types_square.hpp"
 
 #include <rerun.hpp>
 
 namespace mvs {
     using Size = concord::Size;
-
-    struct Square {
-        float x_center;
-        float y_center;
-        float side;
-
-        bool is_inside(float x, float y) {
-            return x_center - side / 2.0f <= x && x <= x_center + side / 2.0f && y_center - side / 2.0f <= y &&
-                   y <= y_center + side / 2.0f;
-        }
-    };
-
+    using Square = concord::Square;
     typedef std::vector<std::vector<Square>> theGrid;
 
     class WorldSettings : public muli::WorldSettings {
