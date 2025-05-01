@@ -13,9 +13,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
 
+set(MULI_BUILD_DEMO OFF)
 fetchcontent_declare(
     muli
-    GIT_REPOSITORY https://github.com/bresilla/Muli
+    # GIT_REPOSITORY https://github.com/bresilla/Muli
+    GIT_REPOSITORY https://github.com/Sopiro/Muli
 )
 FetchContent_MakeAvailable(muli)
 include_directories(${muli_SOURCE_DIR}/include)

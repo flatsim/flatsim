@@ -54,7 +54,7 @@ namespace mvs {
 
         for (auto &row : grid) {
             for (auto &square : row) {
-                enu_grid_.push_back({float(square.center.enu.x), float(square.center.enu.y), 0});
+                enu_grid_.push_back({float(square.getCenter().enu.x), float(square.getCenter().enu.y), 0});
             }
         }
 
