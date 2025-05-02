@@ -10,7 +10,7 @@ namespace mvs {
         using namespace muli;
 
         // --- Utility functions ---
-        inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
+        // inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
 
         static bool followCam = true;
         static bool rotateCam = false;
@@ -83,7 +83,7 @@ namespace mvs {
 
         class Vehicle {
           public:
-            Vehicle(std::shared_ptr<muli::World> world, const concord::Pose &pose) : world(world) {
+            Vehicle(muli::World *world, const concord::Pose &pose) : world(world) {
                 CollisionFilter filter;
                 filter.bit = 1 << 1;
                 filter.mask = ~(1 << 1);
@@ -94,22 +94,35 @@ namespace mvs {
                 body = world->CreateBox(w, h);
                 body->SetCollisionFilter(filter);
 
+                Vec2 p;
+                p.x = pose.point.enu.x;
+                p.y = pose.point.enu.y;
+                body->SetPosition(p);
+
                 body->SetLinearDamping(linearDamping);
                 body->SetAngularDamping(angularDamping);
                 // chassis
                 float s = 0.2f;
 
                 // Front wheels
-                wheels[0].init(world.get(), s, Transform(Vec2(w / 2, h / 2)), filter, linearDamping, angularDamping,
-                               force, friction, maxImpulse, brake, drag);
-                wheels[1].init(world.get(), s, Transform(Vec2(-w / 2, h / 2)), filter, linearDamping, angularDamping,
-                               force, friction, maxImpulse, brake, drag);
+                Transform tf_fr(Vec2(p.x + w / 2, p.y + h / 2));
+                wheels[0].init(world, s, tf_fr, filter, linearDamping, angularDamping, force, friction, maxImpulse,
+                               brake, drag);
+                Transform tf_fl(Vec2(p.x - w / 2, p.y + h / 2));
+                wheels[1].init(world, s, tf_fl, filter, linearDamping, angularDamping, force, friction, maxImpulse,
+                               brake, drag);
 
                 // Rear wheels
-                wheels[2].init(world.get(), s, Transform(Vec2(w / 2, -h / 2)), filter, linearDamping, angularDamping,
-                               force, friction, maxImpulse, brake, drag);
-                wheels[3].init(world.get(), s, Transform(Vec2(-w / 2, -h / 2)), filter, linearDamping, angularDamping,
-                               force, friction, maxImpulse, brake, drag);
+                Transform tf_rr(Vec2(p.x + w / 2, p.y - h / 2));
+                wheels[2].init(world, s, tf_rr, filter, linearDamping, angularDamping, force, friction, maxImpulse,
+                               brake, drag);
+                Transform tf_rl(Vec2(p.x - w / 2, p.y - h / 2));
+                wheels[3].init(world, s, tf_rl, filter, linearDamping, angularDamping, force, friction, maxImpulse,
+                               brake, drag);
+
+                for (int i = 0; i < 4; ++i) {
+                    std::cout << "wheel raw pointer: " << wheels[i].wheel << std::endl;
+                }
 
                 float mf = -1;
                 float fr = -1;
@@ -145,7 +158,7 @@ namespace mvs {
             // }
 
           private:
-            std::shared_ptr<muli::World> world;
+            muli::World *world;
             RigidBody *body;
             Wheel wheels[4];
             MotorJoint *joints[4];

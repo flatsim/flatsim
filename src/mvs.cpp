@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "multiverse/simulator.hpp"
+// #include "multiverse/driver/controller.hpp"
 #include "multiverse/world.hpp"
 #include "rerun/recording_stream.hpp"
 #include <rerun.hpp>
@@ -36,6 +37,11 @@ int main() {
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
 
+    // muli::WorldSettings settings;
+    // muli::World world(settings);
+
+    // mvs::vehicle::Vehicle chassis(sim->world->get_world().get(), concord::Pose());
+
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running...\n";
     while (true) {
@@ -45,6 +51,7 @@ int main() {
         last_time = now;
         float dt = elapsed.count(); // seconds since last frame
         // Tick with “actual” dt
+        // chassis.tick(dt);
         sim->tick(dt);
         // (Optional) tiny sleep so you don't spin at full CPU—
         // adjust or remove if you want completely time-driven stepping
