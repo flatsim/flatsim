@@ -42,24 +42,32 @@ namespace mvs {
                 body->ApplyForce(body->GetPosition(), f, true);
             }
 
-            void Step() {
-                forward = Mul(body->GetRotation(), Vec2(0, 1));
-                lateral = Mul(body->GetRotation(), Vec2(1, 0));
+            void Step(float dt) {
+                // get body‐space axes
+                Vec2 forward = Mul(body->GetRotation(), Vec2(0, 1));
+                Vec2 lateral = Mul(body->GetRotation(), Vec2(1, 0));
                 Vec2 v = body->GetLinearVelocity();
-
-                // lateral friction
+                float mass = body->GetMass();
+                // 1) lateral friction as FORCE
                 float latVel = Dot(v, lateral);
                 if (fabs(latVel) > 1e-3f) {
-                    Vec2 j = -body->GetMass() * lateralFriction * latVel * lateral;
-                    if (Length(j) > maxLateralImpulse)
-                        j = Normalize(j) * maxLateralImpulse;
-                    body->ApplyLinearImpulse(body->GetPosition(), j, true);
+                    // F_lat = -m * mu_lat * latVel
+                    Vec2 F_lat = -mass * lateralFriction * latVel * lateral;
+                    // 2) turn it into an impulse for this frame:
+                    Vec2 J = F_lat * dt;
+                    // 3) cap that impulse
+                    float maxJ = maxLateralImpulse * dt;
+                    if (Length(J) > maxJ) {
+                        J = Normalize(J) * maxJ;
+                    }
+                    // 4) apply it
+                    body->ApplyLinearImpulse(body->GetPosition(), J, true);
                 }
-                // rolling drag
+                // rolling drag: as a force (Box2D will do F*dt internally)
                 float fwdVel = Dot(v, forward);
                 if (fabs(fwdVel) > 1e-3f) {
-                    Vec2 df = -dragCoefficient * fwdVel * forward;
-                    body->ApplyForce(body->GetPosition(), df, true);
+                    Vec2 F_drag = -dragCoefficient * fwdVel * forward;
+                    body->ApplyForce(body->GetPosition(), F_drag, true);
                 }
             }
         };
@@ -101,10 +109,10 @@ namespace mvs {
         }
 
         // Step simulation for each wheel
-        void tick() {
+        void tick(float dt) {
             size_t cnt = (mode == DriveMode::Ackermann) ? 4 : 2;
             for (size_t i = 0; i < cnt; ++i)
-                wheels[i].Step();
+                wheels[i].Step(dt);
         }
 
         void teleport(const Vec2 &pos) { chassis->SetPosition(pos); }
