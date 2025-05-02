@@ -9,68 +9,88 @@ namespace mvs {
 
     using namespace muli;
 
+    enum class DriveMode { Ackermann, Differential };
+
+    struct Wheel {
+        RigidBody *body = nullptr;
+        Vec2 forward, lateral;
+        float driveForce = 0.f;
+        float lateralFriction = 0.f;
+        float maxLateralImpulse = 0.f;
+        float dragCoefficient = 0.f;
+
+        void init(muli::World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter,
+                  float linearDamp, float angularDamp, float driveF, float latFric, float maxImp, float dragC) {
+            body = world->CreateCapsule(radius, radius);
+            body->SetCollisionFilter(filter);
+            Transform tf;
+            tf.position = localPos;
+            body->SetTransform(tf);
+            body->SetLinearDamping(linearDamp);
+            body->SetAngularDamping(angularDamp);
+
+            driveForce = driveF;
+            lateralFriction = latFric;
+            maxLateralImpulse = maxImp;
+            dragCoefficient = dragC;
+        }
+
+        void ApplyDrive(float throttle) {
+            Vec2 f = forward * (driveForce * throttle);
+            body->ApplyForce(body->GetPosition(), f, true);
+        }
+
+        void Step(float dt) {
+            // get body‐space axes
+            Vec2 forward = Mul(body->GetRotation(), Vec2(0, 1));
+            Vec2 lateral = Mul(body->GetRotation(), Vec2(1, 0));
+            Vec2 v = body->GetLinearVelocity();
+            float mass = body->GetMass();
+            // 1) lateral friction as FORCE
+            float latVel = Dot(v, lateral);
+            if (fabs(latVel) > 1e-3f) {
+                // F_lat = -m * mu_lat * latVel
+                Vec2 F_lat = -mass * lateralFriction * latVel * lateral;
+                // 2) turn it into an impulse for this frame:
+                Vec2 J = F_lat * dt;
+                // 3) cap that impulse
+                float maxJ = maxLateralImpulse * dt;
+                if (Length(J) > maxJ) {
+                    J = Normalize(J) * maxJ;
+                }
+                // 4) apply it
+                body->ApplyLinearImpulse(body->GetPosition(), J, true);
+            }
+            // rolling drag: as a force (Box2D will do F*dt internally)
+            float fwdVel = Dot(v, forward);
+            if (fabs(fwdVel) > 1e-3f) {
+                Vec2 F_drag = -dragCoefficient * fwdVel * forward;
+                body->ApplyForce(body->GetPosition(), F_drag, true);
+            }
+        }
+    };
+
     class VehicleController {
       public:
-        enum class DriveMode { Ackermann, Differential };
+        // Members
+        DriveMode mode = DriveMode::Ackermann;
+        RigidBody *chassis = nullptr;
+        Wheel wheels[4];
+        MotorJoint *steerJoints[2] = {nullptr, nullptr};
+        Joint *wheelJoints[4] = {nullptr, nullptr, nullptr, nullptr};
 
-        struct Wheel {
-            RigidBody *body = nullptr;
-            Vec2 forward, lateral;
-            float driveForce = 0.f;
-            float lateralFriction = 0.f;
-            float maxLateralImpulse = 0.f;
-            float dragCoefficient = 0.f;
-
-            void init(muli::World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter,
-                      float linearDamp, float angularDamp, float driveF, float latFric, float maxImp, float dragC) {
-                body = world->CreateCapsule(radius, radius);
-                body->SetCollisionFilter(filter);
-                Transform tf;
-                tf.position = localPos;
-                body->SetTransform(tf);
-                body->SetLinearDamping(linearDamp);
-                body->SetAngularDamping(angularDamp);
-
-                driveForce = driveF;
-                lateralFriction = latFric;
-                maxLateralImpulse = maxImp;
-                dragCoefficient = dragC;
-            }
-
-            void ApplyDrive(float throttle) {
-                Vec2 f = forward * (driveForce * throttle);
-                body->ApplyForce(body->GetPosition(), f, true);
-            }
-
-            void Step(float dt) {
-                // get body‐space axes
-                Vec2 forward = Mul(body->GetRotation(), Vec2(0, 1));
-                Vec2 lateral = Mul(body->GetRotation(), Vec2(1, 0));
-                Vec2 v = body->GetLinearVelocity();
-                float mass = body->GetMass();
-                // 1) lateral friction as FORCE
-                float latVel = Dot(v, lateral);
-                if (fabs(latVel) > 1e-3f) {
-                    // F_lat = -m * mu_lat * latVel
-                    Vec2 F_lat = -mass * lateralFriction * latVel * lateral;
-                    // 2) turn it into an impulse for this frame:
-                    Vec2 J = F_lat * dt;
-                    // 3) cap that impulse
-                    float maxJ = maxLateralImpulse * dt;
-                    if (Length(J) > maxJ) {
-                        J = Normalize(J) * maxJ;
-                    }
-                    // 4) apply it
-                    body->ApplyLinearImpulse(body->GetPosition(), J, true);
-                }
-                // rolling drag: as a force (Box2D will do F*dt internally)
-                float fwdVel = Dot(v, forward);
-                if (fabs(fwdVel) > 1e-3f) {
-                    Vec2 F_drag = -dragCoefficient * fwdVel * forward;
-                    body->ApplyForce(body->GetPosition(), F_drag, true);
-                }
-            }
-        };
+        // Parameters
+        float linearDamping = 0.2f;
+        float angularDamping = 2.0f;
+        float wheelRadius = 0.2f;
+        float driveForce = 30.f;
+        float lateralFriction = 0.4f;
+        float maxLateralImpulse = 0.5f;
+        float dragCoefficient = 0.5f;
+        float steerAngleMax = 35.0f * (3.1415926f / 180.0f);
+        float steerTorque = 10.f;
+        float wheelBase = 1.0f;
+        float trackWidth = 1.0f;
 
         // Public API: unified init
         void init(muli::World *world, DriveMode mode, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
@@ -176,26 +196,6 @@ namespace mvs {
                 wheels[1].ApplyDrive(steerIn[1]);
             }
         }
-
-        // Members
-        DriveMode mode = DriveMode::Ackermann;
-        RigidBody *chassis = nullptr;
-        Wheel wheels[4];
-        MotorJoint *steerJoints[2] = {nullptr, nullptr};
-        Joint *wheelJoints[4] = {nullptr, nullptr, nullptr, nullptr};
-
-        // Parameters
-        float linearDamping = 0.2f;
-        float angularDamping = 2.0f;
-        float wheelRadius = 0.2f;
-        float driveForce = 30.f;
-        float lateralFriction = 0.4f;
-        float maxLateralImpulse = 0.5f;
-        float dragCoefficient = 0.5f;
-        float steerAngleMax = 35.0f * (3.1415926f / 180.0f);
-        float steerTorque = 10.f;
-        float wheelBase = 1.0f;
-        float trackWidth = 1.0f;
     };
 
 } // namespace mvs
