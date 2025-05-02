@@ -21,8 +21,8 @@ namespace mvs {
             float maxLateralImpulse = 0.f;
             float dragCoefficient = 0.f;
 
-            void init(World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter, float linearDamp,
-                      float angularDamp, float driveF, float latFric, float maxImp, float dragC) {
+            void init(muli::World *world, float radius, const Vec2 &localPos, const CollisionFilter &filter,
+                      float linearDamp, float angularDamp, float driveF, float latFric, float maxImp, float dragC) {
                 body = world->CreateCapsule(radius, radius);
                 body->SetCollisionFilter(filter);
                 Transform tf;
@@ -65,7 +65,7 @@ namespace mvs {
         };
 
         // Public API: unified init
-        void init(World *world, DriveMode mode, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+        void init(muli::World *world, DriveMode mode, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
                   const Vec2 offsets[], size_t count, const CollisionFilter &filter) {
             if (mode == DriveMode::Ackermann && count == 4) {
                 InitAckermann(world, chassisSize, chassisPose, wheelR, reinterpret_cast<const Vec2(&)[4]>(offsets),
@@ -111,7 +111,7 @@ namespace mvs {
 
       private:
         // Ackermann-specific init
-        void InitAckermann(World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+        void InitAckermann(muli::World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
                            const Vec2 (&offs)[4], const CollisionFilter &filter) {
             mode = DriveMode::Ackermann;
             wheelRadius = wheelR;
@@ -137,7 +137,7 @@ namespace mvs {
         }
 
         // Differential-specific init
-        void InitDifferential(World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
+        void InitDifferential(muli::World *world, const Vec2 &chassisSize, const Vec2 &chassisPose, float wheelR,
                               const Vec2 (&offs)[2], const CollisionFilter &filter) {
             mode = DriveMode::Differential;
             wheelRadius = wheelR;

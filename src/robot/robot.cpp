@@ -11,5 +11,11 @@ namespace mvs {
         }
     }
 
+    void Robot::init(concord::Pose pose, std::string name) {
+        std::cout << "Initializing robot " << name << "...\n";
+        this->name = name;
+        chassis = std::make_unique<mvs::VehicleController>();
+    }
+
     void Robot::teleport(float x, float y) { chassis->teleport({x, y}); }
 } // namespace mvs

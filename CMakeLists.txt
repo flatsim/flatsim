@@ -10,7 +10,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder -Wno-strict-aliasing")
 include(FetchContent)
 
 
@@ -82,12 +82,12 @@ foreach(src_file IN LISTS exe)
   target_link_libraries(${exec_name} ${dependencies})
   install(TARGETS ${exec_name} DESTINATION bin)
   list(APPEND exec_names ${exec_name})
-  file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
-  file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
 endforeach()
 
 
 foreach(exec IN LISTS exec_names)
+  file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+  file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
   get_filename_component(exec_name "${exec}" NAME)
   file(APPEND "${CMAKE_CURRENT_LIST_DIR}/.execs" "${CMAKE_CURRENT_LIST_DIR}/build/${exec_name}\n")
 endforeach()

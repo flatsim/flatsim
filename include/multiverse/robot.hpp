@@ -15,6 +15,7 @@
 namespace mvs {
     class Robot {
       private:
+        std::string name;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;

@@ -24,6 +24,15 @@ namespace mvs {
         void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
             world = std::make_shared<mvs::World>(rec);
             world->init(datum, world_size, grid_size);
+
+            Robot robot(rec, world->get_world());
+            concord::Pose robot_pose;
+            robot_pose.point.enu.x = 0;
+            robot_pose.point.enu.y = 0;
+            robot_pose.point.enu.z = 0;
+            robot_pose.point.enu.toWGS(world->get_settings().get_datum());
+            robot.init(robot_pose, "robot");
+            robots.push_back(std::make_unique<Robot>(rec, world->get_world()));
         }
     };
 } // namespace mvs
