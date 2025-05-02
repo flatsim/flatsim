@@ -61,7 +61,7 @@ set(exe
 set(lib
   src/world/world.cpp
   src/robot/robot.cpp
-  src/robot/simulator.cpp
+  src/simulator.cpp
 )
 
 set(dependencies
@@ -72,6 +72,8 @@ set(dependencies
 
 set(exec_names)
 
+file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
 foreach(src_file IN LISTS exe)
   get_filename_component(exec_name "${src_file}" NAME_WE)
   add_executable(${exec_name} "${src_file}")
@@ -80,6 +82,14 @@ foreach(src_file IN LISTS exe)
   endforeach()
   target_link_libraries(${exec_name} ${dependencies})
   install(TARGETS ${exec_name} DESTINATION bin)
+
+  add_custom_command(TARGET ${exec_name}
+    POST_BUILD
+    COMMAND /bin/sh -c
+    "echo \$<TARGET_FILE:${exec_name}> >> \"${CMAKE_CURRENT_LIST_DIR}/.execs\""
+    VERBATIM
+  )
+
   list(APPEND exec_names ${exec_name})
 endforeach()
 

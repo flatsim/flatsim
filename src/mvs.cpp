@@ -32,11 +32,9 @@ int main() {
     grid_size.y = 1.0f;
     grid_size.z = 1.0f;
 
-    mvs::Simulator sim(rec);
+    mvs::World sim(rec);
+    // mvs::Simulator sim(rec);
     sim.init(world_datum, world_size, grid_size);
-
-    // mvs::World world(rec);
-    // world.init(world_datum, world_size, grid_size);
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running...\n";
