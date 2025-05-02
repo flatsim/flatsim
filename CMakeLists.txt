@@ -72,8 +72,7 @@ set(dependencies
 
 set(exec_names)
 
-file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
-file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+
 foreach(src_file IN LISTS exe)
   get_filename_component(exec_name "${src_file}" NAME_WE)
   add_executable(${exec_name} "${src_file}")
@@ -82,15 +81,15 @@ foreach(src_file IN LISTS exe)
   endforeach()
   target_link_libraries(${exec_name} ${dependencies})
   install(TARGETS ${exec_name} DESTINATION bin)
-
-  add_custom_command(TARGET ${exec_name}
-    POST_BUILD
-    COMMAND /bin/sh -c
-    "echo \$<TARGET_FILE:${exec_name}> >> \"${CMAKE_CURRENT_LIST_DIR}/.execs\""
-    VERBATIM
-  )
-
   list(APPEND exec_names ${exec_name})
+  file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+  file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+endforeach()
+
+
+foreach(exec IN LISTS exec_names)
+  get_filename_component(exec_name "${exec}" NAME)
+  file(APPEND "${CMAKE_CURRENT_LIST_DIR}/.execs" "${CMAKE_CURRENT_LIST_DIR}/build/${exec_name}\n")
 endforeach()
 
 install(TARGETS
