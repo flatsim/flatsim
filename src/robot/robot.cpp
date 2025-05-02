@@ -5,7 +5,5 @@ namespace mvs {
         : rec(rec), world(world) {}
     Robot::~Robot() {};
 
-    void Robot::tick(float dt) { world->Step(dt); }
-
     void Robot::teleport(float x, float y) { chassis->teleport({x, y}); }
 } // namespace mvs

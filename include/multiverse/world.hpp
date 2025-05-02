@@ -47,6 +47,8 @@ namespace mvs {
 
         const WorldSettings &get_settings() const { return settings; }
         const theGrid &get_grid() const { return grid; }
+        // get world shared pointer
+        std::shared_ptr<muli::World> get_world() const { return world; }
         void init(concord::Datum datum, Size world_size, Size grid_size);
         void tick(float dt);
         void visualize_once();

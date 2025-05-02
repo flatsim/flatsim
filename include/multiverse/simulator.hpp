@@ -15,10 +15,15 @@ namespace mvs {
 
       private:
         void doit() {}
+        std::shared_ptr<muli::World> physics_world;
 
       public:
-        Simulator() {}
-        ~Simulator() {}
-        void tick(float dt) {}
+        Simulator(std::shared_ptr<rerun::RecordingStream> rec);
+        ~Simulator();
+        void tick(float dt) { world->tick(dt); }
+        void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
+            world = std::make_shared<mvs::World>(rec);
+            world->init(datum, world_size, grid_size);
+        }
     };
 } // namespace mvs

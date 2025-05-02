@@ -61,6 +61,7 @@ set(exe
 set(lib
   src/world/world.cpp
   src/robot/robot.cpp
+  src/robot/simulator.cpp
 )
 
 set(dependencies

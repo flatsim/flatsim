@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 
+#include "multiverse/simulator.hpp"
 #include "multiverse/world.hpp"
 #include "rerun/recording_stream.hpp"
 #include <rerun.hpp>
@@ -31,8 +32,11 @@ int main() {
     grid_size.y = 1.0f;
     grid_size.z = 1.0f;
 
-    mvs::World world(rec);
-    world.init(world_datum, world_size, grid_size);
+    mvs::Simulator sim(rec);
+    sim.init(world_datum, world_size, grid_size);
+
+    // mvs::World world(rec);
+    // world.init(world_datum, world_size, grid_size);
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running...\n";
@@ -43,7 +47,7 @@ int main() {
         last_time = now;
         float dt = elapsed.count(); // seconds since last frame
         // Tick with “actual” dt
-        world.tick(dt);
+        sim.tick(dt);
         // (Optional) tiny sleep so you don't spin at full CPU—
         // adjust or remove if you want completely time-driven stepping
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
