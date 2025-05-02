@@ -20,7 +20,12 @@ namespace mvs {
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
-        void tick(float dt) { world->tick(dt); }
+        void tick(float dt) {
+            world->tick(dt);
+            for (auto &robot : robots) {
+                robot->tick(dt);
+            }
+        }
         void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
             world = std::make_shared<mvs::World>(rec);
             world->init(datum, world_size, grid_size);

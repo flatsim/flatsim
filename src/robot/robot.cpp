@@ -9,6 +9,7 @@ namespace mvs {
         for (auto &sensor : sensors) {
             sensor->tick(dt, position);
         }
+        chassis->tick(dt);
     }
 
     void Robot::init(concord::Pose pose, std::string name) {

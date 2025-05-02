@@ -2,6 +2,7 @@
 #include "muli/world.h"
 
 #include <cmath> // for DegToRad conversion
+#include <math.h>
 #include <memory>
 
 namespace mvs {
@@ -11,139 +12,141 @@ namespace mvs {
         // --- Utility functions ---
         inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
 
-        // --- Configurable parameters ---
-        static float EPSILON = 0.01f;
-        static float LINEAR_DAMPING = 0.2f;
-        static float ANGULAR_DAMPING_COEFF = 2.0f;
-        static float DRIVE_FORCE = 30.0f;
-        static float SIDE_FRICTION = 0.4f;
-        static float MAX_SIDE_IMPULSE = 0.5f;
-        static float BRAKE_FORCE = 10.0f;
-        static float DRAG_COEFF = 0.5f;
-        static float STEERING_TORQUE = 10.0f;
-        static float MAX_STEER_ANGLE = DegToRad(35.0f);
-
-        // --- Setter functions ---
-        inline void SetEpsilon(float e) { EPSILON = e; }
-        inline void SetLinearDamping(float d) { LINEAR_DAMPING = d; }
-        inline void SetAngularDampingCoeff(float d) { ANGULAR_DAMPING_COEFF = d; }
-        inline void SetDriveForce(float f) { DRIVE_FORCE = f; }
-        inline void SetSideFriction(float f) { SIDE_FRICTION = f; }
-        inline void SetMaxSideImpulse(float i) { MAX_SIDE_IMPULSE = i; }
-        inline void SetBrakeForce(float f) { BRAKE_FORCE = f; }
-        inline void SetDragCoeff(float d) { DRAG_COEFF = d; }
-        inline void SetSteeringTorque(float t) { STEERING_TORQUE = t; }
-        inline void SetMaxSteerAngle(float radians) { MAX_STEER_ANGLE = radians; }
+        static bool followCam = true;
+        static bool rotateCam = false;
+        static bool drawAxis = false;
+        static float linearDamping = 0.2f;
+        static float angularDamping = 2.0f;
+        static float force = 30;
+        static float torque = 10;
+        static float friction = 0.4;
+        static float maxImpulse = 0.5;
+        static float brake = 10;
+        static float drag = 0.5f;
 
         struct Wheel {
-            RigidBody *body;
-            Vec2 forward, side;
+            RigidBody *wheel;
+            Vec2 forward, normal;
+
+            float force, torque;
+            float brake, drag;
+
             float friction, maxImpulse;
-            float drag;
 
-            void init(std::shared_ptr<muli::World> world, float scale, const Transform &tf,
-                      const CollisionFilter &filter) {
-                body = world->CreateCapsule(scale, scale, false, tf);
-                body->SetCollisionFilter(filter);
-                body->SetLinearDamping(LINEAR_DAMPING);
-                body->SetAngularDamping(ANGULAR_DAMPING_COEFF);
+            void init(World *world, float scale, Transform tf, CollisionFilter filter, float linearDamping,
+                      float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
+                      float _drag) {
+                wheel = world->CreateCapsule(scale, scale, false, tf);
+                wheel->SetCollisionFilter(filter);
 
-                friction = SIDE_FRICTION;
-                maxImpulse = MAX_SIDE_IMPULSE;
-                drag = DRAG_COEFF;
+                wheel->SetLinearDamping(linearDamping);
+                wheel->SetAngularDamping(angularDamping);
+
+                force = _force;
+                friction = _friction;
+                maxImpulse = _maxImpulse;
+
+                brake = _brake;
+                drag = _drag;
             }
 
             void step(float dt) {
-                forward = Mul(body->GetRotation(), Vec2(0, 1));
-                side = Mul(body->GetRotation(), Vec2(1, 0));
+                const Vec2 up(0, 1);
+                const Vec2 right(1, 0);
 
-                Vec2 vel = body->GetLinearVelocity();
-                float vF = Dot(vel, forward);
-                float vS = Dot(vel, side);
+                forward = Mul(wheel->GetRotation(), up);
+                normal = Mul(wheel->GetRotation(), right);
 
-                // 1) lateral friction impulse
-                if (Abs(vS) > EPSILON) {
-                    Vec2 j = -body->GetMass() * friction * vS * dt * side;
-                    float jLen = Length(j);
-                    float maxJ = maxImpulse * dt;
-                    if (jLen > maxJ)
-                        j = Normalize(j) * maxJ;
-                    body->ApplyLinearImpulse(body->GetPosition(), j, true);
+                Vec2 v = wheel->GetLinearVelocity();
+                float vf = Dot(v, forward);
+                float vn = Dot(v, normal);
+
+                if (Abs(vn) > epsilon) {
+                    Vec2 j = -wheel->GetMass() * friction * vn * normal;
+                    if (Length(j) > maxImpulse) {
+                        j = Normalize(j) * maxImpulse;
+                    }
+                    wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
                 }
 
-                // 2) angular damping impulse
-                float av = body->GetAngularVelocity();
-                if (Abs(av) > EPSILON) {
-                    float angImp = -av * ANGULAR_DAMPING_COEFF * body->GetInertia() * dt;
-                    body->ApplyAngularImpulse(angImp, true);
+                float av = wheel->GetAngularVelocity();
+                if (Abs(av) > epsilon) {
+                    wheel->ApplyAngularImpulse(0.1f * wheel->GetInertia() * -av, true);
                 }
 
-                // 3) rolling drag force
-                if (Abs(vF) > EPSILON) {
-                    float dragForce = -drag * vF * dt;
-                    body->ApplyForce(body->GetPosition(), forward * dragForce, true);
+                if (Abs(vf) > epsilon) {
+                    float dragForceMagnitude = -drag * vf;
+                    wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
                 }
             }
         };
 
         class Vehicle {
           public:
-            Vehicle(std::shared_ptr<muli::World> w, const concord::Pose &pose) : world(w) {
-                // chassis
+            Vehicle(std::shared_ptr<muli::World> world, const concord::Pose &pose) : world(world) {
                 CollisionFilter filter;
                 filter.bit = 1 << 1;
                 filter.mask = ~(1 << 1);
 
-                chassis = world->CreateBox(0.8f, 1.4f);
-                chassis->SetCollisionFilter(filter);
-                chassis->SetLinearDamping(LINEAR_DAMPING);
-                chassis->SetAngularDamping(ANGULAR_DAMPING_COEFF);
+                float w = 0.8f;
+                float h = 1.4f;
 
-                Vec2 chassis_pose;
-                chassis_pose.x = pose.point.enu.x;
-                chassis_pose.y = pose.point.enu.y;
-                chassis->SetPosition(chassis_pose);
+                body = world->CreateBox(w, h);
+                body->SetCollisionFilter(filter);
 
-                // wheel positions relative to chassis
-                float scale = 0.2f;
-                Transform pos[4] = {Transform(Vec2(0.4f, 0.7f)), Transform(Vec2(-0.4f, 0.7f)),
-                                    Transform(Vec2(0.4f, -0.7f)), Transform(Vec2(-0.4f, -0.7f))};
+                body->SetLinearDamping(linearDamping);
+                body->SetAngularDamping(angularDamping);
+                // chassis
+                float s = 0.2f;
 
-                for (int i = 0; i < 4; ++i)
-                    wheels[i].init(world, scale, pos[i], filter);
+                // Front wheels
+                wheels[0].init(world.get(), s, Transform(Vec2(w / 2, h / 2)), filter, linearDamping, angularDamping,
+                               force, friction, maxImpulse, brake, drag);
+                wheels[1].init(world.get(), s, Transform(Vec2(-w / 2, h / 2)), filter, linearDamping, angularDamping,
+                               force, friction, maxImpulse, brake, drag);
 
-                // steering/drive joints
-                float m = chassis->GetMass();
-                for (int i = 0; i < 4; ++i) {
-                    joints[i] = world->CreateMotorJoint(chassis, wheels[i].body, wheels[i].body->GetPosition(), -1.0f,
-                                                        STEERING_TORQUE, -1.0f, 0.1f, m);
+                // Rear wheels
+                wheels[2].init(world.get(), s, Transform(Vec2(w / 2, -h / 2)), filter, linearDamping, angularDamping,
+                               force, friction, maxImpulse, brake, drag);
+                wheels[3].init(world.get(), s, Transform(Vec2(-w / 2, -h / 2)), filter, linearDamping, angularDamping,
+                               force, friction, maxImpulse, brake, drag);
+
+                float mf = -1;
+                float fr = -1;
+                float dr = 0.1f;
+                float jm = body->GetMass();
+
+                for (int32 i = 0; i < 4; ++i) {
+                    joints[i] = world->CreateMotorJoint(body, wheels[i].wheel, wheels[i].wheel->GetPosition(), mf,
+                                                        torque, fr, dr, jm);
                 }
             }
 
             void tick(float dt) {
-                for (int i = 0; i < 4; ++i)
+                for (int i = 0; i < 4; ++i) {
                     wheels[i].step(dt);
-            }
-
-            void update(float steering, float throttle) {
-                float angle = steering * MAX_STEER_ANGLE;
-                // front wheels steer
-                joints[0]->SetAngularOffset(angle);
-                joints[1]->SetAngularOffset(angle);
-                // rear fixed
-                joints[2]->SetAngularOffset(0.0f);
-                joints[3]->SetAngularOffset(0.0f);
-
-                // drive on rear wheels
-                for (int i = 2; i < 4; ++i) {
-                    Vec2 f = wheels[i].forward * (throttle * DRIVE_FORCE);
-                    wheels[i].body->ApplyForce(wheels[i].body->GetPosition(), f, true);
                 }
             }
 
+            // void update(float steering, float throttle) {
+            //     float angle = steering * MAX_STEER_ANGLE;
+            //     // front wheels steer
+            //     joints[0]->SetAngularOffset(angle);
+            //     joints[1]->SetAngularOffset(angle);
+            //     // rear fixed
+            //     joints[2]->SetAngularOffset(0.0f);
+            //     joints[3]->SetAngularOffset(0.0f);
+            //
+            //     // drive on rear wheels
+            //     for (int i = 2; i < 4; ++i) {
+            //         Vec2 f = wheels[i].forward * (throttle * DRIVE_FORCE);
+            //         // wheels[i].body->ApplyForce(wheels[i].body->GetPosition(), f, true);
+            //     }
+            // }
+
           private:
             std::shared_ptr<muli::World> world;
-            RigidBody *chassis;
+            RigidBody *body;
             Wheel wheels[4];
             MotorJoint *joints[4];
         };
