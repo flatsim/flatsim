@@ -19,7 +19,7 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
-        std::unique_ptr<VehicleController> chassis;
+        std::unique_ptr<vehicle::Vehicle> chassis;
 
         concord::Pose position;
 
