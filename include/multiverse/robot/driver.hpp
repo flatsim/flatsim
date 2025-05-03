@@ -1,6 +1,8 @@
 #pragma once
 #include "concord/types_basic.hpp"
 #include "muli/world.h"
+#include "pigment/types_basic.hpp"
+#include "pigment/types_hsv.hpp"
 
 #include <cmath> // for M_PI
 #include <memory>
@@ -32,11 +34,12 @@ namespace mvs {
         float brake, drag;
         float friction, maxImpulse;
         std::string name;
+        pigment::RGB color;
         std::shared_ptr<rerun::RecordingStream> rec;
 
-        void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, std::string name, float scale,
-                  Transform tf, CollisionFilter filter, float linearDamping, float angularDamping, float _force,
-                  float _friction, float _maxImpulse, float _brake, float _drag);
+        void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
+                  std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
+                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
 
         void step(float dt);
         void visualize();
@@ -45,13 +48,14 @@ namespace mvs {
     class Vehicle {
       public:
         std::string name;
+        pigment::RGB color;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::vector<float> size;
         Wheel wheels[4];
         RigidBody *body;
 
         Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                const concord::Size &size, std::string name);
+                const concord::Size &size, const pigment::RGB &color, std::string name);
         void tick(float dt);
         void update(float steering, float throttle);
         std::vector<float> get_position() const;

@@ -13,6 +13,7 @@
 int main() {
     auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
     auto rec_running = rec->connect_grpc("rerun+http://172.30.0.1:9876/proxy");
+    // auto rec_running = rec->connect_grpc();
     if (rec_running.is_err()) {
         std::cout << "Failed to connect to rerun" << std::endl;
         return 1;

@@ -3,6 +3,8 @@
 #include "multiverse/robot.hpp"
 #include "multiverse/world.hpp"
 
+#include "pigment/types_basic.hpp"
+
 #include "muli/world.h"
 #include <rerun.hpp>
 
@@ -38,8 +40,9 @@ namespace mvs {
                 robot_pose.point.enu.y = i * 3;
                 robot_pose.point.enu.toWGS(world->get_settings().get_datum());
                 robots.emplace_back([&] {
+                    pigment::RGB color = pigment::RGB::random();
                     auto r = std::make_unique<Robot>(rec, world);
-                    r->init(robot_pose, "robot" + std::to_string(i));
+                    r->init(robot_pose, color, "robot" + std::to_string(i));
                     return r;
                 }());
             }

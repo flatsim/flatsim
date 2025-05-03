@@ -14,9 +14,11 @@ namespace mvs {
         return quat;
     }
 
-    void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, std::string name, float scale,
-                     Transform tf, CollisionFilter filter, float linearDamping, float angularDamping, float _force,
-                     float _friction, float _maxImpulse, float _brake, float _drag) {
+    void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
+                     std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
+                     float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
+                     float _drag) {
+        this->color = color;
         this->name = name;
         this->rec = rec;
         wheel = world->CreateCapsule(scale, scale, false, tf);
@@ -75,16 +77,26 @@ namespace mvs {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
         auto t = quaterion_from_angle(wheel->GetRotation().GetAngle());
+
+        pigment::HSV h = pigment::HSV::fromRGB(color);
+        h.adjustBrightness(0.7f);
+        auto c = h.toRGB();
+
+        std::vector<rerun::Color> colors;
+        colors.push_back(rerun::Color(c.r, c.g, c.b));
+
         rec->log_static(
             this->name + "/wheel",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
                 .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.02f}}));
+                .with_radii({{0.02f}})
+                .with_fill_mode(rerun::FillMode::Solid)
+                .with_colors(colors));
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                     const concord::Size &size, std::string name)
-        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}) {
+                     const concord::Size &size, const pigment::RGB &color, std::string name)
+        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}), color(color) {
         CollisionFilter filter;
         filter.bit = 1 << 1;
         filter.mask = ~(1 << 1);
@@ -106,15 +118,15 @@ namespace mvs {
         float s = 0.2f;
 
         // Front wheels
-        wheels[0].init(world, rec, name + "fr", s, Transform(Vec2(p.x + w / 2, p.y + h / 2)), filter, linearDamping,
-                       angularDamping, force, friction, maxImpulse, brake, drag);
-        wheels[1].init(world, rec, name + "fl", s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter, linearDamping,
-                       angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[0].init(world, rec, color, name + "fr", s, Transform(Vec2(p.x + w / 2, p.y + h / 2)), filter,
+                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[1].init(world, rec, color, name + "fl", s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter,
+                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
         // Rear wheels
-        wheels[2].init(world, rec, name + "rr", s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter, linearDamping,
-                       angularDamping, force, friction, maxImpulse, brake, drag);
-        wheels[3].init(world, rec, name + "rl", s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter, linearDamping,
-                       angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[2].init(world, rec, color, name + "rr", s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter,
+                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[3].init(world, rec, color, name + "rl", s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter,
+                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
 
         float mf = -1;
         float fr = -1;
@@ -139,11 +151,17 @@ namespace mvs {
         auto x = get_position()[0];
         auto y = get_position()[1];
         auto t = quaterion_from_angle(body->GetRotation().GetAngle());
+
+        std::vector<rerun::Color> colors;
+        colors.push_back(rerun::Color(color.r, color.g, color.b));
+
         rec->log_static(
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
                 .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.02f}}));
+                .with_radii({{0.02f}})
+                .with_labels({this->name})
+                .with_colors(colors));
     }
 
     void Vehicle::update(float steering, float throttle) {

@@ -59,6 +59,7 @@ target_include_directories(multiverse INTERFACE
 
 target_link_libraries(multiverse INTERFACE muli)
 target_link_libraries(multiverse INTERFACE concord::concord)
+target_link_libraries(multiverse INTERFACE pigment::pigment)
 
 
 install(
@@ -82,6 +83,7 @@ set(lib
 set(dependencies
   muli
   concord::concord
+  pigment::pigment
   rerun_sdk
 )
 
