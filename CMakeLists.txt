@@ -31,10 +31,17 @@ include_directories(${muli_SOURCE_DIR}/include)
 
 FetchContent_Declare(
   concord
-  GIT_REPOSITORY https://github.com/bresilla/concord.git
+  GIT_REPOSITORY https://github.com/smolfetch/concord.git
   GIT_TAG        main
 )
 FetchContent_MakeAvailable(concord)
+
+FetchContent_Declare(
+  pigment
+  GIT_REPOSITORY https://github.com/smolfetch/pigment.git
+  GIT_TAG        main
+)
+FetchContent_MakeAvailable(pigment)
 
 FetchContent_Declare(
     rerun_sdk 
