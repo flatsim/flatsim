@@ -42,10 +42,6 @@ namespace mvs {
                 auto enu = concord::ENU(x, y, 0.0f);
                 auto wgs = enu.toWGS(settings.get_datum());
                 row.push_back({{enu, wgs}, settings.get_grid_size().x});
-                //--------------------------------------------------------------------------------
-                // muli::RigidBody *body = world->CreateBox(grid_size / 2.0f);
-                // body->Translate({x, y});
-                // row.push_back(body);
             }
             grid.push_back(row);
         }

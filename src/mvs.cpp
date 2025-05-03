@@ -29,9 +29,9 @@ int main() {
     world_size.z = 100.0f;
 
     mvs::Size grid_size;
-    grid_size.x = 1.0f;
-    grid_size.y = 1.0f;
-    grid_size.z = 1.0f;
+    grid_size.x = 3.0f;
+    grid_size.y = 3.0f;
+    grid_size.z = 3.0f;
 
     // auto sim = std::make_shared<mvs::World>(rec);
     auto sim = std::make_shared<mvs::Simulator>(rec);

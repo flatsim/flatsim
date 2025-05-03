@@ -1,6 +1,7 @@
 // vehicle.cpp
 #include "multiverse/robot/driver.hpp"
-#include <iostream> // for debug output
+#include <algorithm>
+#include <iostream>
 
 namespace mvs {
 
@@ -78,7 +79,7 @@ namespace mvs {
             this->name + "/wheel",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
                 .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.05f}}));
+                .with_radii({{0.02f}}));
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
@@ -142,20 +143,20 @@ namespace mvs {
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
                 .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.05f}}));
+                .with_radii({{0.02f}}));
     }
 
     void Vehicle::update(float steering, float throttle) {
+        constexpr float MAX_STEER_DEG = 45.0f;
+        steering = std::clamp(steering, -MAX_STEER_DEG, MAX_STEER_DEG);
         float angle = DegToRad(steering);
         joints[0]->SetAngularOffset(angle);
         joints[1]->SetAngularOffset(angle);
         joints[2]->SetAngularOffset(0.0f);
         joints[3]->SetAngularOffset(0.0f);
-
-        // rear-wheel torque (if you re-enable it)
-        // for (int i = 2; i < 4; ++i) {
-        //     Vec2 f = wheels[i].forward * (throttle * 0.1f);
-        //     wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f, true);
-        // }
+        for (int i = 2; i < 4; ++i) {
+            Vec2 f = wheels[i].forward * (throttle * wheels[i].force);
+            wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f, true);
+        }
     }
 } // namespace mvs
