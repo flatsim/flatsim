@@ -3,6 +3,16 @@
 #include <iostream> // for debug output
 
 namespace mvs {
+
+    std::vector<float> quaterion_from_angle(float angle) {
+        std::vector<float> quat;
+        quat.push_back(cos(angle / 2));
+        quat.push_back(0);
+        quat.push_back(0);
+        quat.push_back(sin(angle / 2));
+        return quat;
+    }
+
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, std::string name, float scale,
                      Transform tf, CollisionFilter filter, float linearDamping, float angularDamping, float _force,
                      float _friction, float _maxImpulse, float _brake, float _drag) {
@@ -63,8 +73,12 @@ namespace mvs {
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
-        rec->log_static(this->name + "/wheel",
-                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.1f, 0.0f}}));
+        auto t = quaterion_from_angle(wheel->GetRotation().GetAngle());
+        rec->log_static(
+            this->name + "/wheel",
+            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
+                .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
+                .with_radii({{0.05f}}));
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
@@ -123,8 +137,12 @@ namespace mvs {
     void Vehicle::visualize() {
         auto x = get_position()[0];
         auto y = get_position()[1];
-        rec->log_static(this->name + "/chassis",
-                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}}));
+        auto t = quaterion_from_angle(body->GetRotation().GetAngle());
+        rec->log_static(
+            this->name + "/chassis",
+            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
+                .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
+                .with_radii({{0.05f}}));
     }
 
     void Vehicle::update(float steering, float throttle) {
