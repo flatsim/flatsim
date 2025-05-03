@@ -33,6 +33,7 @@ namespace mvs {
 
         void tick(float dt);
         void init(concord::Pose, pigment::RGB color, std::string name);
+        std::string id() const { return name; }
 
         void teleport(float x, float y);
         const concord::Pose &get_position() const { return position; }

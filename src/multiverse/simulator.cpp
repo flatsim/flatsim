@@ -28,14 +28,26 @@ namespace mvs {
         }
     }
     void Simulator::on_key(char key) {
-        if (key == 'w') {
-            std::cout << "Pressed W\n" << std::endl;
-        } else if (key == 's') {
-            std::cout << "Pressed S\n" << std::endl;
-        } else if (key == 'a') {
-            std::cout << "Pressed A\n" << std::endl;
-        } else if (key == 'd') {
-            std::cout << "Pressed D\n" << std::endl;
+        if (key >= '0' && key <= '9') {
+            size_t idx = key - '0';
+            if (idx < robots.size()) {
+                selected_robot = robots[idx]; // just copy the shared_ptr
+                std::cout << "Selected robot #" << idx << " (use count=" << selected_robot.use_count() << ")\n";
+            } else {
+                selected_robot.reset();
+                std::cout << "No robot at index " << idx << "\n";
+            }
+        }
+        if (selected_robot) {
+            if (key == 'w') {
+                std::cout << "Pressed W\n" << std::endl;
+            } else if (key == 's') {
+                std::cout << "Pressed S\n" << std::endl;
+            } else if (key == 'a') {
+                std::cout << "Pressed A\n" << std::endl;
+            } else if (key == 'd') {
+                std::cout << "Pressed D\n" << std::endl;
+            }
         }
     }
 } // namespace mvs

@@ -13,12 +13,13 @@ namespace mvs {
       public:
         std::shared_ptr<World> world;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::vector<std::unique_ptr<Robot>> robots;
+        std::vector<std::shared_ptr<Robot>> robots;
         std::unique_ptr<Robot> robot;
 
       private:
         void doit() {}
         std::shared_ptr<muli::World> physics_world;
+        std::shared_ptr<mvs::Robot> selected_robot;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
