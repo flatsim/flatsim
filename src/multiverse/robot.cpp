@@ -23,23 +23,21 @@ namespace mvs {
         this->size.x = 0.8f;
         this->size.y = 1.4f;
 
-        chassis = std::make_unique<Vehicle>(world->get_world().get(), pose, size);
+        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size);
     }
 
     void Robot::visualize() {
-        std::vector<rerun::Position3D> points;
         auto x = this->position.point.enu.x;
         auto y = this->position.point.enu.y;
-        points.push_back(rerun::Position3D(x, y, 0));
 
-        rec->log_static(this->name, rerun::Points3D(points));
+        rec->log_static(this->name + "/pose", rerun::Points3D({{float(x), float(y), 0}}));
 
         auto lat = float(this->position.point.wgs.lat);
         auto lon = float(this->position.point.wgs.lon);
-
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
-        rec->log_static(this->name, rerun::GeoPoints(locators));
+        rec->log_static(this->name + "/pose", rerun::GeoPoints(locators));
+        chassis->visualize();
     }
 
     // void Robot::teleport(float x, float y) { chassis->teleport({x, y}); }

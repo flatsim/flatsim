@@ -16,36 +16,50 @@ namespace mvs {
         brake = _brake;
         drag = _drag;
     }
-
     void Wheel::step(float dt) {
         const Vec2 up(0, 1), right(1, 0);
         forward = Mul(wheel->GetRotation(), up);
         normal = Mul(wheel->GetRotation(), right);
 
+        // current velocity in wheel-space
         Vec2 v = wheel->GetLinearVelocity();
         float vf = Dot(v, forward);
         float vn = Dot(v, normal);
 
+        // --- lateral (sideways) friction impulse ---
         if (Abs(vn) > epsilon) {
-            Vec2 j = -wheel->GetMass() * friction * vn * normal;
-            if (Length(j) > maxImpulse) {
-                j = Normalize(j) * maxImpulse;
+            // Compute frictional *force*  F = µ * m * vn
+            Vec2 Ff = -friction * wheel->GetMass() * vn * normal;
+            // Convert to impulse over this timestep: J = F * dt
+            Vec2 J = Ff * dt;
+
+            // clamp to maxImpulse
+            if (Length(J) > maxImpulse) {
+                J = Normalize(J) * maxImpulse;
             }
-            wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
+            wheel->ApplyLinearImpulse(wheel->GetPosition(), J, true);
         }
 
+        // --- angular damping impulse ---
         float av = wheel->GetAngularVelocity();
         if (Abs(av) > epsilon) {
-            wheel->ApplyAngularImpulse(0.1f * wheel->GetInertia() * -av, true);
+            // torque to oppose spin: τ = -c * I * av
+            float Tau = -0.1f * wheel->GetInertia() * av;
+            float Jrot = Tau * dt; // angular impulse = torque * dt
+            wheel->ApplyAngularImpulse(Jrot, true);
         }
 
+        // --- longitudinal drag force (continual) ---
         if (Abs(vf) > epsilon) {
-            float dragForceMagnitude = -drag * vf;
-            wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
+            // drag force along forward vector
+            float Fd = -drag * vf;
+            wheel->ApplyForce(wheel->GetPosition(), Fd * forward, true);
         }
     }
 
-    Vehicle::Vehicle(World *world, const concord::Pose &pose, const concord::Size &size) : world(world) {
+    Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
+                     const concord::Size &size)
+        : world(world), rec(rec) {
         CollisionFilter filter;
         filter.bit = 1 << 1;
         filter.mask = ~(1 << 1);
@@ -71,7 +85,6 @@ namespace mvs {
                        force, friction, maxImpulse, brake, drag);
         wheels[1].init(world, s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter, linearDamping, angularDamping,
                        force, friction, maxImpulse, brake, drag);
-
         // Rear wheels
         wheels[2].init(world, s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter, linearDamping, angularDamping,
                        force, friction, maxImpulse, brake, drag);
@@ -93,6 +106,12 @@ namespace mvs {
         for (int i = 0; i < 4; ++i) {
             wheels[i].step(dt);
         }
+    }
+
+    void Vehicle::visualize() {
+        // rec->log_static(this->name + "/chassis",
+        // rerun::Boxes3D::from_centers_and_half_sizes({{float(x), float(y), 0}},
+        // {{float(size.x), float(size.y), 0.0f}}));
     }
 
     void Vehicle::update(float steering, float throttle) {

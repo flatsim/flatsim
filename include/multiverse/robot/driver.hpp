@@ -4,6 +4,7 @@
 
 #include <cmath> // for M_PI
 #include <memory>
+#include <rerun.hpp>
 
 namespace mvs {
     using namespace muli;
@@ -39,11 +40,16 @@ namespace mvs {
 
     class Vehicle {
       public:
-        Vehicle(World *world, const concord::Pose &pose, const concord::Size &size);
-        void tick(float dt);
-        void update(float steering, float throttle);
+        std::shared_ptr<rerun::RecordingStream> rec;
         Wheel wheels[4];
         RigidBody *body;
+
+        Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
+                const concord::Size &size);
+        void tick(float dt);
+        void update(float steering, float throttle);
+
+        void visualize();
 
       private:
         World *world;
