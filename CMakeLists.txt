@@ -17,6 +17,7 @@ set(params
     -Wno-unused-variable
     -Wno-reorder
     -Wno-strict-aliasing
+    -Wno-unused-but-set-variable
 )
 
 set(MULI_BUILD_DEMO OFF)
