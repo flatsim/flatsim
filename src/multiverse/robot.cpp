@@ -23,7 +23,7 @@ namespace mvs {
         this->size.x = 0.8f;
         this->size.y = 1.4f;
 
-        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size);
+        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, name);
     }
 
     void Robot::visualize() {

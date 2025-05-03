@@ -3,9 +3,11 @@
 #include <iostream> // for debug output
 
 namespace mvs {
-    void Wheel::init(World *world, float scale, Transform tf, CollisionFilter filter, float linearDamping,
-                     float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
-                     float _drag) {
+    void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, std::string name, float scale,
+                     Transform tf, CollisionFilter filter, float linearDamping, float angularDamping, float _force,
+                     float _friction, float _maxImpulse, float _brake, float _drag) {
+        this->name = name;
+        this->rec = rec;
         wheel = world->CreateCapsule(scale, scale, false, tf);
         wheel->SetCollisionFilter(filter);
         wheel->SetLinearDamping(linearDamping);
@@ -55,11 +57,19 @@ namespace mvs {
             float Fd = -drag * vf;
             wheel->ApplyForce(wheel->GetPosition(), Fd * forward, true);
         }
+        visualize();
+    }
+
+    void Wheel::visualize() {
+        auto x = wheel->GetPosition().x;
+        auto y = wheel->GetPosition().y;
+        rec->log_static(this->name + "/wheel",
+                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.1f, 0.0f}}));
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                     const concord::Size &size)
-        : world(world), rec(rec) {
+                     const concord::Size &size, std::string name)
+        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}) {
         CollisionFilter filter;
         filter.bit = 1 << 1;
         filter.mask = ~(1 << 1);
@@ -81,15 +91,15 @@ namespace mvs {
         float s = 0.2f;
 
         // Front wheels
-        wheels[0].init(world, s, Transform(Vec2(p.x + w / 2, p.y + h / 2)), filter, linearDamping, angularDamping,
-                       force, friction, maxImpulse, brake, drag);
-        wheels[1].init(world, s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter, linearDamping, angularDamping,
-                       force, friction, maxImpulse, brake, drag);
+        wheels[0].init(world, rec, name + "fr", s, Transform(Vec2(p.x + w / 2, p.y + h / 2)), filter, linearDamping,
+                       angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[1].init(world, rec, name + "fl", s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter, linearDamping,
+                       angularDamping, force, friction, maxImpulse, brake, drag);
         // Rear wheels
-        wheels[2].init(world, s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter, linearDamping, angularDamping,
-                       force, friction, maxImpulse, brake, drag);
-        wheels[3].init(world, s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter, linearDamping, angularDamping,
-                       force, friction, maxImpulse, brake, drag);
+        wheels[2].init(world, rec, name + "rr", s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter, linearDamping,
+                       angularDamping, force, friction, maxImpulse, brake, drag);
+        wheels[3].init(world, rec, name + "rl", s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter, linearDamping,
+                       angularDamping, force, friction, maxImpulse, brake, drag);
 
         float mf = -1;
         float fr = -1;
@@ -108,10 +118,13 @@ namespace mvs {
         }
     }
 
+    std::vector<float> Vehicle::get_position() const { return {body->GetPosition().x, body->GetPosition().y}; }
+
     void Vehicle::visualize() {
-        // rec->log_static(this->name + "/chassis",
-        // rerun::Boxes3D::from_centers_and_half_sizes({{float(x), float(y), 0}},
-        // {{float(size.x), float(size.y), 0.0f}}));
+        auto x = get_position()[0];
+        auto y = get_position()[1];
+        rec->log_static(this->name + "/chassis",
+                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}}));
     }
 
     void Vehicle::update(float steering, float throttle) {
