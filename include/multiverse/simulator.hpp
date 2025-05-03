@@ -23,29 +23,8 @@ namespace mvs {
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
-        void tick(float dt) {
-            world->tick(dt);
-            for (auto &robott : robots) {
-                robott->tick(dt);
-            }
-        }
-        void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
-            world = std::make_shared<mvs::World>(rec);
-            world->init(datum, world_size, grid_size);
-
-            for (int i = 0; i < 4; ++i) {
-                std::cout << "creating robot " << i << std::endl;
-                concord::Pose robot_pose;
-                robot_pose.point.enu.x = i * 3;
-                robot_pose.point.enu.y = i * 3;
-                robot_pose.point.enu.toWGS(world->get_settings().get_datum());
-                robots.emplace_back([&] {
-                    pigment::RGB color = pigment::RGB::random();
-                    auto r = std::make_unique<Robot>(rec, world);
-                    r->init(robot_pose, color, "robot" + std::to_string(i));
-                    return r;
-                }());
-            }
-        }
+        void tick(float dt);
+        void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size);
+        void on_key(char key);
     };
 } // namespace mvs

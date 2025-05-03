@@ -58,16 +58,16 @@ namespace mvs {
 
     void World::visualize_once() {
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
-        rec->log("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+        rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
-        rec->log("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+        rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
         auto gsx = float(settings.get_grid_size().x / 2);
         auto gsy = float(settings.get_grid_size().z / 2);
-        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
-                             .with_colors({{200, 55, 155}})
-                             .with_radii({{0.005f}}));
+        rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
+                                    .with_colors({{200, 55, 155}})
+                                    .with_radii({{0.005f}}));
     }
 
 } // namespace mvs
