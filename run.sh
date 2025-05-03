@@ -14,9 +14,9 @@ buildit() {
     fi
     cd "$TOP_HEAD/build"
     if ! [ -z "$argc_arrow" ]; then
-        cmake -Wno-dev ..
+        cmake -Wno-dev -Wno-unused-variable .. 
     else
-        cmake -Wno-dev -DRERUN_DOWNLOAD_AND_BUILD_ARROW=OFF ..
+        cmake -Wno-dev -Wno-unused-variable -DRERUN_DOWNLOAD_AND_BUILD_ARROW=OFF ..
     fi
     cd "$CURR_DIR"
 }

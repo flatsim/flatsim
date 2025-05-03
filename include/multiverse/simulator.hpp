@@ -32,10 +32,10 @@ namespace mvs {
             world->init(datum, world_size, grid_size);
 
             for (int i = 0; i < 4; ++i) {
+                std::cout << "creating robot " << i << std::endl;
                 concord::Pose robot_pose;
-                robot_pose.point.enu.x = 0;
-                robot_pose.point.enu.y = 0;
-                robot_pose.point.enu.z = 0;
+                robot_pose.point.enu.x = i * 3;
+                robot_pose.point.enu.y = i * 3;
                 robot_pose.point.enu.toWGS(world->get_settings().get_datum());
                 robots.emplace_back([&] {
                     auto r = std::make_unique<Robot>(rec, world->get_world());
