@@ -69,9 +69,9 @@ namespace mvs {
 
         auto gsx = float(settings.get_grid_size().x / 2);
         auto gsy = float(settings.get_grid_size().z / 2);
-        rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
-                             .with_colors({{200, 55, 155}})
-                             .with_radii({{0.01f}}));
+        // rec->log("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
+        //                      .with_colors({{200, 55, 155}})
+        //                      .with_radii({{0.01f}}));
     }
 
 } // namespace mvs

@@ -17,7 +17,7 @@ namespace mvs {
         drag = _drag;
     }
 
-    void Wheel::step(float dt, std::shared_ptr<rerun::RecordingStream> rec) {
+    void Wheel::step(float dt) {
         const Vec2 up(0, 1), right(1, 0);
         forward = Mul(wheel->GetRotation(), up);
         normal = Mul(wheel->GetRotation(), right);
@@ -45,14 +45,13 @@ namespace mvs {
         }
     }
 
-    Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose)
-        : world(world), rec(rec) {
+    Vehicle::Vehicle(World *world, const concord::Pose &pose, const concord::Size &size) : world(world) {
         CollisionFilter filter;
         filter.bit = 1 << 1;
         filter.mask = ~(1 << 1);
 
-        float w = 0.8f;
-        float h = 1.4f;
+        float w = size.x;
+        float h = size.y;
 
         body = world->CreateBox(w, h);
         body->SetCollisionFilter(filter);
@@ -79,10 +78,6 @@ namespace mvs {
         wheels[3].init(world, s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter, linearDamping, angularDamping,
                        force, friction, maxImpulse, brake, drag);
 
-        for (int i = 0; i < 4; ++i) {
-            std::cout << "wheel raw pointer: " << wheels[i].wheel << std::endl;
-        }
-
         float mf = -1;
         float fr = -1;
         float dr = 0.1f;
@@ -96,7 +91,7 @@ namespace mvs {
 
     void Vehicle::tick(float dt) {
         for (int i = 0; i < 4; ++i) {
-            wheels[i].step(dt, rec);
+            wheels[i].step(dt);
         }
     }
 
@@ -113,8 +108,4 @@ namespace mvs {
         //     wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f, true);
         // }
     }
-
-    void Vehicle::visualize_once() {}
-
-    void Vehicle::visualize() {}
 } // namespace mvs

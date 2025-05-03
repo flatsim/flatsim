@@ -38,8 +38,8 @@ namespace mvs {
                 robot_pose.point.enu.y = i * 3;
                 robot_pose.point.enu.toWGS(world->get_settings().get_datum());
                 robots.emplace_back([&] {
-                    auto r = std::make_unique<Robot>(rec, world->get_world());
-                    r->init(robot_pose, "robot");
+                    auto r = std::make_unique<Robot>(rec, world);
+                    r->init(robot_pose, "robot" + std::to_string(i));
                     return r;
                 }());
             }

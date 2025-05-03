@@ -9,6 +9,7 @@
 #include "concord/types_basic.hpp"
 #include "multiverse/robot/driver.hpp"
 #include "multiverse/robot/sensor.hpp"
+#include "multiverse/world.hpp"
 
 #include <rerun.hpp>
 
@@ -17,14 +18,15 @@ namespace mvs {
       private:
         std::string name;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::shared_ptr<muli::World> world;
+        std::shared_ptr<mvs::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Vehicle> chassis;
 
         concord::Pose position;
+        concord::Size size;
 
       public:
-        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world);
         ~Robot();
 
         void tick(float dt);
