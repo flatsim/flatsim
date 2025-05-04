@@ -19,7 +19,7 @@ namespace mvs {
       private:
         void doit() {}
         std::shared_ptr<muli::World> physics_world;
-        std::shared_ptr<mvs::Robot> selected_robot;
+        int selected_robot_idx = -1;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);

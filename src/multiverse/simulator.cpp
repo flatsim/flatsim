@@ -19,7 +19,7 @@ namespace mvs {
             robot_pose.point.enu.x = i * 3;
             robot_pose.point.enu.y = i * 3;
             robot_pose.point.enu.toWGS(world->get_settings().get_datum());
-            robot_pose.angle.yaw = 3.14f / 4.0f;
+            robot_pose.angle.yaw = 0.0f;
             robots.emplace_back([&] {
                 pigment::RGB color = pigment::RGB::random();
                 auto r = std::make_unique<Robot>(rec, world);
@@ -32,22 +32,25 @@ namespace mvs {
         if (key >= '0' && key <= '9') {
             size_t idx = key - '0';
             if (idx < robots.size()) {
-                selected_robot = robots[idx]; // just copy the shared_ptr
-                std::cout << "Selected robot #" << idx << " (use count=" << selected_robot.use_count() << ")\n";
+                std::cout << "Selected robot #" << robots[idx]->id() << std::endl;
+                selected_robot_idx = idx;
             } else {
-                selected_robot.reset();
                 std::cout << "No robot at index " << idx << "\n";
             }
         }
-        if (selected_robot) {
+        if (selected_robot_idx >= 0) {
             if (key == 'w') {
-                robot->update(0, 1);
+                std::cout << "Pressed w" << std::endl;
+                robots[selected_robot_idx]->update(0, 1);
             } else if (key == 's') {
-                robot->update(0, -1);
+                std::cout << "Pressed s" << std::endl;
+                robots[selected_robot_idx]->update(0, -1);
             } else if (key == 'a') {
-                robot->update(25, 0);
+                std::cout << "Pressed a" << std::endl;
+                robots[selected_robot_idx]->update(-25, 0);
             } else if (key == 'd') {
-                robot->update(-25, 0);
+                std::cout << "Pressed d" << std::endl;
+                robots[selected_robot_idx]->update(25, 0);
             }
         }
     }

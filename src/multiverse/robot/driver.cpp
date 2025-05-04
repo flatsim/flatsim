@@ -5,23 +5,6 @@
 #include <iostream>
 
 namespace mvs {
-    Vec2 rotateVec2(const Vec2 &p, const Vec2 &center, float angle_rad) {
-        // Convert degrees to radians
-        float cosA = std::cos(angle_rad);
-        float sinA = std::sin(angle_rad);
-
-        // Translate point to origin
-        float dx = p.x - center.x;
-        float dy = p.y - center.y;
-
-        // Apply rotation matrix
-        float rx = dx * cosA - dy * sinA;
-        float ry = dx * sinA + dy * cosA;
-
-        // Translate back
-        return Vec2{rx + center.x, ry + center.y};
-    }
-
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                      std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
                      float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
@@ -85,7 +68,7 @@ namespace mvs {
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
-        auto t = wheel->GetRotation().GetAngle();
+        auto th = wheel->GetRotation().GetAngle();
 
         pigment::HSV h = pigment::HSV::fromRGB(color);
         h.adjustBrightness(0.7f);
@@ -99,7 +82,7 @@ namespace mvs {
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
-                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(t))})
+                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
     }
 
@@ -139,15 +122,12 @@ namespace mvs {
             Vec2 rotatedOffset;
             rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
             rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
-
             // Add the rotated offset to the car's position
             Vec2 wheelPosition;
             wheelPosition.x = t.position.x + rotatedOffset.x;
             wheelPosition.y = t.position.y + rotatedOffset.y;
-
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-
             wheels[i].init(world, rec, color, name + wheelOffsets[i].second, s, wheelTf, filter, linearDamping,
                            angularDamping, force, friction, maxImpulse, brake, drag);
         }
@@ -174,10 +154,7 @@ namespace mvs {
     void Vehicle::visualize() {
         auto x = get_position()[0];
         auto y = get_position()[1];
-        auto t = body->GetRotation().GetAngle();
-        std::cout << "yaw of robot: " << name << " is " << body->GetRotation().GetAngle() << "\n";
-        // exit(0);
-
+        auto th = body->GetRotation().GetAngle();
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
 
@@ -187,8 +164,47 @@ namespace mvs {
                 .with_radii({{0.02f}})
                 .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
-                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(t))})
+                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
+
+        Vec2 size = {this->size[0], this->size[1]};
+        Transform t = body->GetTransform();
+        const float arrowHeight = size.y * -0.2f; // How far the tip extends beyond the chassis
+        const float arrowWidth = size.x * 0.5f;   // Width of arrow base
+
+        std::array<Vec2, 3> arrow_head_offsets = {{
+            {Vec2(0, size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
+            {Vec2(-arrowWidth / 2, -size.y / 16)}, // left corner of arrow
+            {Vec2(arrowWidth / 2, -size.y / 16)}   // right corner of arrow
+        }};
+
+        std::array<Vec2, 3> arrow_world_points;
+        for (int i = 0; i < 3; ++i) {
+            // Get local offset
+            Vec2 localOffset = arrow_head_offsets[i];
+
+            // Rotate the offset according to car's rotation
+            Vec2 rotatedOffset;
+            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
+            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
+
+            // Add the rotated offset to the car's position
+            arrow_world_points[i].x = t.position.x + rotatedOffset.x;
+            arrow_world_points[i].y = t.position.y + rotatedOffset.y;
+        }
+
+        const rerun::Position3D vertex_positions[3] = {{arrow_world_points[0].x, arrow_world_points[0].y, 0.0f},
+                                                       {arrow_world_points[1].x, arrow_world_points[1].y, 0.0f},
+                                                       {arrow_world_points[2].x, arrow_world_points[2].y, 0.0f}};
+        const rerun::Color vertex_colors[3] = {
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+        };
+        rec->log_static(this->name + "/heading", rerun::Mesh3D(vertex_positions)
+                                                     .with_vertex_normals({{0.0, 0.0, 1.0}})
+                                                     .with_vertex_colors(vertex_colors)
+                                                     .with_triangle_indices({{2, 1, 0}}));
     }
 
     void Vehicle::update(float steering, float throttle) {
@@ -197,6 +213,9 @@ namespace mvs {
         float angle = DegToRad(steering);
         joints[0]->SetAngularOffset(angle);
         joints[1]->SetAngularOffset(angle);
+
+        std::cout << "steering: " << steering << std::endl;
+
         joints[2]->SetAngularOffset(0.0f);
         joints[3]->SetAngularOffset(0.0f);
         for (int i = 2; i < 4; ++i) {

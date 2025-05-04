@@ -64,6 +64,10 @@ namespace mvs {
 
         void visualize();
 
+        void teleport(concord::Pose);
+        void teleport(concord::Point);
+        void teleport(concord::Euler);
+
       private:
         World *world;
         MotorJoint *joints[4];
