@@ -24,43 +24,32 @@ namespace mvs {
     }
 
     void Wheel::step(float dt) {
-        const Vec2 up(0, 1), right(1, 0);
+        const Vec2 up(0, 1);
+        const Vec2 right(1, 0);
+
         forward = Mul(wheel->GetRotation(), up);
         normal = Mul(wheel->GetRotation(), right);
 
-        // current velocity in wheel-space
         Vec2 v = wheel->GetLinearVelocity();
         float vf = Dot(v, forward);
         float vn = Dot(v, normal);
 
-        // --- lateral (sideways) friction impulse ---
         if (Abs(vn) > epsilon) {
-            // Compute frictional *force*  F = µ * m * vn
-            Vec2 Ff = -friction * wheel->GetMass() * vn * normal;
-            // Convert to impulse over this timestep: J = F * dt
-            Vec2 J = Ff * dt;
-
-            // clamp to maxImpulse
-            if (Length(J) > maxImpulse) {
-                J = Normalize(J) * maxImpulse;
+            Vec2 j = -wheel->GetMass() * friction * vn * normal;
+            if (Length(j) > maxImpulse) {
+                j = Normalize(j) * maxImpulse;
             }
-            wheel->ApplyLinearImpulse(wheel->GetPosition(), J, true);
+            wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
         }
 
-        // --- angular damping impulse ---
         float av = wheel->GetAngularVelocity();
         if (Abs(av) > epsilon) {
-            // torque to oppose spin: τ = -c * I * av
-            float Tau = -0.1f * wheel->GetInertia() * av;
-            float Jrot = Tau * dt; // angular impulse = torque * dt
-            wheel->ApplyAngularImpulse(Jrot, true);
+            wheel->ApplyAngularImpulse(0.1f * wheel->GetInertia() * -av, true);
         }
 
-        // --- longitudinal drag force (continual) ---
         if (Abs(vf) > epsilon) {
-            // drag force along forward vector
-            float Fd = -drag * vf;
-            wheel->ApplyForce(wheel->GetPosition(), Fd * forward, true);
+            float dragForceMagnitude = -drag * vf;
+            wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
         }
         visualize();
     }
@@ -218,9 +207,10 @@ namespace mvs {
 
         joints[2]->SetAngularOffset(0.0f);
         joints[3]->SetAngularOffset(0.0f);
-        for (int i = 2; i < 4; ++i) {
-            Vec2 f = wheels[i].forward * (throttle * wheels[i].force);
-            wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f, true);
-        }
+
+        Vec2 f2 = wheels[2].forward * (throttle * wheels[2].force);
+        wheels[2].wheel->ApplyForce(wheels[2].wheel->GetPosition(), f2, true);
+        Vec2 f3 = wheels[3].forward * (throttle * wheels[3].force);
+        wheels[2].wheel->ApplyForce(wheels[3].wheel->GetPosition(), f3, true);
     }
 } // namespace mvs
