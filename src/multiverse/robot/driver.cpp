@@ -54,6 +54,20 @@ namespace mvs {
         visualize();
     }
 
+    void Wheel::update(float steering, float throttle, MotorJoint *joint) {
+        constexpr float MAX_STEER_DEG = 45.0f;
+        steering = std::clamp(steering, -MAX_STEER_DEG, MAX_STEER_DEG);
+        float angle = DegToRad(steering);
+
+        if (angle == 0.0f) {
+            joint->SetAngularOffset(angle);
+        } else {
+            joint->SetAngularOffset(0.0f);
+            Vec2 f2 = forward * (throttle * force);
+            wheel->ApplyForce(wheel->GetPosition(), f2, true);
+        }
+    }
+
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;

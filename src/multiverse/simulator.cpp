@@ -8,6 +8,13 @@ namespace mvs {
         for (auto &robott : robots) {
             robott->tick(dt);
         }
+        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+            if (fabs(throttle) > 0.1f) {
+                robots[selected_robot_idx]->update(angle, throttle);
+            } else {
+                robots[selected_robot_idx]->update(angle, 0.0f);
+            }
+        }
     }
     void Simulator::init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
         world = std::make_shared<mvs::World>(rec);
@@ -34,9 +41,8 @@ namespace mvs {
             if (axis == 0) {
                 angle = -value * 45;
             } else if (axis == 1) {
-                throttle = -value * 0.2;
+                throttle = -value * 0.4f;
             }
-            robots[selected_robot_idx]->update(angle, throttle);
         }
     }
     void Simulator::on_joystick_button(int button, bool pressed) {
