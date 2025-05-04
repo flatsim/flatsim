@@ -1,7 +1,8 @@
 #include <chrono>
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <termios.h>
+#include <linux/joystick.h>
 #include <thread>
 #include <unistd.h>
 #include <vector>
@@ -9,52 +10,39 @@
 #include "multiverse/simulator.hpp"
 #include "rerun/recording_stream.hpp"
 
-static struct termios orig_termios;
-
-// Restore original terminal settings on exit
-void reset_terminal_mode() { tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios); }
-
-// Put terminal into raw, non‐blocking mode
-void set_nonblocking_input() {
-    struct termios new_termios;
-    tcgetattr(STDIN_FILENO, &orig_termios);
-    new_termios = orig_termios;
-    new_termios.c_lflag &= ~(ICANON | ECHO);
-    new_termios.c_cc[VMIN] = 0;
-    new_termios.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-
-    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
-
-    std::atexit(reset_terminal_mode);
-}
-
-// Read *all* pending key‐press bytes and return them in a vector
-std::vector<unsigned char> poll_keypresses() {
-    std::vector<unsigned char> keys;
-    unsigned char buf[32];
-    ssize_t n;
-    while ((n = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
-        for (ssize_t i = 0; i < n; ++i) {
-            keys.push_back(buf[i]);
-        }
-    }
-    return keys;
-}
-
 int main() {
-    set_nonblocking_input();
+    // 1) Open joystick device
+    const char *js_device = "/dev/input/js1";
+    int js_fd = open(js_device, O_RDONLY | O_NONBLOCK);
+    if (js_fd < 0) {
+        std::perror("Opening joystick failed");
+        return 1;
+    }
 
-    // Connect to Rerun recording stream
+    // 2) Query number of axes/buttons
+    unsigned char num_axes = 0, num_buttons = 0;
+    ioctl(js_fd, JSIOCGAXES, &num_axes);
+    ioctl(js_fd, JSIOCGBUTTONS, &num_buttons);
+
+    // 3) Prepare state storage
+    std::vector<int> axis_states(num_axes, 0);
+    std::vector<char> button_states(num_buttons, 0);
+
+    // 4) (Optional) Print joystick name
+    char js_name[128] = "Unknown";
+    if (ioctl(js_fd, JSIOCGNAME(sizeof(js_name)), js_name) >= 0) {
+        std::cout << "Joystick: " << js_name << "  Axes: " << int(num_axes) << "  Buttons: " << int(num_buttons)
+                  << std::endl;
+    }
+
+    // 5) Connect to Rerun
     auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
-    auto rec_running = rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy");
-    if (rec_running.is_err()) {
+    if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
         std::cerr << "Failed to connect to rerun\n";
         return 1;
     }
 
-    // … your world setup here …
+    // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
     mvs::Size world_size{100.0f, 100.0f, 100.0f};
     mvs::Size grid_size{1.0f, 1.0f, 1.0f};
@@ -63,30 +51,35 @@ int main() {
     sim->init(world_datum, world_size, grid_size);
 
     auto last_time = std::chrono::steady_clock::now();
-    std::cout << "Running… (press ESC to quit)\n";
+    std::cout << "Running… (Ctrl-C to quit)\n";
 
-    bool keep_running = true;
-    while (keep_running) {
-        // 1) fetch all pending keys
-        auto keys = poll_keypresses();
-        for (auto k : keys) {
-            if (k == 27) { // ESC
-                keep_running = false;
-            } else {
-                sim->on_key(static_cast<char>(k));
+    // 7) Main loop: only joystick + simulation tick
+    while (true) {
+        // --- read one joystick event if available ---
+        js_event e;
+        ssize_t bytes = read(js_fd, &e, sizeof(e));
+        if (bytes == sizeof(e)) {
+            auto type = e.type & ~JS_EVENT_INIT;
+            if (type == JS_EVENT_AXIS && e.number < num_axes) {
+                float normalized = e.value / 32767.0f;
+                axis_states[e.number] = e.value;
+                sim->on_joystick_axis(int(e.number), normalized);
+            } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
+                button_states[e.number] = e.value;
+                sim->on_joystick_button(int(e.number), e.value != 0);
             }
         }
 
-        // 2) advance simulation
+        // --- advance your simulation by elapsed time ---
         auto now = std::chrono::steady_clock::now();
-        std::chrono::duration<float> elapsed = now - last_time;
+        std::chrono::duration<float> dt = now - last_time;
         last_time = now;
-        sim->tick(elapsed.count());
+        sim->tick(dt.count());
 
-        // 3) throttle CPU
+        // --- small sleep to cap CPU usage ---
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    std::cout << "Shutting down.\n";
+    close(js_fd);
     return 0;
 }

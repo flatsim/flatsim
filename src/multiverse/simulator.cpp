@@ -28,30 +28,24 @@ namespace mvs {
             }());
         }
     }
-    void Simulator::on_key(char key) {
-        if (key >= '0' && key <= '9') {
-            size_t idx = key - '0';
-            if (idx < robots.size()) {
-                std::cout << "Selected robot #" << robots[idx]->id() << std::endl;
-                selected_robot_idx = idx;
-            } else {
-                std::cout << "No robot at index " << idx << "\n";
+
+    void Simulator::on_joystick_axis(int axis, float value) {
+        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+            if (axis == 0) {
+                angle = -value * 45;
+            } else if (axis == 1) {
+                throttle = -value;
             }
+            robots[selected_robot_idx]->update(angle, throttle);
+
+            // std::cout << "Joystick axis " << axis << " value: " << value << std::endl;
+            // robots[selected_robot_idx]->update(value * 10, 0);
         }
-        if (selected_robot_idx >= 0) {
-            if (key == 'w') {
-                std::cout << "Pressed w" << std::endl;
-                robots[selected_robot_idx]->update(0, 1);
-            } else if (key == 's') {
-                std::cout << "Pressed s" << std::endl;
-                robots[selected_robot_idx]->update(0, -1);
-            } else if (key == 'd') {
-                std::cout << "Pressed a" << std::endl;
-                robots[selected_robot_idx]->update(-25, 0);
-            } else if (key == 'a') {
-                std::cout << "Pressed d" << std::endl;
-                robots[selected_robot_idx]->update(25, 0);
-            }
+    }
+    void Simulator::on_joystick_button(int button, bool pressed) {
+        if (button < 4 && pressed) {
+            selected_robot_idx = button;
+            std::cout << "Selected robot #" << selected_robot_idx << std::endl;
         }
     }
 } // namespace mvs

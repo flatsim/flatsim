@@ -151,7 +151,7 @@ namespace mvs {
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
                 .with_radii({{0.02f}})
-                .with_labels({this->name})
+                // .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
