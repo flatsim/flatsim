@@ -31,12 +31,13 @@ namespace mvs {
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world);
         ~Robot();
 
+        std::string id() const { return name; }
+        const concord::Pose &get_position() const { return position; }
+
         void tick(float dt);
         void init(concord::Pose, pigment::RGB color, std::string name);
-        std::string id() const { return name; }
-
         void teleport(float x, float y);
-        const concord::Pose &get_position() const { return position; }
+        void update(float steering, float throttle);
 
       private:
         void visualize_once();

@@ -19,6 +19,8 @@ namespace mvs {
             robot_pose.point.enu.x = i * 3;
             robot_pose.point.enu.y = i * 3;
             robot_pose.point.enu.toWGS(world->get_settings().get_datum());
+            robot_pose.angle.yaw = rand() % 360;
+            // std::cout << "yaw of robot " << i << " is " << DegToRad(robot_pose.angle.yaw) << "\n" << std::endl;
             robots.emplace_back([&] {
                 pigment::RGB color = pigment::RGB::random();
                 auto r = std::make_unique<Robot>(rec, world);
@@ -40,13 +42,13 @@ namespace mvs {
         }
         if (selected_robot) {
             if (key == 'w') {
-                std::cout << "Pressed W\n" << std::endl;
+                robot->update(0, 1);
             } else if (key == 's') {
-                std::cout << "Pressed S\n" << std::endl;
+                robot->update(0, -1);
             } else if (key == 'a') {
-                std::cout << "Pressed A\n" << std::endl;
+                robot->update(25, 0);
             } else if (key == 'd') {
-                std::cout << "Pressed D\n" << std::endl;
+                robot->update(-25, 0);
             }
         }
     }

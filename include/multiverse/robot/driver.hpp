@@ -43,6 +43,8 @@ namespace mvs {
 
         void step(float dt);
         void visualize();
+        void update_acceleration(float throttle);
+        void update_brake(float brakeAmount);
     };
 
     class Vehicle {

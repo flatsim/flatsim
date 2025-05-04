@@ -4,16 +4,6 @@
 #include <iostream>
 
 namespace mvs {
-
-    std::vector<float> quaterion_from_angle(float angle) {
-        std::vector<float> quat;
-        quat.push_back(cos(angle / 2));
-        quat.push_back(0);
-        quat.push_back(0);
-        quat.push_back(sin(angle / 2));
-        return quat;
-    }
-
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                      std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
                      float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
@@ -31,6 +21,7 @@ namespace mvs {
         brake = _brake;
         drag = _drag;
     }
+
     void Wheel::step(float dt) {
         const Vec2 up(0, 1), right(1, 0);
         forward = Mul(wheel->GetRotation(), up);
@@ -76,7 +67,7 @@ namespace mvs {
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
-        auto t = quaterion_from_angle(wheel->GetRotation().GetAngle());
+        auto t = wheel->GetRotation().GetAngle();
 
         pigment::HSV h = pigment::HSV::fromRGB(color);
         h.adjustBrightness(0.7f);
@@ -85,13 +76,13 @@ namespace mvs {
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(c.r, c.g, c.b));
 
-        rec->log_static(
-            this->name + "/wheel",
-            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
-                .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.02f}})
-                .with_fill_mode(rerun::FillMode::Solid)
-                .with_colors(colors));
+        rec->log_static(this->name + "/wheel",
+                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{0.1f, 0.2f, 0.0f}})
+                            .with_radii({{0.02f}})
+                            // .with_fill_mode(rerun::FillMode::Solid)
+                            .with_rotation_axis_angles({rerun::RotationAxisAngle(
+                                {0.0f, 0.0f, 1.0f}, rerun::Angle::radians(static_cast<float>(t) * 2.0f))})
+                            .with_colors(colors));
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
@@ -104,29 +95,37 @@ namespace mvs {
         float w = size.x;
         float h = size.y;
 
-        body = world->CreateBox(w, h);
+        Transform t;
+        t.position.x = pose.point.enu.x;
+        t.position.y = pose.point.enu.y;
+        t.rotation = pose.angle.yaw;
+        body = world->CreateBox(w, h, t);
         body->SetCollisionFilter(filter);
 
-        Vec2 p;
-        p.x = pose.point.enu.x;
-        p.y = pose.point.enu.y;
-        body->SetPosition(p);
+        std::cout << "yaw of robot: " << name << " is " << DegToRad(pose.angle.yaw) << "\n";
 
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
 
         float s = 0.2f;
 
-        // Front wheels
-        wheels[0].init(world, rec, color, name + "fr", s, Transform(Vec2(p.x + w / 2, p.y + h / 2)), filter,
-                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
-        wheels[1].init(world, rec, color, name + "fl", s, Transform(Vec2(p.x - w / 2, p.y + h / 2)), filter,
-                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
-        // Rear wheels
-        wheels[2].init(world, rec, color, name + "rr", s, Transform(Vec2(p.x + w / 2, p.y - h / 2)), filter,
-                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
-        wheels[3].init(world, rec, color, name + "rl", s, Transform(Vec2(p.x - w / 2, p.y - h / 2)), filter,
-                       linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
+        std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
+            {Vec2(+w / 2, +h / 2), "fr"}, // front-right
+            {Vec2(-w / 2, +h / 2), "fl"}, // front-left
+            {Vec2(+w / 2, -h / 2), "rr"}, // rear-right
+            {Vec2(-w / 2, -h / 2), "rl"}, // rear-left
+        }};
+
+        for (int i = 0; i < 4; ++i) {
+            Vec2 lo = wheelOffsets[i].first;
+            Vec2 worldOffset{lo.x * t.rotation.c - lo.y * t.rotation.s, lo.x * t.rotation.s + lo.y * t.rotation.c};
+            Vec2 wheelPos{float(pose.point.enu.x) + worldOffset.x, float(pose.point.enu.y) + worldOffset.y};
+
+            Transform wheelTf{wheelPos, t.rotation};
+
+            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, s, wheelTf, filter, linearDamping,
+                           angularDamping, force, friction, maxImpulse, brake, drag);
+        }
 
         float mf = -1;
         float fr = -1;
@@ -150,18 +149,21 @@ namespace mvs {
     void Vehicle::visualize() {
         auto x = get_position()[0];
         auto y = get_position()[1];
-        auto t = quaterion_from_angle(body->GetRotation().GetAngle());
+        auto t = body->GetRotation().GetAngle();
+        std::cout << "yaw of robot: " << name << " is " << body->GetRotation().GetAngle() << "\n";
+        // exit(0);
 
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
 
-        rec->log_static(
-            this->name + "/chassis",
-            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
-                .with_quaternions({rerun::Quaternion::IDENTITY, rerun::Quaternion::from_xyzw(t[0], t[1], t[2], t[3])})
-                .with_radii({{0.02f}})
-                .with_labels({this->name})
-                .with_colors(colors));
+        rec->log_static(this->name + "/chassis",
+                        rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
+                            .with_radii({{0.02f}})
+                            .with_labels({this->name})
+                            .with_fill_mode(rerun::FillMode::Solid)
+                            .with_rotation_axis_angles({rerun::RotationAxisAngle(
+                                {0.0f, 0.0f, 1.0f}, rerun::Angle::radians(static_cast<float>(t) * 2.0f))})
+                            .with_colors(colors));
     }
 
     void Vehicle::update(float steering, float throttle) {

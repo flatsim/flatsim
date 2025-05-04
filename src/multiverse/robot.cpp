@@ -27,6 +27,8 @@ namespace mvs {
         chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name);
     }
 
+    void Robot::update(float steering, float throttle) { chassis->update(steering, throttle); }
+
     void Robot::visualize() {
         auto x = this->position.point.enu.x;
         auto y = this->position.point.enu.y;
