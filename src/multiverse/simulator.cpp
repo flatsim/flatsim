@@ -19,8 +19,7 @@ namespace mvs {
             robot_pose.point.enu.x = i * 3;
             robot_pose.point.enu.y = i * 3;
             robot_pose.point.enu.toWGS(world->get_settings().get_datum());
-            robot_pose.angle.yaw = rand() % 360;
-            // std::cout << "yaw of robot " << i << " is " << DegToRad(robot_pose.angle.yaw) << "\n" << std::endl;
+            robot_pose.angle.yaw = 3.14f / 4.0f;
             robots.emplace_back([&] {
                 pigment::RGB color = pigment::RGB::random();
                 auto r = std::make_unique<Robot>(rec, world);
