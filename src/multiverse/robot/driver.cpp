@@ -101,20 +101,22 @@ namespace mvs {
         t.rotation = pose.angle.yaw;
         body = world->CreateBox(w, h, t);
         body->SetCollisionFilter(filter);
-
-        std::cout << "yaw of robot: " << name << " is " << DegToRad(pose.angle.yaw) << "\n";
-
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
 
         float s = 0.2f;
-
         std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
             {Vec2(+w / 2, +h / 2), "fr"}, // front-right
             {Vec2(-w / 2, +h / 2), "fl"}, // front-left
             {Vec2(+w / 2, -h / 2), "rr"}, // rear-right
             {Vec2(-w / 2, -h / 2), "rl"}, // rear-left
         }};
+
+        // Motor joints things
+        float mf = -1;
+        float fr = -1;
+        float dr = 0.1f;
+        float jm = body->GetMass();
 
         for (int i = 0; i < 4; ++i) {
             Vec2 lo = wheelOffsets[i].first;
@@ -125,14 +127,6 @@ namespace mvs {
 
             wheels[i].init(world, rec, color, name + wheelOffsets[i].second, s, wheelTf, filter, linearDamping,
                            angularDamping, force, friction, maxImpulse, brake, drag);
-        }
-
-        float mf = -1;
-        float fr = -1;
-        float dr = 0.1f;
-        float jm = body->GetMass();
-
-        for (int i = 0; i < 4; ++i) {
             joints[i] =
                 world->CreateMotorJoint(body, wheels[i].wheel, wheels[i].wheel->GetPosition(), mf, torque, fr, dr, jm);
         }
