@@ -34,12 +34,9 @@ namespace mvs {
             if (axis == 0) {
                 angle = -value * 45;
             } else if (axis == 1) {
-                throttle = -value;
+                throttle = -value * 0.2;
             }
             robots[selected_robot_idx]->update(angle, throttle);
-
-            // std::cout << "Joystick axis " << axis << " value: " << value << std::endl;
-            // robots[selected_robot_idx]->update(value * 10, 0);
         }
     }
     void Simulator::on_joystick_button(int button, bool pressed) {

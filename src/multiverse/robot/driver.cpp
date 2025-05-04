@@ -151,20 +151,20 @@ namespace mvs {
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
                 .with_radii({{0.02f}})
-                // .with_labels({this->name})
+                .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
 
         Vec2 size = {this->size[0], this->size[1]};
         Transform t = body->GetTransform();
-        const float arrowHeight = size.y * -0.2f; // How far the tip extends beyond the chassis
-        const float arrowWidth = size.x * 0.5f;   // Width of arrow base
+        const float arrowHeight = size.y * -0.03f; // How far the tip extends beyond the chassis
+        const float arrowWidth = size.x * 0.5f;    // Width of arrow base
 
         std::array<Vec2, 3> arrow_head_offsets = {{
             {Vec2(0, size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
-            {Vec2(-arrowWidth / 2, -size.y / 16)}, // left corner of arrow
-            {Vec2(arrowWidth / 2, -size.y / 16)}   // right corner of arrow
+            {Vec2(-arrowWidth / 2, size.y * 0.3)}, // left corner of arrow
+            {Vec2(arrowWidth / 2, size.y * 0.3)}   // right corner of arrow
         }};
 
         std::array<Vec2, 3> arrow_world_points;
@@ -185,10 +185,15 @@ namespace mvs {
         const rerun::Position3D vertex_positions[3] = {{arrow_world_points[0].x, arrow_world_points[0].y, 0.0f},
                                                        {arrow_world_points[1].x, arrow_world_points[1].y, 0.0f},
                                                        {arrow_world_points[2].x, arrow_world_points[2].y, 0.0f}};
+
+        pigment::HSV h = pigment::HSV::fromRGB(color);
+        h.adjustBrightness(0.7f);
+        auto c = h.toRGB();
+
         const rerun::Color vertex_colors[3] = {
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
+            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
+            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
         };
         rec->log_static(this->name + "/heading", rerun::Mesh3D(vertex_positions)
                                                      .with_vertex_normals({{0.0, 0.0, 1.0}})
@@ -202,8 +207,6 @@ namespace mvs {
         float angle = DegToRad(steering);
         joints[0]->SetAngularOffset(angle);
         joints[1]->SetAngularOffset(angle);
-
-        std::cout << "steering: " << steering << std::endl;
 
         joints[2]->SetAngularOffset(0.0f);
         joints[3]->SetAngularOffset(0.0f);
