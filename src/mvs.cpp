@@ -4,51 +4,49 @@
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
+#include <vector>
 
 #include "multiverse/simulator.hpp"
 #include "rerun/recording_stream.hpp"
 
 static struct termios orig_termios;
 
-// Restore original terminal settings
+// Restore original terminal settings on exit
 void reset_terminal_mode() { tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios); }
 
 // Put terminal into raw, non‐blocking mode
 void set_nonblocking_input() {
     struct termios new_termios;
-    // get current
     tcgetattr(STDIN_FILENO, &orig_termios);
     new_termios = orig_termios;
-
-    // disable canonical mode, echo, signals
     new_termios.c_lflag &= ~(ICANON | ECHO);
-    // minimum of number input read.
     new_termios.c_cc[VMIN] = 0;
-    // timeout (in deciseconds) for read
     new_termios.c_cc[VTIME] = 0;
-
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
 
-    // also set stdin non‐blocking
     int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
-    // ensure we restore on exit
     std::atexit(reset_terminal_mode);
 }
 
-// Return −1 if no key was pressed; otherwise the unsigned char
-int poll_keypress() {
-    unsigned char c;
-    ssize_t n = read(STDIN_FILENO, &c, 1);
-    if (n == 1)
-        return c;
-    return -1;
+// Read *all* pending key‐press bytes and return them in a vector
+std::vector<unsigned char> poll_keypresses() {
+    std::vector<unsigned char> keys;
+    unsigned char buf[32];
+    ssize_t n;
+    while ((n = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
+        for (ssize_t i = 0; i < n; ++i) {
+            keys.push_back(buf[i]);
+        }
+    }
+    return keys;
 }
 
 int main() {
     set_nonblocking_input();
 
+    // Connect to Rerun recording stream
     auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
     auto rec_running = rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy");
     if (rec_running.is_err()) {
@@ -69,17 +67,17 @@ int main() {
 
     bool keep_running = true;
     while (keep_running) {
-        // 1) check for key
-        int key = poll_keypress();
-        if (key != -1) {
-            if (key == 27) { // ESC
+        // 1) fetch all pending keys
+        auto keys = poll_keypresses();
+        for (auto k : keys) {
+            if (k == 27) { // ESC
                 keep_running = false;
             } else {
-                sim->on_key(static_cast<char>(key));
+                sim->on_key(static_cast<char>(k));
             }
         }
 
-        // 2) tick sim
+        // 2) advance simulation
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<float> elapsed = now - last_time;
         last_time = now;

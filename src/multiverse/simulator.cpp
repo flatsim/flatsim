@@ -45,10 +45,10 @@ namespace mvs {
             } else if (key == 's') {
                 std::cout << "Pressed s" << std::endl;
                 robots[selected_robot_idx]->update(0, -1);
-            } else if (key == 'a') {
+            } else if (key == 'd') {
                 std::cout << "Pressed a" << std::endl;
                 robots[selected_robot_idx]->update(-25, 0);
-            } else if (key == 'd') {
+            } else if (key == 'a') {
                 std::cout << "Pressed d" << std::endl;
                 robots[selected_robot_idx]->update(25, 0);
             }

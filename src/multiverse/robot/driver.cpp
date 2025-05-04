@@ -211,6 +211,6 @@ namespace mvs {
         Vec2 f2 = wheels[2].forward * (throttle * wheels[2].force);
         wheels[2].wheel->ApplyForce(wheels[2].wheel->GetPosition(), f2, true);
         Vec2 f3 = wheels[3].forward * (throttle * wheels[3].force);
-        wheels[2].wheel->ApplyForce(wheels[3].wheel->GetPosition(), f3, true);
+        wheels[3].wheel->ApplyForce(wheels[3].wheel->GetPosition(), f3, true);
     }
 } // namespace mvs
