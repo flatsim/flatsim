@@ -93,7 +93,7 @@ namespace mvs {
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
                      const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid)
-        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}), color(color), collision_id(cid) {
+        : world(world), rec(rec), name(name), size(size), color(color), collision_id(cid) {
         CollisionFilter filter;
         filter.bit = 1 << collision_id;
         filter.mask = ~(1 << collision_id);
@@ -164,17 +164,18 @@ namespace mvs {
         auto th = body->GetRotation().GetAngle();
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
-
+        auto w = float(size.x);
+        auto h = float(size.y);
         rec->log_static(
             this->name + "/chassis",
-            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{size[0] / 2, size[1] / 2, 0.0f}})
+            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{w / 2, h / 2, 0.0f}})
                 .with_radii({{0.02f}})
                 .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
 
-        Vec2 size = {this->size[0], this->size[1]};
+        // Vec2 size = {this->size[0], this->size[1]};
         Transform t = body->GetTransform();
         const float arrowHeight = size.y * -0.03f; // How far the tip extends beyond the chassis
         const float arrowWidth = size.x * 0.5f;    // Width of arrow base
@@ -204,9 +205,9 @@ namespace mvs {
                                                        {arrow_world_points[1].x, arrow_world_points[1].y, 0.0f},
                                                        {arrow_world_points[2].x, arrow_world_points[2].y, 0.0f}};
 
-        pigment::HSV h = pigment::HSV::fromRGB(color);
-        h.adjustBrightness(0.7f);
-        auto c = h.toRGB();
+        pigment::HSV hsv = pigment::HSV::fromRGB(color);
+        hsv.adjustBrightness(0.7f);
+        auto c = hsv.toRGB();
 
         const rerun::Color vertex_colors[3] = {
             {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
@@ -238,8 +239,8 @@ namespace mvs {
         body->SetTransform(t);
         body->SetSleeping(true);
 
-        auto w = size[0];
-        auto h = size[1];
+        auto w = float(size.x);
+        auto h = float(size.y);
 
         std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
             {Vec2(w / 2, h / 2), "fr"},   // front-right

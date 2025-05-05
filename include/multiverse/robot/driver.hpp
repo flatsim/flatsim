@@ -53,7 +53,7 @@ namespace mvs {
         uint32_t collision_id;
         pigment::RGB color;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::vector<float> size;
+        concord::Size size;
         Wheel wheels[4];
         RigidBody *body;
 
