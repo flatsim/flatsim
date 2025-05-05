@@ -3,10 +3,10 @@
 namespace mvs {
     Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
                    const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid)
-        : world(world), rec(rec), name(name), size(size), color(color), collision_id(cid) {
+        : world(world), rec(rec), name(name), size(size), color(color), group(cid) {
         CollisionFilter filter;
-        filter.bit = 1 << collision_id;
-        filter.mask = ~(1 << collision_id);
+        filter.bit = 1 << group;
+        filter.mask = ~(1 << group);
         // filter.bit = 1 << 1;
         // filter.mask = ~(1 << 1);
 
@@ -24,6 +24,8 @@ namespace mvs {
         body->SetAngularDamping(angularDamping);
 
         float s = 0.2f;
+
+        concord::Size wheel_size{0.1f, 0.2f, 0.0f};
 
         std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
             {Vec2(w / 2, h / 2), "fr"},   // front-right
@@ -46,7 +48,7 @@ namespace mvs {
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
             wheels[i].init(world, rec, color, name + wheelOffsets[i].second, s, wheelTf, filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag);
+                           angularDamping, force, friction, maxImpulse, brake, drag, wheel_size);
         }
 
         float mf = -1;

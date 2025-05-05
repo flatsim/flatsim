@@ -33,12 +33,12 @@ namespace mvs {
       public:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
-        uint32_t collision_id;
         pigment::RGB color;
         concord::Size size;
+        uint32_t group;
 
         Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-               const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t collision_id);
+               const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t group);
 
         void tick(float dt);
         void visualize();

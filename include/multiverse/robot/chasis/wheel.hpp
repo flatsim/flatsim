@@ -1,5 +1,6 @@
 #pragma once
 
+#include "concord/types_basic.hpp"
 #include "muli/world.h"
 #include "pigment/types_basic.hpp"
 #include <rerun.hpp>
@@ -10,18 +11,21 @@ namespace mvs {
     inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
 
     struct Wheel {
+        std::shared_ptr<rerun::RecordingStream> rec;
+        std::string name;
+        pigment::RGB color;
+        concord::Size size;
+
         RigidBody *wheel;
         Vec2 forward, normal;
         float force, torque;
         float brake, drag;
         float friction, maxImpulse;
-        std::string name;
-        pigment::RGB color;
-        std::shared_ptr<rerun::RecordingStream> rec;
 
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                   std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
-                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
+                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag,
+                  concord::Size size);
 
         void step(float dt);
         void visualize();
