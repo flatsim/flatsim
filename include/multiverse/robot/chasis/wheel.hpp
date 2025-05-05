@@ -26,7 +26,7 @@ namespace mvs {
                   std::string name, concord::Size size, Transform tf, CollisionFilter filter, float linearDamping,
                   float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
 
-        void step(float dt);
+        void tick(float dt);
         void visualize();
         void teleport(Transform t);
         void update(float steering, float throttle, MotorJoint *joint);

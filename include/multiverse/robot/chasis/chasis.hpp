@@ -38,7 +38,11 @@ namespace mvs {
         uint32_t group;
 
         Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-               const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t group);
+               const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t group,
+               std::vector<concord::Size> wheel_sizes, CollisionFilter filter);
+
+        void init(const concord::Pose &pose, const concord::Size &size, const pigment::RGB &color, std::string name,
+                  uint32_t group, std::vector<concord::Size> wheel_sizes, CollisionFilter filter);
 
         void tick(float dt);
         void visualize();

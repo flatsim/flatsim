@@ -10,7 +10,7 @@ namespace mvs {
         this->color = color;
         this->name = name;
         this->rec = rec;
-        wheel = world->CreateBox(size.x, size.y, tf);
+        wheel = world->CreateCapsule(size.x, size.y, false, tf);
         wheel->SetCollisionFilter(filter);
         wheel->SetLinearDamping(linearDamping);
         wheel->SetAngularDamping(angularDamping);
@@ -21,7 +21,7 @@ namespace mvs {
         drag = _drag;
     }
 
-    void Wheel::step(float dt) {
+    void Wheel::tick(float dt) {
         const Vec2 up(0, 1);
         const Vec2 right(1, 0);
 

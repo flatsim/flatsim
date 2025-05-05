@@ -14,6 +14,7 @@
 #include "pigment/types_basic.hpp"
 
 #include <rerun.hpp>
+#include <vector>
 
 namespace mvs {
     class Robot {
@@ -24,6 +25,10 @@ namespace mvs {
         std::shared_ptr<mvs::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chasis> chassis;
+
+        // muli::CollisonFilter filter;
+        muli::CollisionFilter filter;
+        muli::RigidBody *karosserie;
 
         concord::Pose position;
         concord::Polygon shape;
@@ -39,7 +44,8 @@ namespace mvs {
         const concord::Pose &get_position() const { return position; }
 
         void tick(float dt);
-        void init(concord::Pose, pigment::RGB color, std::string name);
+        void init(concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
+                  std::vector<concord::Size> wheel_sizes = {});
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
         void teleport(concord::Pose pose);

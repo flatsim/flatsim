@@ -23,10 +23,16 @@ namespace mvs {
             robot_pose.point.enu.y = i * 3;
             robot_pose.point.enu.toWGS(world->get_settings().get_datum());
             robot_pose.angle.yaw = 0.0f;
+            concord::Size chassis_size{0.8f, 1.4f, 0.0f};
+            std::vector<concord::Size> wheel_sizes;
+            wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
+            wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
+            wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
+            wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
             robots.emplace_back([&] {
                 pigment::RGB color = pigment::RGB::random();
                 auto r = std::make_unique<Robot>(rec, world, i);
-                r->init(robot_pose, color, "robot" + std::to_string(i));
+                r->init(robot_pose, chassis_size, color, "robot" + std::to_string(i), wheel_sizes);
                 return r;
             }());
         }

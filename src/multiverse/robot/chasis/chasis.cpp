@@ -1,13 +1,16 @@
 #include "multiverse/robot/chasis/chasis.hpp"
 
 namespace mvs {
-    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                   const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid)
-        : world(world), rec(rec), name(name), size(size), color(color), group(cid) {
-        CollisionFilter filter;
-        filter.bit = 1 << group;
-        filter.mask = ~(1 << group);
 
+    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
+                   const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid,
+                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter)
+        : world(world), rec(rec), name(name), size(size), color(color), group(cid) {
+        init(pose, size, color, name, cid, wheel_sizes, filter);
+    }
+
+    void Chasis::init(const concord::Pose &pose, const concord::Size &size, const pigment::RGB &color, std::string name,
+                      uint32_t cid, std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
         float w = size.x; // usually 0.5
         float h = size.y; // usually 2 * w
 
@@ -20,8 +23,6 @@ namespace mvs {
 
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
-
-        concord::Size wheel_size{0.1f, 0.2f, 0.0f};
 
         std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
             {Vec2(w / 2, h / 2), "fr"},   // front-right
@@ -43,8 +44,8 @@ namespace mvs {
             wheelPosition.y = t.position.y + rotatedOffset.y;
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, wheel_size, wheelTf, filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag);
+            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, wheel_sizes[i], wheelTf, filter,
+                           linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
         }
 
         float mf = -1;
@@ -60,7 +61,7 @@ namespace mvs {
 
     void Chasis::tick(float dt) {
         for (int i = 0; i < 4; ++i) {
-            wheels[i].step(dt);
+            wheels[i].tick(dt);
         }
     }
 

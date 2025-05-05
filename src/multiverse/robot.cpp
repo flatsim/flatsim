@@ -18,16 +18,19 @@ namespace mvs {
         visualize();
     }
 
-    void Robot::init(concord::Pose pose, pigment::RGB color, std::string name) {
+    void Robot::init(concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
+                     std::vector<concord::Size> wheel_sizes) {
         std::cout << "Initializing robot " << name << "...\n";
         this->color = color;
         this->name = name;
-        this->size.x = 0.8f;
-        this->size.y = 1.4f;
+        this->size = size;
         this->spawn_position = pose;
 
-        chassis = std::make_unique<Chasis>(world->get_world().get(), rec, pose, size, color, name, group);
-        // shape.addPoint(pose.point.enu, world->get_settings().get_datum());
+        filter.bit = 1 << group;
+        filter.mask = ~(1 << group);
+
+        chassis = std::make_unique<Chasis>(world->get_world().get(), rec, pose, size, color, name, group, wheel_sizes,
+                                           filter);
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
