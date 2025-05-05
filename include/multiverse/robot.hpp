@@ -18,6 +18,7 @@ namespace mvs {
     class Robot {
       private:
         std::string name;
+        uint32_t collision_id;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<mvs::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
@@ -29,7 +30,7 @@ namespace mvs {
         concord::Pose spawn_position;
 
       public:
-        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world);
+        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t collision_id);
         ~Robot();
 
         std::string id() const { return name; }

@@ -25,7 +25,7 @@ namespace mvs {
             robot_pose.angle.yaw = 0.0f;
             robots.emplace_back([&] {
                 pigment::RGB color = pigment::RGB::random();
-                auto r = std::make_unique<Robot>(rec, world);
+                auto r = std::make_unique<Robot>(rec, world, i);
                 r->init(robot_pose, color, "robot" + std::to_string(i));
                 return r;
             }());

@@ -92,11 +92,13 @@ namespace mvs {
     }
 
     Vehicle::Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                     const concord::Size &size, const pigment::RGB &color, std::string name)
-        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}), color(color) {
+                     const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid)
+        : world(world), rec(rec), name(name), size({float(size.x), float(size.y)}), color(color), collision_id(cid) {
         CollisionFilter filter;
-        filter.bit = 1 << 1;
-        filter.mask = ~(1 << 1);
+        filter.bit = 1 << collision_id;
+        filter.mask = ~(1 << collision_id);
+        // filter.bit = 1 << 1;
+        // filter.mask = ~(1 << 1);
 
         float w = size.x; // usually 0.5
         float h = size.y; // usually 2 * w

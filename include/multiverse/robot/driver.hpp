@@ -50,6 +50,7 @@ namespace mvs {
     class Vehicle {
       public:
         std::string name;
+        uint32_t collision_id;
         pigment::RGB color;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::vector<float> size;
@@ -57,7 +58,7 @@ namespace mvs {
         RigidBody *body;
 
         Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                const concord::Size &size, const pigment::RGB &color, std::string name);
+                const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t collision_id);
         std::vector<float> get_position() const;
 
         void tick(float dt);

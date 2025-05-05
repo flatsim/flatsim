@@ -1,8 +1,8 @@
 #include "multiverse/robot.hpp"
 
 namespace mvs {
-    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world)
-        : rec(rec), world(world) {}
+    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t collision_id)
+        : rec(rec), world(world), collision_id(collision_id) {}
     Robot::~Robot() {}
 
     void Robot::tick(float dt) {
@@ -25,7 +25,7 @@ namespace mvs {
         this->size.y = 1.4f;
         this->spawn_position = pose;
 
-        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name);
+        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name, collision_id);
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
