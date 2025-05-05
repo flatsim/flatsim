@@ -7,6 +7,7 @@
 #include "muli/world.h"
 
 #include "concord/types_basic.hpp"
+#include "concord/types_polygon.hpp"
 #include "multiverse/robot/driver.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/world.hpp"
@@ -25,6 +26,7 @@ namespace mvs {
         std::unique_ptr<Vehicle> chassis;
 
         concord::Pose position;
+        concord::Polygon shape;
         concord::Size size;
         pigment::RGB color;
         concord::Pose spawn_position;

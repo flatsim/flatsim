@@ -6,4 +6,6 @@ multiverse
 
 simple robotics simulator using [muli](https://github.com/Sopiro/Muli) physics
 
-![alt text](./book/src/images/1746365348.png)
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/xjRNYtFulUs/0.jpg)](https://www.youtube.com/watch?v=xjRNYtFulUs)
+

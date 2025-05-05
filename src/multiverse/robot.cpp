@@ -26,6 +26,9 @@ namespace mvs {
         this->spawn_position = pose;
 
         chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name, collision_id);
+
+        // square shape
+        // concord::Point
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
