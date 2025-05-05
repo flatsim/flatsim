@@ -1,4 +1,5 @@
 #include "multiverse/robot.hpp"
+#include "pigment/types_hsv.hpp"
 
 namespace mvs {
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t collision_id)
@@ -25,7 +26,7 @@ namespace mvs {
         this->size.y = 1.4f;
         this->spawn_position = pose;
 
-        chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name, collision_id);
+        chassis = std::make_unique<Chasis>(world->get_world().get(), rec, pose, size, color, name, collision_id);
 
         // shape.addPoint(pose.point.enu, world->get_settings().get_datum());
     }

@@ -73,7 +73,8 @@ set(exe
 )
 
 set(lib
-    src/multiverse/robot/driver.cpp
+    src/multiverse/robot/chasis/chasis.cpp
+    src/multiverse/robot/chasis/wheel.cpp
     src/multiverse/robot/sensor.cpp
     src/multiverse/robot.cpp
     src/multiverse/world.cpp

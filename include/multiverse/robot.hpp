@@ -8,7 +8,7 @@
 
 #include "concord/types_basic.hpp"
 #include "concord/types_polygon.hpp"
-#include "multiverse/robot/driver.hpp"
+#include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/world.hpp"
 #include "pigment/types_basic.hpp"
@@ -23,7 +23,7 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<mvs::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
-        std::unique_ptr<Vehicle> chassis;
+        std::unique_ptr<Chasis> chassis;
 
         concord::Pose position;
         concord::Polygon shape;
