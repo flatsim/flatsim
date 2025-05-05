@@ -26,6 +26,7 @@ namespace mvs {
         concord::Pose position;
         concord::Size size;
         pigment::RGB color;
+        concord::Pose spawn_position;
 
       public:
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world);
@@ -36,9 +37,10 @@ namespace mvs {
 
         void tick(float dt);
         void init(concord::Pose, pigment::RGB color, std::string name);
-        void teleport(float x, float y);
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
+        void teleport(concord::Pose pose);
+        void respawn();
 
       private:
         void visualize_once();

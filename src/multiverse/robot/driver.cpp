@@ -68,6 +68,8 @@ namespace mvs {
         }
     }
 
+    void Wheel::teleport(Transform t) { wheel->SetTransform(t); }
+
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
@@ -215,22 +217,6 @@ namespace mvs {
                                                      .with_triangle_indices({{2, 1, 0}}));
     }
 
-    void Vehicle::update(float steering, float throttle) {
-        constexpr float MAX_STEER_DEG = 45.0f;
-        steering = std::clamp(steering, -MAX_STEER_DEG, MAX_STEER_DEG);
-        float angle = DegToRad(steering);
-        joints[0]->SetAngularOffset(angle);
-        joints[1]->SetAngularOffset(angle);
-
-        joints[2]->SetAngularOffset(0.0f);
-        joints[3]->SetAngularOffset(0.0f);
-
-        Vec2 f2 = wheels[2].forward * (throttle * wheels[2].force);
-        wheels[2].wheel->ApplyForce(wheels[2].wheel->GetPosition(), f2, true);
-        Vec2 f3 = wheels[3].forward * (throttle * wheels[3].force);
-        wheels[3].wheel->ApplyForce(wheels[3].wheel->GetPosition(), f3, true);
-    }
-
     void Vehicle::update(float steering[4], float throttle[4]) {
         constexpr float MAX_STEER_DEG = 45.0f;
         for (int i = 0; i < 4; ++i) {
@@ -239,6 +225,42 @@ namespace mvs {
             joints[i]->SetAngularOffset(angle);
             Vec2 f2 = wheels[i].forward * (throttle[i] * wheels[i].force);
             wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f2, true);
+        }
+    }
+
+    void Vehicle::teleport(concord::Pose pose) {
+        Transform t;
+        t.position.x = pose.point.enu.x;
+        t.position.y = pose.point.enu.y;
+        t.rotation = pose.angle.yaw;
+        body->SetTransform(t);
+        body->SetSleeping(true);
+
+        auto w = size[0];
+        auto h = size[1];
+
+        std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
+            {Vec2(w / 2, h / 2), "fr"},   // front-right
+            {Vec2(-w / 2, h / 2), "fl"},  // front-left
+            {Vec2(w / 2, -h / 2), "rr"},  // rear-right
+            {Vec2(-w / 2, -h / 2), "rl"}, // rear-left
+        }};
+
+        for (int i = 0; i < 4; ++i) {
+            // Transform the local offset to world coordinates
+            Vec2 localOffset = wheelOffsets[i].first;
+            // Rotate the offset according to car's rotation
+            Vec2 rotatedOffset;
+            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
+            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
+            // Add the rotated offset to the car's position
+            Vec2 wheelPosition;
+            wheelPosition.x = t.position.x + rotatedOffset.x;
+            wheelPosition.y = t.position.y + rotatedOffset.y;
+            // Create the wheel transform
+            Transform wheelTf{wheelPosition, t.rotation};
+            wheels[i].teleport(wheelTf);
+            wheels[i].wheel->SetSleeping(true);
         }
     }
 

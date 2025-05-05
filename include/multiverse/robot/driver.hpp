@@ -43,6 +43,7 @@ namespace mvs {
 
         void step(float dt);
         void visualize();
+        void teleport(Transform t);
         void update(float steering, float throttle, MotorJoint *joint);
     };
 
@@ -57,16 +58,12 @@ namespace mvs {
 
         Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
                 const concord::Size &size, const pigment::RGB &color, std::string name);
-        void tick(float dt);
         std::vector<float> get_position() const;
-        void update(float steering, float throttle);
-        void update(float steering[4], float throttle[4]);
 
+        void tick(float dt);
         void visualize();
-
         void teleport(concord::Pose);
-        void teleport(concord::Point);
-        void teleport(concord::Euler);
+        void update(float steering[4], float throttle[4]);
 
       private:
         World *world;

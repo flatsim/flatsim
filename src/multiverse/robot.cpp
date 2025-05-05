@@ -23,11 +23,11 @@ namespace mvs {
         this->name = name;
         this->size.x = 0.8f;
         this->size.y = 1.4f;
+        this->spawn_position = pose;
 
         chassis = std::make_unique<Vehicle>(world->get_world().get(), rec, pose, size, color, name);
     }
 
-    void Robot::update(float steering, float throttle) { chassis->update(steering, throttle); }
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
 
     void Robot::visualize() {
@@ -47,5 +47,6 @@ namespace mvs {
         chassis->visualize();
     }
 
-    // void Robot::teleport(float x, float y) { chassis->teleport({x, y}); }
+    void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
+    void Robot::respawn() { chassis->teleport(spawn_position); }
 } // namespace mvs
