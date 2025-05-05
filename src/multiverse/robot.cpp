@@ -10,8 +10,8 @@ namespace mvs {
         for (auto &sensor : sensors) {
             sensor->tick(dt, position);
         }
-        this->position.point.enu.x = chassis->body->GetPosition().x;
-        this->position.point.enu.y = chassis->body->GetPosition().y;
+        this->position.point.enu.x = chassis->get_transform().position.x;
+        this->position.point.enu.y = chassis->get_transform().position.y;
         this->position.point.enu.z = 0;
         this->position.point.wgs = this->position.point.enu.toWGS(world->get_settings().get_datum());
         chassis->tick(dt);
@@ -51,7 +51,7 @@ namespace mvs {
         rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
         // Vec2 size = {this->size[0], this->size[1]};
-        Transform t = chassis->body->GetTransform();
+        Transform t = chassis->get_transform();
         const float arrowHeight = size.y * -0.03f; // How far the tip extends beyond the chassis
         const float arrowWidth = size.x * 0.5f;    // Width of arrow base
 

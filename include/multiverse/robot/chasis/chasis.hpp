@@ -24,26 +24,26 @@ namespace mvs {
     inline constexpr float drag = 0.5f;
 
     class Chasis {
+      private:
+        World *world;
+        RigidBody *body;
+        Wheel wheels[4];
+        MotorJoint *joints[4];
+
       public:
+        std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
         uint32_t collision_id;
         pigment::RGB color;
-        std::shared_ptr<rerun::RecordingStream> rec;
         concord::Size size;
-        Wheel wheels[4];
-        RigidBody *body;
 
         Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
                const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t collision_id);
-        std::vector<float> get_position() const;
 
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose);
         void update(float steering[4], float throttle[4]);
-
-      private:
-        World *world;
-        MotorJoint *joints[4];
+        muli::Transform get_transform() const;
     };
 } // namespace mvs

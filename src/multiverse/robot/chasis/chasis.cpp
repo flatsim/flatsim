@@ -66,11 +66,11 @@ namespace mvs {
         }
     }
 
-    std::vector<float> Chasis::get_position() const { return {body->GetPosition().x, body->GetPosition().y}; }
+    muli::Transform Chasis::get_transform() const { return body->GetTransform(); }
 
     void Chasis::visualize() {
-        auto x = get_position()[0];
-        auto y = get_position()[1];
+        auto x = body->GetPosition().x;
+        auto y = body->GetPosition().y;
         auto th = body->GetRotation().GetAngle();
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
