@@ -12,7 +12,7 @@
 
 int main() {
     // 1) Open joystick device
-    const char *js_device = "/dev/input/js1";
+    const char *js_device = "/dev/input/js0";
     int js_fd = open(js_device, O_RDONLY | O_NONBLOCK);
     if (js_fd < 0) {
         std::perror("Opening joystick failed");

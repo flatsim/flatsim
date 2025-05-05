@@ -174,50 +174,6 @@ namespace mvs {
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
-
-        // Vec2 size = {this->size[0], this->size[1]};
-        Transform t = body->GetTransform();
-        const float arrowHeight = size.y * -0.03f; // How far the tip extends beyond the chassis
-        const float arrowWidth = size.x * 0.5f;    // Width of arrow base
-
-        std::array<Vec2, 3> arrow_head_offsets = {{
-            {Vec2(0, size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
-            {Vec2(-arrowWidth / 2, size.y * 0.3)}, // left corner of arrow
-            {Vec2(arrowWidth / 2, size.y * 0.3)}   // right corner of arrow
-        }};
-
-        std::array<Vec2, 3> arrow_world_points;
-        for (int i = 0; i < 3; ++i) {
-            // Get local offset
-            Vec2 localOffset = arrow_head_offsets[i];
-
-            // Rotate the offset according to car's rotation
-            Vec2 rotatedOffset;
-            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
-            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
-
-            // Add the rotated offset to the car's position
-            arrow_world_points[i].x = t.position.x + rotatedOffset.x;
-            arrow_world_points[i].y = t.position.y + rotatedOffset.y;
-        }
-
-        const rerun::Position3D vertex_positions[3] = {{arrow_world_points[0].x, arrow_world_points[0].y, 0.0f},
-                                                       {arrow_world_points[1].x, arrow_world_points[1].y, 0.0f},
-                                                       {arrow_world_points[2].x, arrow_world_points[2].y, 0.0f}};
-
-        pigment::HSV hsv = pigment::HSV::fromRGB(color);
-        hsv.adjustBrightness(0.7f);
-        auto c = hsv.toRGB();
-
-        const rerun::Color vertex_colors[3] = {
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
-        };
-        rec->log_static(this->name + "/heading", rerun::Mesh3D(vertex_positions)
-                                                     .with_vertex_normals({{0.0, 0.0, 1.0}})
-                                                     .with_vertex_colors(vertex_colors)
-                                                     .with_triangle_indices({{2, 1, 0}}));
     }
 
     void Vehicle::update(float steering[4], float throttle[4]) {
