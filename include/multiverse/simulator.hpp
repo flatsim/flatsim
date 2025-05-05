@@ -28,7 +28,7 @@ namespace mvs {
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
         void tick(float dt);
-        void init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size);
+        void init(concord::Datum datum, concord::Size world_size, concord::Size grid_size);
 
         void on_joystick_axis(int axis, float value);
         void on_joystick_button(int button, bool pressed);

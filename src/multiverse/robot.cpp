@@ -75,7 +75,6 @@ namespace mvs {
             this->name + "/karosserie",
             rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
                 .with_radii({{0.02f}})
-                .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
                 .with_colors(colors_a));

@@ -44,8 +44,8 @@ int main() {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    mvs::Size world_size{100.0f, 100.0f, 100.0f};
-    mvs::Size grid_size{1.0f, 1.0f, 1.0f};
+    concord::Size world_size{100.0f, 120.0f, 100.0f};
+    concord::Size grid_size{1.0f, 1.0f, 1.0f};
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
@@ -77,7 +77,7 @@ int main() {
         sim->tick(dt.count());
 
         // --- small sleep to cap CPU usage ---
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     close(js_fd);

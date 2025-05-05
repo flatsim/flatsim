@@ -12,7 +12,7 @@ namespace mvs {
             robots[selected_robot_idx]->update(steerings, throttles);
         }
     }
-    void Simulator::init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
+    void Simulator::init(concord::Datum datum, concord::Size world_size, concord::Size grid_size) {
         world = std::make_shared<mvs::World>(rec);
         world->init(datum, world_size, grid_size);
 
