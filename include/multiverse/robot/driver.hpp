@@ -58,8 +58,9 @@ namespace mvs {
         Vehicle(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
                 const concord::Size &size, const pigment::RGB &color, std::string name);
         void tick(float dt);
-        void update(float steering, float throttle);
         std::vector<float> get_position() const;
+        void update(float steering, float throttle);
+        void update(float steering[4], float throttle[4]);
 
         void visualize();
 

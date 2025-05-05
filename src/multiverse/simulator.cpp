@@ -8,12 +8,8 @@ namespace mvs {
         for (auto &robott : robots) {
             robott->tick(dt);
         }
-        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            if (fabs(throttle) > 0.1f) {
-                robots[selected_robot_idx]->update(angle, throttle);
-            } else {
-                robots[selected_robot_idx]->update(angle, 0.0f);
-            }
+        if (selected_robot_idx >= 0 && selected_robot_idx < robots.size()) {
+            robots[selected_robot_idx]->update(steerings, throttles);
         }
     }
     void Simulator::init(concord::Datum datum, mvs::Size world_size, mvs::Size grid_size) {
@@ -39,10 +35,31 @@ namespace mvs {
     void Simulator::on_joystick_axis(int axis, float value) {
         if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
             if (axis == 0) {
-                angle = -value * 45;
-            } else if (axis == 1) {
-                throttle = -value * 0.4f;
+                steering = -value * 45;
+                steerings[0] = steering;
+                steerings[1] = steering;
             }
+
+            if (axis == 1) {
+                auto preval = -value * 0.4f;
+                throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
+                throttles[0] = throttle;
+                throttles[1] = throttle;
+            }
+
+            if (axis == 3) {
+                steering = -value * 45;
+                steerings[2] = steering;
+                steerings[3] = steering;
+            }
+
+            if (axis == 4) {
+                auto preval = -value * 0.4f;
+                throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
+                throttles[2] = throttle;
+                throttles[3] = throttle;
+            }
+
         }
     }
     void Simulator::on_joystick_button(int button, bool pressed) {

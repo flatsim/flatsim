@@ -230,4 +230,16 @@ namespace mvs {
         Vec2 f3 = wheels[3].forward * (throttle * wheels[3].force);
         wheels[3].wheel->ApplyForce(wheels[3].wheel->GetPosition(), f3, true);
     }
+
+    void Vehicle::update(float steering[4], float throttle[4]) {
+        constexpr float MAX_STEER_DEG = 45.0f;
+        for (int i = 0; i < 4; ++i) {
+            auto steer = std::clamp(steering[i], -MAX_STEER_DEG, MAX_STEER_DEG);
+            float angle = DegToRad(steer);
+            joints[i]->SetAngularOffset(angle);
+            Vec2 f2 = wheels[i].forward * (throttle[i] * wheels[i].force);
+            wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f2, true);
+        }
+    }
+
 } // namespace mvs

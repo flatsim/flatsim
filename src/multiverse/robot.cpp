@@ -28,6 +28,7 @@ namespace mvs {
     }
 
     void Robot::update(float steering, float throttle) { chassis->update(steering, throttle); }
+    void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
 
     void Robot::visualize() {
         auto x = this->position.point.enu.x;

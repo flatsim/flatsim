@@ -38,6 +38,7 @@ namespace mvs {
         void init(concord::Pose, pigment::RGB color, std::string name);
         void teleport(float x, float y);
         void update(float steering, float throttle);
+        void update(float steering[4], float throttle[4]);
 
       private:
         void visualize_once();
