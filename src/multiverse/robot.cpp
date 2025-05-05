@@ -43,12 +43,15 @@ namespace mvs {
         karosserie->SetCollisionFilter(filter);
         karosserie->SetLinearDamping(linearDamping);
         karosserie->SetAngularDamping(angularDamping);
+
+        pulse = concord::Circle(this->position.point, 0.0);
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
 
     void Robot::visualize() {
         chassis->visualize();
+        pulse_vis();
 
         auto x = this->position.point.enu.x;
         auto y = this->position.point.enu.y;
@@ -122,6 +125,32 @@ namespace mvs {
                                                      .with_vertex_normals({{0.0, 0.0, 1.0}})
                                                      .with_vertex_colors(vertex_colors)
                                                      .with_triangle_indices({{2, 1, 0}}));
+        pulse_vis(10.0f);
+    }
+
+    void Robot::pulse_vis(float p_s) {
+        auto pulse_size = pulse.getRadius() + 0.001;
+        auto this_c = rerun::Color(color.r, color.g, color.b, 40);
+        if (!pulsining) {
+            return;
+        } else if (pulse.getRadius() > p_s) {
+            pulsining = false;
+            pulse_size = 0.0;
+        }
+        auto x = this->position.point.enu.x;
+        auto y = this->position.point.enu.y;
+        concord::Point p;
+        p.enu.x = x;
+        p.enu.y = y;
+        pulse = concord::Circle(p, pulse_size);
+        auto pointss = pulse.as_polygon(20);
+        std::vector<rerun::Vec3D> poi;
+        for (auto &point : pointss) {
+            poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
+        }
+        // push line strip
+        poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
+        rec->log_static(this->name + "/pulse", rerun::LineStrips3D({{poi}}).with_colors({{this_c}}));
     }
 
     void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }

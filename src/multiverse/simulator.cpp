@@ -74,12 +74,13 @@ namespace mvs {
             selected_robot_idx = button;
             std::cout << "Selected robot #" << selected_robot_idx << std::endl;
         }
-        if ((button == 4 || button == 5) && pressed && selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            robots[selected_robot_idx]->respawn();
-            //     concord::Pose pose;
-            //     pose.point.enu.x = 0;
-            //     pose.point.enu.y = 0;
-            //     robots[selected_robot_idx]->teleport(pose);
+        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+            if ((button == 4 || button == 5) && pressed) {
+                robots[selected_robot_idx]->respawn();
+            }
+            if (button == 9 && pressed) {
+                robots[selected_robot_idx]->pulsining = true;
+            }
         }
     }
 } // namespace mvs

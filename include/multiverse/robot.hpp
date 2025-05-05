@@ -7,6 +7,7 @@
 #include "muli/world.h"
 
 #include "concord/types_basic.hpp"
+#include "concord/types_circle.hpp"
 #include "concord/types_polygon.hpp"
 #include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
@@ -37,6 +38,7 @@ namespace mvs {
         concord::Pose spawn_position;
 
       public:
+        bool pulsining = false;
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t group);
         ~Robot();
 
@@ -49,9 +51,11 @@ namespace mvs {
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
         void teleport(concord::Pose pose);
+        void pulse_vis(float p_s = 2.0);
         void respawn();
 
       private:
+        concord::Circle pulse;
         void visualize_once();
         void visualize();
     };
