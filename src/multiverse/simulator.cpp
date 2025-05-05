@@ -17,27 +17,16 @@ namespace mvs {
 
         concord::Size grid_size_size{grid_size, grid_size, grid_size};
         world->init(datum, world_size, grid_size_size);
+        world_datum = datum;
+    }
 
-        for (int i = 0; i < 4; ++i) {
-            std::cout << "creating robot " << i << std::endl;
-            concord::Pose robot_pose;
-            robot_pose.point.enu.x = i * 3;
-            robot_pose.point.enu.y = i * 3;
-            robot_pose.point.enu.toWGS(world->get_settings().get_datum());
-            robot_pose.angle.yaw = 0.0f;
-            concord::Size chassis_size{0.8f, 1.4f, 0.0f};
-            std::vector<concord::Size> wheel_sizes;
-            wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
-            wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
-            wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
-            wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
-            robots.emplace_back([&] {
-                pigment::RGB color = pigment::RGB::random();
-                auto r = std::make_unique<Robot>(rec, world, i);
-                r->init(robot_pose, chassis_size, color, "robot" + std::to_string(i), wheel_sizes);
-                return r;
-            }());
-        }
+    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Size> wheels) {
+        robots.emplace_back([&] {
+            pigment::RGB color = pigment::RGB::random();
+            auto r = std::make_unique<Robot>(rec, world, robots.size());
+            r->init(robot_pose, chassis_size, color, "robot" + std::to_string(robots.size()), wheels);
+            return r;
+        }());
     }
 
     void Simulator::on_joystick_axis(int axis, float value) {

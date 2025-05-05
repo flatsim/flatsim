@@ -12,6 +12,7 @@ namespace mvs {
     class Simulator {
       public:
         std::shared_ptr<World> world;
+        concord::Datum world_datum;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::vector<std::shared_ptr<Robot>> robots;
         std::unique_ptr<Robot> robot;
@@ -29,6 +30,9 @@ namespace mvs {
         ~Simulator();
         void tick(float dt);
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
+        concord::Datum get_datum() const { return world_datum; }
+
+        void add_robot(concord::Pose robot_pose, concord::Size, std::vector<concord::Size> wheels);
 
         void on_joystick_axis(int axis, float value);
         void on_joystick_button(int button, bool pressed);

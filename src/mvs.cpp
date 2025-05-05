@@ -44,11 +44,27 @@ int main() {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    concord::Size world_size{100.0f, 120.0f, 100.0f};
-    float grid_size = 1.4f;
+    concord::Size world_size{50.0f, 50.0f, 100.0f};
+    float grid_size = 0.5f;
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
+
+    for (int i = 0; i < 4; ++i) {
+        std::cout << "creating robot " << i << std::endl;
+        concord::Pose robot_pose;
+        robot_pose.point.enu.x = i * 3;
+        robot_pose.point.enu.y = i * 3;
+        robot_pose.point.enu.toWGS(world_datum);
+        robot_pose.angle.yaw = 0.0f;
+        concord::Size chassis_size{0.8f, 1.4f, 0.0f};
+        std::vector<concord::Size> wheel_sizes;
+        wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
+        wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
+        wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
+        wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
+        sim->add_robot(robot_pose, chassis_size, wheel_sizes);
+    }
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
