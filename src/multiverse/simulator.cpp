@@ -8,7 +8,7 @@ namespace mvs {
         for (auto &robott : robots) {
             robott->tick(dt);
         }
-        if (selected_robot_idx >= 0 && selected_robot_idx < robots.size()) {
+        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
             robots[selected_robot_idx]->update(steerings, throttles);
         }
     }
@@ -59,7 +59,15 @@ namespace mvs {
                 throttles[2] = throttle;
                 throttles[3] = throttle;
             }
-
+            if (axis == 2 || axis == 8) {
+                std::cout << "Axis " << axis << " value " << value << std::endl;
+                auto preval = value * 0.4f;
+                throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
+                throttles[0] = throttle;
+                throttles[1] = -throttle;
+                throttles[2] = throttle;
+                throttles[3] = -throttle;
+            }
         }
     }
     void Simulator::on_joystick_button(int button, bool pressed) {
