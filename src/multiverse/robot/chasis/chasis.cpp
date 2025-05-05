@@ -7,8 +7,6 @@ namespace mvs {
         CollisionFilter filter;
         filter.bit = 1 << group;
         filter.mask = ~(1 << group);
-        // filter.bit = 1 << 1;
-        // filter.mask = ~(1 << 1);
 
         float w = size.x; // usually 0.5
         float h = size.y; // usually 2 * w
@@ -22,8 +20,6 @@ namespace mvs {
 
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
-
-        float s = 0.2f;
 
         concord::Size wheel_size{0.1f, 0.2f, 0.0f};
 
@@ -47,8 +43,8 @@ namespace mvs {
             wheelPosition.y = t.position.y + rotatedOffset.y;
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, s, wheelTf, filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag, wheel_size);
+            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, wheel_size, wheelTf, filter, linearDamping,
+                           angularDamping, force, friction, maxImpulse, brake, drag);
         }
 
         float mf = -1;

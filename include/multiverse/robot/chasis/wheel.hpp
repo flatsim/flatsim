@@ -23,9 +23,8 @@ namespace mvs {
         float friction, maxImpulse;
 
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                  std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
-                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag,
-                  concord::Size size);
+                  std::string name, concord::Size size, Transform tf, CollisionFilter filter, float linearDamping,
+                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
 
         void step(float dt);
         void visualize();

@@ -3,9 +3,9 @@
 
 namespace mvs {
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                     std::string name, float scale, Transform tf, CollisionFilter filter, float linearDamping,
-                     float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag,
-                     concord::Size size) {
+                     std::string name, concord::Size size, Transform tf, CollisionFilter filter, float linearDamping,
+                     float angularDamping, float _force, float _friction, float _maxImpulse, float _brake,
+                     float _drag) {
         this->size = size;
         this->color = color;
         this->name = name;
