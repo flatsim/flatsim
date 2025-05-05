@@ -34,34 +34,36 @@ namespace mvs {
 
     void Simulator::on_joystick_axis(int axis, float value) {
         if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+            auto ster_mult = 30.0f;
+            auto thr_mult = 0.2f;
             if (axis == 0) {
-                steering = -value * 45;
+                steering = -value * ster_mult;
                 steerings[0] = steering;
                 steerings[1] = steering;
             }
 
             if (axis == 1) {
-                auto preval = -value * 0.4f;
+                auto preval = -value * thr_mult;
                 throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
                 throttles[0] = throttle;
                 throttles[1] = throttle;
             }
 
             if (axis == 3) {
-                steering = -value * 45;
+                steering = -value * ster_mult;
                 steerings[2] = steering;
                 steerings[3] = steering;
             }
 
             if (axis == 4) {
-                auto preval = -value * 0.4f;
+                auto preval = -value * thr_mult;
                 throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
                 throttles[2] = throttle;
                 throttles[3] = throttle;
             }
             if (axis == 2 || axis == 8) {
                 std::cout << "Axis " << axis << " value " << value << std::endl;
-                auto preval = value * 0.4f;
+                auto preval = value * thr_mult;
                 throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
                 throttles[0] = throttle;
                 throttles[1] = -throttle;

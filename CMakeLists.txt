@@ -23,8 +23,8 @@ set(params
 set(MULI_BUILD_DEMO OFF)
 fetchcontent_declare(
     muli
-    # GIT_REPOSITORY https://github.com/bresilla/Muli
     GIT_REPOSITORY https://github.com/Sopiro/Muli
+    GIT_TAG 25f6762e37de50f66251d16f6cfb8b7eae8be6ba
 )
 FetchContent_MakeAvailable(muli)
 include_directories(${muli_SOURCE_DIR}/include)
