@@ -53,5 +53,6 @@ namespace mvs {
 
       private:
         std::vector<rerun::components::Color> above_colors;
+        uint8_t cal = 1;
     };
 } // namespace mvs

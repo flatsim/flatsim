@@ -74,6 +74,29 @@ namespace mvs {
         visualize();
     }
     //
-    void World::visualize() {}
+    void World::visualize() {
+        std::vector<std::array<float, 3>> enu_grid_;
+        std::vector<rerun::components::Color> enu_colors;
+
+        for (std::size_t r = 0; r < the_grid.rows(); ++r) {
+            for (std::size_t c = 0; c < the_grid.cols(); ++c) {
+                enu_grid_.push_back({(float(the_grid(r, c).first.enu.x)), (float(the_grid(r, c).first.enu.y)), 0});
+                auto &[pt, color] = the_grid(r, c); // now color is an RGB& directly
+                color.r = 200;
+                color.g = 0;
+                color.b = 0;
+                rerun::datatypes::Rgba32 a_color{uint8(the_grid(r, c).second.r), uint8(the_grid(r, c).second.g),
+                                                 uint8(the_grid(r, c).second.b), 40};
+                enu_colors.push_back(a_color);
+            }
+        }
+
+        // visualize
+        auto gsx = float(settings.get_grid_size().x / 2);
+        auto gsy = float(settings.get_grid_size().z / 2);
+        rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
+                                    .with_colors(enu_colors)
+                                    .with_radii({{0.005f}}));
+    }
 
 } // namespace mvs
