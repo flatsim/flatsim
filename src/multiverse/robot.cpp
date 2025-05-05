@@ -2,8 +2,11 @@
 #include "pigment/types_hsv.hpp"
 
 namespace mvs {
-    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t collision_id)
-        : rec(rec), world(world), group(collision_id) {}
+    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t group)
+        : rec(rec), world(world), group(group) {
+        filter.bit = 1 << group;
+        filter.mask = ~(1 << group);
+    }
     Robot::~Robot() {}
 
     void Robot::tick(float dt) {
@@ -15,6 +18,8 @@ namespace mvs {
         this->position.point.enu.z = 0;
         this->position.point.wgs = this->position.point.enu.toWGS(world->get_settings().get_datum());
         chassis->tick(dt);
+
+        karosserie->SetTransform(chassis->get_transform());
         visualize();
     }
 
@@ -26,11 +31,18 @@ namespace mvs {
         this->size = size;
         this->spawn_position = pose;
 
-        filter.bit = 1 << group;
-        filter.mask = ~(1 << group);
+        Transform t;
+        t.position.x = pose.point.enu.x;
+        t.position.y = pose.point.enu.y;
+        t.rotation = pose.angle.yaw; // in radians
 
-        chassis = std::make_unique<Chasis>(world->get_world().get(), rec, pose, size, color, name, group, wheel_sizes,
-                                           filter);
+        chassis =
+            std::make_unique<Chasis>(world->get_world().get(), rec, t, size, color, name, group, wheel_sizes, filter);
+
+        karosserie = world->get_world()->CreateBox(size.x * 1.3, size.y * 1.3, t);
+        karosserie->SetCollisionFilter(filter);
+        karosserie->SetLinearDamping(linearDamping);
+        karosserie->SetAngularDamping(angularDamping);
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
@@ -51,6 +63,22 @@ namespace mvs {
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+
+        auto k_x = karosserie->GetPosition().x;
+        auto k_y = karosserie->GetPosition().y;
+        auto k_th = karosserie->GetRotation().GetAngle();
+        auto k_w = float(size.x * 1.3);
+        auto k_h = float(size.y * 1.3);
+        std::vector<rerun::Color> colors_a;
+        colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
+        rec->log_static(
+            this->name + "/karosserie",
+            rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
+                .with_radii({{0.02f}})
+                .with_labels({this->name})
+                // .with_fill_mode(rerun::FillMode::Solid)
+                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
+                .with_colors(colors_a));
 
         // Vec2 size = {this->size[0], this->size[1]};
         Transform t = chassis->get_transform();

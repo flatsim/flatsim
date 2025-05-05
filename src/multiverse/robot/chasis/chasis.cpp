@@ -2,22 +2,18 @@
 
 namespace mvs {
 
-    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, const concord::Pose &pose,
-                   const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid,
-                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter)
+    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, Transform t, const concord::Size &size,
+                   const pigment::RGB &color, std::string name, uint32_t cid, std::vector<concord::Size> wheel_sizes,
+                   CollisionFilter filter)
         : world(world), rec(rec), name(name), size(size), color(color), group(cid) {
-        init(pose, size, color, name, cid, wheel_sizes, filter);
+        init(t, size, color, name, cid, wheel_sizes, filter);
     }
 
-    void Chasis::init(const concord::Pose &pose, const concord::Size &size, const pigment::RGB &color, std::string name,
-                      uint32_t cid, std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
+    void Chasis::init(Transform t, const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid,
+                      std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
         float w = size.x; // usually 0.5
         float h = size.y; // usually 2 * w
 
-        Transform t;
-        t.position.x = pose.point.enu.x;
-        t.position.y = pose.point.enu.y;
-        t.rotation = pose.angle.yaw; // in radians
         body = world->CreateBox(w, h, t);
         body->SetCollisionFilter(filter);
 
