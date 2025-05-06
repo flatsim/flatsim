@@ -11,6 +11,7 @@
 #include "pigment/types_basic.hpp"
 #include "rerun.hpp"
 
+#include "multiverse/robot.hpp"
 #include "multiverse/world/layer.hpp"
 
 namespace mvs {
@@ -37,7 +38,6 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        // concord::Grid<pigment::RGB> the_grid;
         Layer<pigment::RGB> grid;
 
       public:

@@ -42,29 +42,12 @@ namespace mvs {
         // the_grid = concord::Grid<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
         grid = Layer<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
 
-        std::vector<std::array<float, 3>> enu_grid_;
-        std::vector<rerun::components::Color> enu_colors;
-
-        for (std::size_t r = 0; r < grid.getGrid().rows(); ++r) {
-            for (std::size_t c = 0; c < grid.getGrid().cols(); ++c) {
-                enu_grid_.push_back(
-                    {(float(grid.getGrid()(r, c).first.enu.x)), (float(grid.getGrid()(r, c).first.enu.y)), 0});
-                auto &[pt, color] = grid.getGrid()(r, c); // now color is an RGB& directly
-                color.r = 110;
-                color.g = 90;
-                color.b = 60;
-                rerun::datatypes::Rgba32 a_color{uint8(grid.getGrid()(r, c).second.r),
-                                                 uint8(grid.getGrid()(r, c).second.g),
-                                                 uint8(grid.getGrid()(r, c).second.b), 255};
-                enu_colors.push_back(a_color);
-            }
-        }
-
         auto gsx = float(settings.get_grid_size().x / 2);
         auto gsy = float(settings.get_grid_size().z / 2);
-        rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
-                                    .with_colors(enu_colors)
-                                    .with_radii({{0.005f}}));
+        rec->log_static("grid",
+                        rerun::Boxes3D::from_centers_and_half_sizes(grid.getGrid().flatten_points(), {{gsx, gsy, 0.0f}})
+                            .with_colors(rerun::Color(110, 90, 60))
+                            .with_radii({{0.005f}}));
 
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
