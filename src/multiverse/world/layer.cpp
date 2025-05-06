@@ -2,12 +2,15 @@
 
 namespace mvs {
     template class Layer<pigment::RGB>;
-    template <typename T> Layer<T>::Layer(std::size_t rows, std::size_t cols, double inradius, bool centered) {
+    template <typename T>
+    Layer<T>::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
+                    bool centered): rec(rec) {
         grid = concord::Grid<T>(rows, cols, inradius, centered);
     }
 
     template <typename T>
-    Layer<T>::Layer(std::size_t rows, std::size_t cols, double inradius, concord::Datum datum, bool centered) {
+    Layer<T>::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
+                    concord::Datum datum, bool centered): rec(rec) {
         grid = concord::Grid<T>(rows, cols, inradius, datum, centered);
     }
 
@@ -22,7 +25,7 @@ namespace mvs {
         }
     }
 
-    template <typename T> void Layer<T>::visualize(std::shared_ptr<rerun::RecordingStream> rec) {
+    template <typename T> void Layer<T>::visualize() {
         auto gs = float(grid.inradius() / 2);
         rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(grid.flatten_points(), {{gs, gs, 0.0f}})
                                     .with_colors(rerun::Color(110, 90, 60))

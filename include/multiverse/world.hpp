@@ -50,8 +50,10 @@ namespace mvs {
         void init(concord::Datum datum, concord::Size world_size, concord::Size grid_size);
         void tick(float dt);
         void visualize();
+        void add_layer(std::string name, float inradius);
 
       private:
-        std::vector<rerun::components::Color> above_colors;
+        std::vector<std::array<float, 3>> enu_corners_;
+        std::vector<rerun::LatLon> wgs_corners_;
     };
 } // namespace mvs
