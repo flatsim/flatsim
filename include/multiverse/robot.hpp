@@ -51,7 +51,7 @@ namespace mvs {
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
         void teleport(concord::Pose pose);
-        void pulse_vis(float p_s = 2.0);
+        void pulse_vis(float p_s);
         void respawn();
 
       private:
