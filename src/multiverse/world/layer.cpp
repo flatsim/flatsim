@@ -22,21 +22,9 @@ namespace mvs {
         }
     }
 
-    template <typename T>
-    template <typename U, typename>
-    void Layer<T>::visualize(std::shared_ptr<rerun::RecordingStream> rec, concord::Size world_size,
-                             concord::Size grid_size) {
-        std::vector<std::array<float, 3>> enu_grid_;
-        for (std::size_t r = 0; r < grid.getGrid().rows(); ++r) {
-            for (std::size_t c = 0; c < grid.getGrid().cols(); ++c) {
-                enu_grid_.push_back(
-                    {(float(grid.getGrid()(r, c).first.enu.x)), (float(grid.getGrid()(r, c).first.enu.y)), 0});
-            }
-        }
-
-        auto gsy = float(grid_size.y / 2);
-        auto gsx = float(world_size.x / 2);
-        rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
+    template <typename T> void Layer<T>::visualize(std::shared_ptr<rerun::RecordingStream> rec) {
+        auto gs = float(grid.inradius() / 2);
+        rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(grid.flatten_points(), {{gs, gs, 0.0f}})
                                     .with_colors(rerun::Color(110, 90, 60))
                                     .with_radii({{0.005f}}));
     }

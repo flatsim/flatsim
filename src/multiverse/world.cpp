@@ -42,13 +42,6 @@ namespace mvs {
         // the_grid = concord::Grid<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
         grid = Layer<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
 
-        auto gsx = float(settings.get_grid_size().x / 2);
-        auto gsy = float(settings.get_grid_size().z / 2);
-        rec->log_static("grid",
-                        rerun::Boxes3D::from_centers_and_half_sizes(grid.getGrid().flatten_points(), {{gsx, gsy, 0.0f}})
-                            .with_colors(rerun::Color(110, 90, 60))
-                            .with_radii({{0.005f}}));
-
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
@@ -58,6 +51,7 @@ namespace mvs {
     void World::tick(float dt) {
         world->Step(dt);
         visualize();
+        grid.visualize(rec);
     }
     //
     void World::visualize() {
