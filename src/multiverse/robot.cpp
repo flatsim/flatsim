@@ -7,7 +7,7 @@ namespace mvs {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
-    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t group)
+    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
         : rec(rec), world(world), group(group) {
         filter.bit = 1 << group;
         filter.mask = ~(1 << group);
@@ -21,14 +21,14 @@ namespace mvs {
         this->position.point.enu.x = chassis->get_transform().position.x;
         this->position.point.enu.y = chassis->get_transform().position.y;
         this->position.point.enu.z = 0;
-        this->position.point.wgs = this->position.point.enu.toWGS(world->get_settings().get_datum());
+        this->position.point.wgs = this->position.point.enu.toWGS(datum);
         chassis->tick(dt);
 
         karosserie->SetTransform(chassis->get_transform());
         visualize();
     }
 
-    void Robot::init(concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
+    void Robot::init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
                      std::vector<concord::Size> wheel_sizes) {
         std::cout << "Initializing robot " << name << "...\n";
         this->color = color;
@@ -41,10 +41,9 @@ namespace mvs {
         t.position.y = pose.point.enu.y;
         t.rotation = pose.angle.yaw; // in radians
 
-        chassis =
-            std::make_unique<Chasis>(world->get_world().get(), rec, t, size, color, name, group, wheel_sizes, filter);
+        chassis = std::make_unique<Chasis>(world.get(), rec, t, size, color, name, group, wheel_sizes, filter);
 
-        karosserie = world->get_world()->CreateBox(size.x * 1.3, size.y * 1.3, t);
+        karosserie = world->CreateBox(size.x * 1.3, size.y * 1.3, t);
         karosserie->SetCollisionFilter(filter);
         karosserie->SetLinearDamping(linearDamping);
         karosserie->SetAngularDamping(angularDamping);

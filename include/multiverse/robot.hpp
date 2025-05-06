@@ -23,7 +23,7 @@ namespace mvs {
         std::string name;
         uint32_t group;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::shared_ptr<mvs::World> world;
+        std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chasis> chassis;
 
@@ -39,14 +39,14 @@ namespace mvs {
 
       public:
         bool pulsining = false;
-        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t group);
+        Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
 
         std::string id() const { return name; }
         const concord::Pose &get_position() const { return position; }
 
         void tick(float dt);
-        void init(concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
+        void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
                   std::vector<concord::Size> wheel_sizes = {});
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
@@ -55,6 +55,7 @@ namespace mvs {
         void respawn();
 
       private:
+        concord::Datum datum;
         concord::Circle pulse;
         void visualize_once();
         void visualize();
