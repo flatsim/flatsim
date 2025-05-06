@@ -128,7 +128,7 @@ namespace mvs {
                                                      .with_vertex_normals({{0.0, 0.0, 1.0}})
                                                      .with_vertex_colors(vertex_colors)
                                                      .with_triangle_indices({{2, 1, 0}}));
-        pulse_vis(3.0f);
+        pulse_vis(std::max(size.x, size.y) * 3.0f);
     }
 
     void Robot::pulse_vis(float p_s) {
@@ -155,10 +155,11 @@ namespace mvs {
             poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
         }
         poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
-        rec->log_static(this->name + "/pulse2",
-                        rerun::LineStrips3D({{poi}})
-                            .with_colors({{this_c}})
-                            .with_radii({{float(mapValue(pulse_size, 0.0, 3.0, 0.03, 0.0005))}}));
+        rec->log_static(
+            this->name + "/pulse2",
+            rerun::LineStrips3D({{poi}})
+                .with_colors({{this_c}})
+                .with_radii({{float(mapValue(pulse_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
     }
 
     void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }

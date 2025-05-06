@@ -23,7 +23,7 @@ namespace mvs {
     void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Size> wheels) {
         robots.emplace_back([&] {
             pigment::RGB color = pigment::RGB::random();
-            auto r = std::make_unique<Robot>(rec, world->get_world(), robots.size());
+            auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
             r->init(world_datum, robot_pose, chassis_size, color, "robot" + std::to_string(robots.size()), wheels);
             return r;
         }());

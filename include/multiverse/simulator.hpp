@@ -15,7 +15,6 @@ namespace mvs {
         concord::Datum world_datum;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::vector<std::shared_ptr<Robot>> robots;
-        std::unique_ptr<Robot> robot;
 
       private:
         void doit() {}
