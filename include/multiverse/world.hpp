@@ -1,18 +1,17 @@
 #pragma once
 
+#include "concord/types_basic.hpp"
+#include "concord/types_grid.hpp"
+#include "concord/types_square.hpp"
 #include "muli/math.h"
 #include "muli/polygon.h"
 #include "muli/rigidbody.h"
 #include "muli/settings.h"
 #include "muli/world.h"
-
-#include "concord/types_basic.hpp"
-#include "concord/types_grid.hpp"
-#include "concord/types_square.hpp"
-
 #include "pigment/types_basic.hpp"
+#include "rerun.hpp"
 
-#include <rerun.hpp>
+#include "multiverse/world/layer.hpp"
 
 namespace mvs {
     class WorldSettings : public muli::WorldSettings {
@@ -38,7 +37,8 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        concord::Grid<pigment::RGB> the_grid;
+        // concord::Grid<pigment::RGB> the_grid;
+        Layer<pigment::RGB> grid;
 
       public:
         World(std::shared_ptr<rerun::RecordingStream> rec);
@@ -50,8 +50,6 @@ namespace mvs {
         void init(concord::Datum datum, concord::Size world_size, concord::Size grid_size);
         void tick(float dt);
         void visualize();
-
-        std::vector<uint8_t> get_image_grid();
 
       private:
         std::vector<rerun::components::Color> above_colors;

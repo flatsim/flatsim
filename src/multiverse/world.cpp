@@ -39,20 +39,23 @@ namespace mvs {
 
         int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size().x);
         int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size().y);
-        the_grid = concord::Grid<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
+        // the_grid = concord::Grid<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
+        grid = Layer<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
 
         std::vector<std::array<float, 3>> enu_grid_;
         std::vector<rerun::components::Color> enu_colors;
 
-        for (std::size_t r = 0; r < the_grid.rows(); ++r) {
-            for (std::size_t c = 0; c < the_grid.cols(); ++c) {
-                enu_grid_.push_back({(float(the_grid(r, c).first.enu.x)), (float(the_grid(r, c).first.enu.y)), 0});
-                auto &[pt, color] = the_grid(r, c); // now color is an RGB& directly
+        for (std::size_t r = 0; r < grid.getGrid().rows(); ++r) {
+            for (std::size_t c = 0; c < grid.getGrid().cols(); ++c) {
+                enu_grid_.push_back(
+                    {(float(grid.getGrid()(r, c).first.enu.x)), (float(grid.getGrid()(r, c).first.enu.y)), 0});
+                auto &[pt, color] = grid.getGrid()(r, c); // now color is an RGB& directly
                 color.r = 110;
                 color.g = 90;
                 color.b = 60;
-                rerun::datatypes::Rgba32 a_color{uint8(the_grid(r, c).second.r), uint8(the_grid(r, c).second.g),
-                                                 uint8(the_grid(r, c).second.b), 255};
+                rerun::datatypes::Rgba32 a_color{uint8(grid.getGrid()(r, c).second.r),
+                                                 uint8(grid.getGrid()(r, c).second.g),
+                                                 uint8(grid.getGrid()(r, c).second.b), 255};
                 enu_colors.push_back(a_color);
             }
         }
@@ -97,20 +100,6 @@ namespace mvs {
         // rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(enu_grid_, {{gsx, gsy, 0.0f}})
         //                             .with_colors(enu_colors)
         //                             .with_radii({{0.005f}}));
-    }
-
-    std::vector<uint8_t> World::get_image_grid() {
-        std::vector<uint8_t> image;
-        image.resize(the_grid.rows() * the_grid.cols() * 3);
-        for (std::size_t r = 0; r < the_grid.rows(); ++r) {
-            for (std::size_t c = 0; c < the_grid.cols(); ++c) {
-                auto &[pt, color] = the_grid(r, c); // now color is an RGB& directly
-                image[r * the_grid.cols() * 3 + c * 3 + 0] = color.r;
-                image[r * the_grid.cols() * 3 + c * 3 + 1] = color.g;
-                image[r * the_grid.cols() * 3 + c * 3 + 2] = color.b;
-            }
-        }
-        return image;
     }
 
 } // namespace mvs

@@ -77,6 +77,7 @@ set(lib
     src/multiverse/robot/chasis/wheel.cpp
     src/multiverse/robot/sensor.cpp
     src/multiverse/robot.cpp
+    src/multiverse/world/layer.cpp
     src/multiverse/world.cpp
     src/multiverse/simulator.cpp
 )
