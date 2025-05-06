@@ -2,6 +2,11 @@
 #include "pigment/types_hsv.hpp"
 
 namespace mvs {
+
+    double mapValue(double x, double in_min, double in_max, double out_min, double out_max) {
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
+
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<mvs::World> world, uint32_t group)
         : rec(rec), world(world), group(group) {
         filter.bit = 1 << group;
@@ -124,13 +129,13 @@ namespace mvs {
                                                      .with_vertex_normals({{0.0, 0.0, 1.0}})
                                                      .with_vertex_colors(vertex_colors)
                                                      .with_triangle_indices({{2, 1, 0}}));
-        pulse_vis(5.0f);
+        pulse_vis(3.0f);
     }
 
     void Robot::pulse_vis(float p_s) {
-        auto pulse_size = pulse.getRadius() + 0.001;
+        auto pulse_size = pulse.getRadius() + 0.0015;
         auto hsv = pigment::HSV::fromRGB(color);
-        hsv.adjustSaturation(0.5f);
+        hsv.adjustBrightness(0.5f);
         auto c = hsv.toRGB();
         auto this_c = rerun::Color(c.r, c.g, c.b);
         if (!pulsining) {
@@ -151,7 +156,10 @@ namespace mvs {
             poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
         }
         poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
-        rec->log_static(this->name + "/pulse2", rerun::LineStrips3D({{poi}}).with_colors({{this_c}}));
+        rec->log_static(this->name + "/pulse2",
+                        rerun::LineStrips3D({{poi}})
+                            .with_colors({{this_c}})
+                            .with_radii({{float(mapValue(pulse_size, 0.0, 3.0, 0.03, 0.0005))}}));
     }
 
     void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }

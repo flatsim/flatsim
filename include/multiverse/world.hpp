@@ -51,6 +51,8 @@ namespace mvs {
         void tick(float dt);
         void visualize();
 
+        std::vector<uint8_t> get_image_grid();
+
       private:
         std::vector<rerun::components::Color> above_colors;
     };

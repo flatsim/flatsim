@@ -99,4 +99,18 @@ namespace mvs {
                                     .with_radii({{0.01f}}));
     }
 
+    std::vector<uint8_t> World::get_image_grid() {
+        std::vector<uint8_t> image;
+        image.resize(the_grid.rows() * the_grid.cols() * 3);
+        for (std::size_t r = 0; r < the_grid.rows(); ++r) {
+            for (std::size_t c = 0; c < the_grid.cols(); ++c) {
+                auto &[pt, color] = the_grid(r, c); // now color is an RGB& directly
+                image[r * the_grid.cols() * 3 + c * 3 + 0] = color.r;
+                image[r * the_grid.cols() * 3 + c * 3 + 1] = color.g;
+                image[r * the_grid.cols() * 3 + c * 3 + 2] = color.b;
+            }
+        }
+        return image;
+    }
+
 } // namespace mvs
