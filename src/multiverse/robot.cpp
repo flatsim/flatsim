@@ -24,9 +24,6 @@ namespace mvs {
         this->position.point.wgs = this->position.point.enu.toWGS(datum);
         chassis->tick(dt);
 
-        for (auto &ks : karosserie) {
-            ks->SetTransform(chassis->get_transform());
-        }
         visualize();
     }
 
@@ -47,14 +44,6 @@ namespace mvs {
         bound.size = size;
         bound.pose = pose;
         chassis = std::make_unique<Chasis>(world.get(), rec, bound, color, name, group, wheel_sizes, filter);
-
-        for (auto &ks : karosserie_sizes) {
-            auto ks_ = world->CreateBox(ks.x * 1.3, ks.y * 1.3, t);
-            ks_->SetCollisionFilter(filter);
-            ks_->SetLinearDamping(linearDamping);
-            ks_->SetAngularDamping(angularDamping);
-            karosserie.push_back(ks_);
-        }
 
         pulse = concord::Circle(this->position.point, 0.0);
     }
@@ -80,22 +69,22 @@ namespace mvs {
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
-        for (auto &ks : karosserie) {
-            auto k_x = ks->GetPosition().x;
-            auto k_y = ks->GetPosition().y;
-            auto k_th = ks->GetRotation().GetAngle();
-            auto k_w = float(size.x * 1.3);
-            auto k_h = float(size.y * 1.3);
-            std::vector<rerun::Color> colors_a;
-            colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
-            rec->log_static(this->name + "/karosserie",
-                            rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
-                                .with_radii({{0.02f}})
-                                // .with_fill_mode(rerun::FillMode::Solid)
-                                .with_rotation_axis_angles(
-                                    {rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
-                                .with_colors(colors_a));
-        }
+        // for (auto &ks : karosserie) {
+        //     auto k_x = ks->GetPosition().x;
+        //     auto k_y = ks->GetPosition().y;
+        //     auto k_th = ks->GetRotation().GetAngle();
+        //     auto k_w = float(size.x * 1.3);
+        //     auto k_h = float(size.y * 1.3);
+        //     std::vector<rerun::Color> colors_a;
+        //     colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
+        //     rec->log_static(this->name + "/karosserie",
+        //                     rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
+        //                         .with_radii({{0.02f}})
+        //                         // .with_fill_mode(rerun::FillMode::Solid)
+        //                         .with_rotation_axis_angles(
+        //                             {rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
+        //                         .with_colors(colors_a));
+        // }
 
         // Vec2 size = {this->size[0], this->size[1]};
         Transform t = chassis->get_transform();

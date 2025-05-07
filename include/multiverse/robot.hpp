@@ -27,11 +27,7 @@ namespace mvs {
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chasis> chassis;
 
-        // muli::CollisonFilter filter;
         muli::CollisionFilter filter;
-        // muli::RigidBody *karosserie;
-
-        std::vector<muli::RigidBody *> karosserie;
 
         concord::Pose position;
         concord::Polygon shape;
