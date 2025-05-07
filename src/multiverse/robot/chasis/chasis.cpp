@@ -2,17 +2,22 @@
 
 namespace mvs {
 
-    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, Transform t, const concord::Size &size,
+    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
                    const pigment::RGB &color, std::string name, uint32_t cid, std::vector<concord::Size> wheel_sizes,
                    CollisionFilter filter)
-        : world(world), rec(rec), name(name), size(size), color(color), group(cid) {
-        init(t, size, color, name, cid, wheel_sizes, filter);
+        : world(world), rec(rec), name(name), bound(bound), color(color), group(cid) {
+        init(bound, color, name, cid, wheel_sizes, filter);
     }
 
-    void Chasis::init(Transform t, const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t cid,
+    void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name, uint32_t group,
                       std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
-        float w = size.x; // usually 0.5
-        float h = size.y; // usually 2 * w
+        float w = bound.size.x; // usually 0.5
+        float h = bound.size.y; // usually 2 * w
+
+        Transform t;
+        t.position.x = bound.pose.point.enu.x;
+        t.position.y = bound.pose.point.enu.y;
+        t.rotation = bound.pose.angle.yaw;
 
         body = world->CreateBox(w, h, t);
         body->SetCollisionFilter(filter);
@@ -38,10 +43,17 @@ namespace mvs {
             Vec2 wheelPosition;
             wheelPosition.x = t.position.x + rotatedOffset.x;
             wheelPosition.y = t.position.y + rotatedOffset.y;
+            concord ::Bound wheel_bound;
+            wheel_bound.size = wheel_sizes[i];
+            concord::Pose wheel_pose;
+            wheel_pose.point.enu.x = wheelPosition.x;
+            wheel_pose.point.enu.y = wheelPosition.y;
+            wheel_pose.angle.yaw = 0.0f; // TODO: fix this
+            wheel_bound.pose = wheel_pose;
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].init(world, rec, color, name + wheelOffsets[i].second, wheel_sizes[i], wheelTf, filter,
-                           linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
+            wheels[i].init(world, rec, color, name + std::to_string(i), wheel_bound, wheelTf, filter, linearDamping,
+                           angularDamping, force, friction, maxImpulse, brake, drag);
         }
 
         float mf = -1;
@@ -69,8 +81,8 @@ namespace mvs {
         auto th = body->GetRotation().GetAngle();
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
-        auto w = float(size.x);
-        auto h = float(size.y);
+        auto w = float(bound.size.x);
+        auto h = float(bound.size.y);
         rec->log_static(
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{w / 2, h / 2, 0.0f}})
@@ -100,8 +112,8 @@ namespace mvs {
         body->SetTransform(t);
         body->SetSleeping(true);
 
-        auto w = float(size.x);
-        auto h = float(size.y);
+        auto w = float(bound.size.x);
+        auto h = float(bound.size.y);
 
         std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
             {Vec2(w / 2, h / 2), "fr"},   // front-right

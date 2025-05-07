@@ -29,7 +29,9 @@ namespace mvs {
 
         // muli::CollisonFilter filter;
         muli::CollisionFilter filter;
-        muli::RigidBody *karosserie;
+        // muli::RigidBody *karosserie;
+
+        std::vector<muli::RigidBody *> karosserie;
 
         concord::Pose position;
         concord::Polygon shape;
@@ -47,7 +49,7 @@ namespace mvs {
 
         void tick(float dt);
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                  std::vector<concord::Size> wheel_sizes = {});
+                  std::vector<concord::Size> wheel_sizes = {}, std::vector<concord::Size> karosserie_sizes = {});
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
         void teleport(concord::Pose pose);

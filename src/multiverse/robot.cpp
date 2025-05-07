@@ -24,12 +24,14 @@ namespace mvs {
         this->position.point.wgs = this->position.point.enu.toWGS(datum);
         chassis->tick(dt);
 
-        karosserie->SetTransform(chassis->get_transform());
+        for (auto &ks : karosserie) {
+            ks->SetTransform(chassis->get_transform());
+        }
         visualize();
     }
 
     void Robot::init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                     std::vector<concord::Size> wheel_sizes) {
+                     std::vector<concord::Size> wheel_sizes, std::vector<concord::Size> karosserie_sizes) {
         std::cout << "Initializing robot " << name << "...\n";
         this->color = color;
         this->name = name;
@@ -41,17 +43,25 @@ namespace mvs {
         t.position.y = pose.point.enu.y;
         t.rotation = pose.angle.yaw; // in radians
 
-        chassis = std::make_unique<Chasis>(world.get(), rec, t, size, color, name, group, wheel_sizes, filter);
+        concord::Bound bound;
+        bound.size = size;
+        bound.pose = pose;
+        chassis = std::make_unique<Chasis>(world.get(), rec, bound, color, name, group, wheel_sizes, filter);
 
-        karosserie = world->CreateBox(size.x * 1.3, size.y * 1.3, t);
-        karosserie->SetCollisionFilter(filter);
-        karosserie->SetLinearDamping(linearDamping);
-        karosserie->SetAngularDamping(angularDamping);
+        for (auto &ks : karosserie_sizes) {
+            auto ks_ = world->CreateBox(ks.x * 1.3, ks.y * 1.3, t);
+            ks_->SetCollisionFilter(filter);
+            ks_->SetLinearDamping(linearDamping);
+            ks_->SetAngularDamping(angularDamping);
+            karosserie.push_back(ks_);
+        }
 
         pulse = concord::Circle(this->position.point, 0.0);
     }
 
     void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
+    void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
+    void Robot::respawn() { chassis->teleport(spawn_position); }
 
     void Robot::visualize() {
         chassis->visualize();
@@ -70,20 +80,22 @@ namespace mvs {
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
-        auto k_x = karosserie->GetPosition().x;
-        auto k_y = karosserie->GetPosition().y;
-        auto k_th = karosserie->GetRotation().GetAngle();
-        auto k_w = float(size.x * 1.3);
-        auto k_h = float(size.y * 1.3);
-        std::vector<rerun::Color> colors_a;
-        colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
-        rec->log_static(
-            this->name + "/karosserie",
-            rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
-                .with_radii({{0.02f}})
-                // .with_fill_mode(rerun::FillMode::Solid)
-                .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
-                .with_colors(colors_a));
+        for (auto &ks : karosserie) {
+            auto k_x = ks->GetPosition().x;
+            auto k_y = ks->GetPosition().y;
+            auto k_th = ks->GetRotation().GetAngle();
+            auto k_w = float(size.x * 1.3);
+            auto k_h = float(size.y * 1.3);
+            std::vector<rerun::Color> colors_a;
+            colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
+            rec->log_static(this->name + "/karosserie",
+                            rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
+                                .with_radii({{0.02f}})
+                                // .with_fill_mode(rerun::FillMode::Solid)
+                                .with_rotation_axis_angles(
+                                    {rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
+                                .with_colors(colors_a));
+        }
 
         // Vec2 size = {this->size[0], this->size[1]};
         Transform t = chassis->get_transform();
@@ -161,7 +173,4 @@ namespace mvs {
                 .with_colors({{this_c}})
                 .with_radii({{float(mapValue(pulse_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
     }
-
-    void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
-    void Robot::respawn() { chassis->teleport(spawn_position); }
 } // namespace mvs

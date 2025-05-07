@@ -21,6 +21,7 @@ namespace mvs {
               bool centered = true);
         Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
               concord::Datum datum, bool centered = true);
+        Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Size world_size, double inradius);
 
         concord::Grid<T> &getGrid() { return grid; }
         const concord::Grid<T> &getGrid() const { return grid; }

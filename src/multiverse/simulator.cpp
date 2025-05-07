@@ -15,16 +15,17 @@ namespace mvs {
     void Simulator::init(concord::Datum datum, concord::Size world_size, float grid_size) {
         world = std::make_shared<mvs::World>(rec);
 
-        concord::Size grid_size_size{grid_size, grid_size, grid_size};
-        world->init(datum, world_size, grid_size_size);
+        world->init(datum, world_size, grid_size);
         world_datum = datum;
     }
 
-    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Size> wheels) {
+    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Size> wheels,
+                              std::vector<concord::Size> karosserie) {
         robots.emplace_back([&] {
             pigment::RGB color = pigment::RGB::random();
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
-            r->init(world_datum, robot_pose, chassis_size, color, "robot" + std::to_string(robots.size()), wheels);
+            r->init(world_datum, robot_pose, chassis_size, color, "robot" + std::to_string(robots.size()), wheels,
+                    karosserie);
             return r;
         }());
     }

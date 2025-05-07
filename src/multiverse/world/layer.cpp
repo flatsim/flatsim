@@ -4,14 +4,23 @@ namespace mvs {
     template class Layer<pigment::RGB>;
     template <typename T>
     Layer<T>::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
-                    bool centered): rec(rec) {
+                    bool centered)
+        : rec(rec) {
         grid = concord::Grid<T>(rows, cols, inradius, centered);
     }
 
     template <typename T>
     Layer<T>::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
-                    concord::Datum datum, bool centered): rec(rec) {
+                    concord::Datum datum, bool centered)
+        : rec(rec) {
         grid = concord::Grid<T>(rows, cols, inradius, datum, centered);
+    }
+
+    template <typename T>
+    Layer<T>::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Size world_size, double inradius) : rec(rec) {
+        auto width = world_size.x / inradius;
+        auto height = world_size.y / inradius;
+        grid = concord::Grid<T>(width, height, inradius);
     }
 
     template <typename T> template <typename U, typename> void Layer<T>::to_image(std::vector<uint8_t> &image) {

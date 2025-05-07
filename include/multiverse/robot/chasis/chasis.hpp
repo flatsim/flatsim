@@ -2,6 +2,7 @@
 
 #include "concord/types_basic.hpp"
 #include "muli/world.h"
+#include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
 #include "pigment/types_basic.hpp"
 
@@ -29,19 +30,20 @@ namespace mvs {
         RigidBody *body;
         Wheel wheels[4];
         MotorJoint *joints[4];
+        std::vector<Karosserie *> karosserie;
 
       public:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
         pigment::RGB color;
-        concord::Size size;
+        concord::Bound bound;
         uint32_t group;
 
-        Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, Transform t, const concord::Size &size,
+        Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
                const pigment::RGB &color, std::string name, uint32_t group, std::vector<concord::Size> wheel_sizes,
                CollisionFilter filter);
 
-        void init(Transform t, const concord::Size &size, const pigment::RGB &color, std::string name, uint32_t group,
+        void init(concord::Bound &bound, const pigment::RGB &color, std::string name, uint32_t group,
                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter);
 
         void tick(float dt);

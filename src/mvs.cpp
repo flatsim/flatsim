@@ -63,7 +63,10 @@ int main() {
         wheel_sizes.push_back({0.1f, 0.2f, 0.0f});
         wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
         wheel_sizes.push_back({0.2f, 0.4f, 0.0f});
-        sim->add_robot(robot_pose, chassis_size, wheel_sizes);
+        std::vector<concord::Size> karosserie_sizes;
+        karosserie_sizes.push_back({0.1f, 0.2f, 0.0f});
+        karosserie_sizes.push_back({0.2f, 0.3f, 0.0f});
+        sim->add_robot(robot_pose, chassis_size, wheel_sizes, karosserie_sizes);
     }
 
     auto last_time = std::chrono::steady_clock::now();

@@ -14,7 +14,7 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
         pigment::RGB color;
-        concord::Size size;
+        concord::Bound bound;
 
         RigidBody *wheel;
         Vec2 forward, normal;
@@ -23,7 +23,7 @@ namespace mvs {
         float friction, maxImpulse;
 
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                  std::string name, concord::Size size, Transform tf, CollisionFilter filter, float linearDamping,
+                  std::string name, concord::Bound bound, Transform tf, CollisionFilter filter, float linearDamping,
                   float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
 
         void tick(float dt);

@@ -16,7 +16,7 @@ namespace mvs {
     World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     World::~World() { world.reset(); }
 
-    void World::init(concord::Datum datum, concord::Size world_size, concord::Size grid_size) {
+    void World::init(concord::Datum datum, concord::Size world_size, float grid_size) {
 
         settings.init(datum, world_size, grid_size);
         settings.apply_gravity = false;
@@ -35,10 +35,9 @@ namespace mvs {
             wgs_corners_.push_back({lat, lon});
         }
 
-        int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size().x);
-        int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size().y);
-        // the_grid = concord::Grid<pigment::RGB>(g_width, g_height, settings.get_grid_size().y);
-        grid = Layer<pigment::RGB>(rec, g_width, g_height, settings.get_grid_size().y);
+        int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
+        int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
+        grid = Layer<pigment::RGB>(rec, g_width, g_height, settings.get_grid_size());
     }
     void World::tick(float dt) {
         world->Step(dt);
@@ -53,6 +52,11 @@ namespace mvs {
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+    }
+
+    void World::add_layer(std::string name, float inradius) {
+        auto layer = std::make_shared<Layer<pigment::RGB>>(rec, grid.getGrid().rows(), grid.getGrid().cols(), inradius);
+        layers.push_back(layer);
     }
 
 } // namespace mvs
