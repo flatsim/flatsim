@@ -17,11 +17,15 @@ namespace mvs {
         pigment::RGB color;
 
       public:
-        Karosserie();
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
 
-        void init(concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color, std::string name);
+        void init(concord::Bound parent, concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color,
+                  std::string name);
         void tick(float dt, muli::Transform t);
+
+        muli::Transform shift(concord::Bound parent, concord::Bound child);
+        void teleport(concord::Pose pose);
+
         void visualize();
     };
 } // namespace mvs

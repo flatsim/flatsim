@@ -21,6 +21,8 @@ namespace mvs {
 
     void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Bound> wheels,
                               std::vector<concord::Bound> karosserie) {
+        throttles = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        steerings = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         robots.emplace_back([&] {
             pigment::RGB color = pigment::RGB::random();
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
@@ -49,8 +51,8 @@ namespace mvs {
 
             if (axis == 3) {
                 steering = -value * ster_mult;
-                steerings[2] = steering;
-                steerings[3] = steering;
+                steerings[4] = steering;
+                steerings[5] = steering;
             }
 
             if (axis == 4) {

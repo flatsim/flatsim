@@ -7,14 +7,12 @@ namespace mvs {
                  CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                     std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
+    void Wheel::init(const pigment::RGB &color, std::string name, concord::Bound parent, concord::Bound bound,
                      float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,
                      float _brake, float _drag) {
         this->bound = bound;
         this->color = color;
         this->name = name;
-        this->rec = rec;
 
         auto wheelTf = shift(parent, bound);
 
@@ -57,7 +55,6 @@ namespace mvs {
             float dragForceMagnitude = -drag * vf;
             wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
         }
-        visualize();
     }
 
     void Wheel::update(float steering, float throttle, MotorJoint *joint) {
@@ -122,7 +119,8 @@ namespace mvs {
 
         rec->log_static(
             this->name + "/wheel",
-            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
+            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}},
+                                                        {{float(bound.size.x) / 2, float(bound.size.y) / 2, 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})

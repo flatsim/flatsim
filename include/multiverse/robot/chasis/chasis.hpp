@@ -48,7 +48,7 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose);
-        void update(float steering[4], float throttle[4]);
+        void update(std::vector<float> steering, std::vector<float> throttle);
         muli::Transform get_transform() const;
     };
 } // namespace mvs

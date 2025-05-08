@@ -1,37 +1,64 @@
 #include "multiverse/robot/chasis/karosserie.hpp"
 
 namespace mvs {
-    Karosserie::Karosserie() {}
-
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Karosserie::init(concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color, std::string name) {
+    void Karosserie::init(concord::Bound parent, concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color,
+                          std::string name) {
         this->name = name;
         this->color = color;
         this->bound = bound;
-        muli::Transform t;
-        t.position.x = bound.pose.point.enu.x;
-        t.position.y = bound.pose.point.enu.y;
-        t.rotation = bound.pose.angle.yaw;
-        karosserie = world->CreateBox(bound.size.x, bound.size.y, t);
+
+        auto karosseriePosition = shift(parent, bound);
+        karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
         karosserie->SetCollisionFilter(filter);
     }
 
     void Karosserie::tick(float dt, muli::Transform t) {
-
         // Transform the local offset to world coordinates
-        muli::Vec2 localOffset = {float(bound.pose.point.enu.x), float(bound.pose.point.enu.y)};
-        // Rotate the offset according to car's rotation
         muli::Vec2 rotatedOffset;
-        rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
-        rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
+        rotatedOffset.x = bound.pose.point.enu.x * t.rotation.c - bound.pose.point.enu.y * t.rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * t.rotation.s + bound.pose.point.enu.y * t.rotation.c;
         // Add the rotated offset to the car's position
-        muli::Vec2 ks_pose;
-        ks_pose.x = t.position.x + rotatedOffset.x;
-        ks_pose.y = t.position.y + rotatedOffset.y;
-        muli::Transform wheelTf{ks_pose, t.rotation};
-        karosserie->SetTransform(wheelTf);
+        muli::Vec2 karosseriePosition;
+        karosseriePosition.x = t.position.x + rotatedOffset.x;
+        karosseriePosition.y = t.position.y + rotatedOffset.y;
+        karosserie->SetTransform(muli::Transform{karosseriePosition, t.rotation});
+    }
+
+    muli::Transform Karosserie::shift(concord::Bound parent, concord::Bound child) {
+        muli::Rotation p_rotation(parent.pose.angle.yaw);
+        muli::Vec2 rotatedOffset;
+        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
+        // Add the rotated offset to the car's position
+        muli::Vec2 wheelPosition;
+        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
+        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
+        concord::Pose wheel_pose;
+        wheel_pose.point.enu.x = wheelPosition.x;
+        wheel_pose.point.enu.y = wheelPosition.y;
+        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
+        muli::Rotation rotation(wheel_pose.angle.yaw);
+        muli::Transform wheelTf{wheelPosition, rotation};
+        return wheelTf;
+    }
+
+    void Karosserie::teleport(concord::Pose pose) {
+        muli::Transform t;
+        t.position.x = pose.point.enu.x;
+        t.position.y = pose.point.enu.y;
+        t.rotation = pose.angle.yaw;
+        muli::Vec2 rotatedOffset;
+        rotatedOffset.x = bound.pose.point.enu.x * t.rotation.c - bound.pose.point.enu.y * t.rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * t.rotation.s + bound.pose.point.enu.y * t.rotation.c;
+        // Add the rotated offset to the car's position
+        muli::Vec2 wheelPosition;
+        wheelPosition.x = pose.point.enu.x + rotatedOffset.x;
+        wheelPosition.y = pose.point.enu.y + rotatedOffset.y;
+        karosserie->SetTransform(muli::Transform{wheelPosition, t.rotation});
+        karosserie->SetSleeping(true);
     }
 
     void Karosserie::visualize() {

@@ -59,19 +59,24 @@ int main() {
         robot_pose.angle.yaw = 0.0f;
 
         float width = 0.8f;
-        float height = 1.4f;
+        float height = 1.95f;
 
         concord::Size chassis_size{width, height, 0.0f};
 
         std::vector<concord::Bound> wheels;
-        wheels.push_back(concord::Bound(concord::Pose(width / 2, height / 2, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(-width / 2, height / 2, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(width / 2, -height / 2, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(-width / 2, -height / 2, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
+        concord::Size w_size{width * 0.25, height * 0.2f, 0.0f};
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, (height / 2) * 0.6, 0.0f), w_size));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, (height / 2) * 0.6, 0.0f), w_size));
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, 0.1, 0.0f), w_size));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, 0.1, 0.0f), w_size));
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
 
         std::vector<concord::Bound> karosseries;
-        karosseries.push_back(concord::Bound(concord::Pose(2.0f, 2.0f, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
-        karosseries.push_back(concord::Bound(concord::Pose(3.0f, 3.0f, 0.0f), concord::Size(0.2f, 0.3f, 0.0f)));
+        concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
+        karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
+        k_size = concord::Size(width * 0.7, height * 0.15f, 0.0f);
+        karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
 
         sim->add_robot(robot_pose, chassis_size, wheels, karosseries);
     }

@@ -21,8 +21,7 @@ namespace mvs {
         std::shared_ptr<muli::World> physics_world;
         int selected_robot_idx = -1;
         float steering = 0.0f, throttle = 0.0f;
-        float steerings[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-        float throttles[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        std::vector<float> steerings, throttles;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);

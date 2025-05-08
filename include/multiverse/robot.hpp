@@ -35,6 +35,8 @@ namespace mvs {
         pigment::RGB color;
         concord::Pose spawn_position;
 
+        int wheel_nr;
+
       public:
         bool pulsining = false;
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
@@ -46,8 +48,7 @@ namespace mvs {
         void tick(float dt);
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
                   std::vector<concord::Bound> wheels = {}, std::vector<concord::Bound> karosseries = {});
-        void update(float steering, float throttle);
-        void update(float steering[4], float throttle[4]);
+        void update(std::vector<float> steering, std::vector<float> throttle);
         void teleport(concord::Pose pose);
         void pulse_vis(float p_s);
         void respawn();

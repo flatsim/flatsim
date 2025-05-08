@@ -15,7 +15,7 @@ namespace mvs {
 
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
-
+                                //
         Transform t;
         t.position.x = bound.pose.point.enu.x;
         t.position.y = bound.pose.point.enu.y;
@@ -34,24 +34,28 @@ namespace mvs {
 
         for (uint i = 0; i < wheels_s.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
-                       angularDamping, force, friction, maxImpulse, brake, drag);
+            wheel.init(color, name + std::to_string(i), bound, wheels_s[i], linearDamping, angularDamping, force,
+                       friction, maxImpulse, brake, drag);
             wheelz.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
             jointz.emplace_back(joint);
         }
         //
-        // for (uint i = 0; i < karosseries.size(); ++i) {
-        //     Karosserie karosserie;
-        //     karosserie.init(bound, filter, color, name + std::to_string(i));
-        //     karosseriez.push_back(karosserie);
-        // }
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            Karosserie karosserie(rec, world);
+            karosserie.init(bound, karosseries[i], filter, color, name + std::to_string(i));
+            karosseriez.push_back(karosserie);
+            // world->CreateLimitedDistanceJoint(
+        }
     }
 
     void Chasis::tick(float dt) {
-        for (int i = 0; i < 4; ++i) {
+        for (uint i = 0; i < wheelz.size(); ++i) {
             wheelz[i].tick(dt);
+        }
+        for (uint i = 0; i < karosseriez.size(); ++i) {
+            karosseriez[i].tick(dt, body->GetTransform());
         }
     }
 
@@ -73,11 +77,18 @@ namespace mvs {
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
+
+        for (uint i = 0; i < wheelz.size(); ++i) {
+            wheelz[i].visualize();
+        }
+        for (uint i = 0; i < karosseriez.size(); ++i) {
+            karosseriez[i].visualize();
+        }
     }
 
-    void Chasis::update(float steering[4], float throttle[4]) {
+    void Chasis::update(std::vector<float> steering, std::vector<float> throttle) {
         constexpr float MAX_STEER_DEG = 45.0f;
-        for (int i = 0; i < 4; ++i) {
+        for (uint i = 0; i < wheelz.size(); ++i) {
             auto steer = std::clamp(steering[i], -MAX_STEER_DEG, MAX_STEER_DEG);
             float angle = DegToRad(steer);
             jointz[i]->SetAngularOffset(angle);

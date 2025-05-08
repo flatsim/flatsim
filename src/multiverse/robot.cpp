@@ -35,6 +35,8 @@ namespace mvs {
         this->size = size;
         this->spawn_position = pose;
 
+        wheel_nr = wheels.size();
+
         Transform t;
         t.position.x = pose.point.enu.x;
         t.position.y = pose.point.enu.y;
@@ -50,7 +52,9 @@ namespace mvs {
         pulse = concord::Circle(this->position.point, 0.0);
     }
 
-    void Robot::update(float steering[4], float throttle[4]) { chassis->update(steering, throttle); }
+    void Robot::update(std::vector<float> steering, std::vector<float> throttle) {
+        chassis->update(steering, throttle);
+    }
     void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
     void Robot::respawn() { chassis->teleport(spawn_position); }
 

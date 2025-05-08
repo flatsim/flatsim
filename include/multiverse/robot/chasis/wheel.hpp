@@ -27,8 +27,7 @@ namespace mvs {
 
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
-        void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                  std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
+        void init(const pigment::RGB &color, std::string name, concord::Bound parent, concord::Bound bound,
                   float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,
                   float _brake, float _drag);
 
