@@ -30,7 +30,7 @@ namespace mvs {
         std::shared_ptr<muli::World> world;
         std::vector<Wheel> wheelz;
         std::vector<muli::MotorJoint *> jointz;
-        std::vector<Karosserie> karosserie;
+        std::vector<Karosserie> karosseriez;
         muli::CollisionFilter filter;
 
       public:

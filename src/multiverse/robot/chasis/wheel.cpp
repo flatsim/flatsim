@@ -24,24 +24,6 @@ namespace mvs {
         drag = _drag;
     }
 
-    muli::Transform Wheel::shift(concord::Bound parent, concord::Bound child) {
-        muli::Rotation p_rotation(parent.pose.angle.yaw);
-        Vec2 rotatedOffset;
-        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
-        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
-        // Add the rotated offset to the car's position
-        Vec2 wheelPosition;
-        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
-        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
-        concord::Pose wheel_pose;
-        wheel_pose.point.enu.x = wheelPosition.x;
-        wheel_pose.point.enu.y = wheelPosition.y;
-        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
-        muli::Rotation rotation(wheel_pose.angle.yaw);
-        muli::Transform wheelTf{wheelPosition, rotation};
-        return wheelTf;
-    }
-
     void Wheel::tick(float dt) {
         const Vec2 up(0, 1);
         const Vec2 right(1, 0);
@@ -87,7 +69,39 @@ namespace mvs {
         }
     }
 
-    void Wheel::teleport(Transform t) { wheel->SetTransform(t); }
+    muli::Transform Wheel::shift(concord::Bound parent, concord::Bound child) {
+        muli::Rotation p_rotation(parent.pose.angle.yaw);
+        Vec2 rotatedOffset;
+        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
+        // Add the rotated offset to the car's position
+        Vec2 wheelPosition;
+        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
+        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
+        concord::Pose wheel_pose;
+        wheel_pose.point.enu.x = wheelPosition.x;
+        wheel_pose.point.enu.y = wheelPosition.y;
+        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
+        muli::Rotation rotation(wheel_pose.angle.yaw);
+        muli::Transform wheelTf{wheelPosition, rotation};
+        return wheelTf;
+    }
+
+    void Wheel::teleport(concord::Pose pose) {
+        Transform t;
+        t.position.x = pose.point.enu.x;
+        t.position.y = pose.point.enu.y;
+        t.rotation = pose.angle.yaw;
+        Vec2 rotatedOffset;
+        rotatedOffset.x = bound.pose.point.enu.x * t.rotation.c - bound.pose.point.enu.y * t.rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * t.rotation.s + bound.pose.point.enu.y * t.rotation.c;
+        // Add the rotated offset to the car's position
+        Vec2 wheelPosition;
+        wheelPosition.x = pose.point.enu.x + rotatedOffset.x;
+        wheelPosition.y = pose.point.enu.y + rotatedOffset.y;
+        wheel->SetTransform(muli::Transform{wheelPosition, t.rotation});
+        wheel->SetSleeping(true);
+    }
 
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;

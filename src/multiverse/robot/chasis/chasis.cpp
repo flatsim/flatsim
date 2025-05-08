@@ -41,6 +41,12 @@ namespace mvs {
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
             jointz.emplace_back(joint);
         }
+        //
+        // for (uint i = 0; i < karosseries.size(); ++i) {
+        //     Karosserie karosserie;
+        //     karosserie.init(bound, filter, color, name + std::to_string(i));
+        //     karosseriez.push_back(karosserie);
+        // }
     }
 
     void Chasis::tick(float dt) {
@@ -88,31 +94,8 @@ namespace mvs {
         body->SetTransform(t);
         body->SetSleeping(true);
 
-        auto w = float(bound.size.x);
-        auto h = float(bound.size.y);
-
-        std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
-            {Vec2(w / 2, h / 2), "fr"},   // front-right
-            {Vec2(-w / 2, h / 2), "fl"},  // front-left
-            {Vec2(w / 2, -h / 2), "rr"},  // rear-right
-            {Vec2(-w / 2, -h / 2), "rl"}, // rear-left
-        }};
-
-        for (int i = 0; i < 4; ++i) {
-            // Transform the local offset to world coordinates
-            Vec2 localOffset = wheelOffsets[i].first;
-            // Rotate the offset according to car's rotation
-            Vec2 rotatedOffset;
-            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
-            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
-            // Add the rotated offset to the car's position
-            Vec2 wheelPosition;
-            wheelPosition.x = t.position.x + rotatedOffset.x;
-            wheelPosition.y = t.position.y + rotatedOffset.y;
-            // Create the wheel transform
-            Transform wheelTf{wheelPosition, t.rotation};
-            wheelz[i].teleport(wheelTf);
-            wheelz[i].wheel->SetSleeping(true);
+        for (uint i = 0; i < wheelz.size(); ++i) {
+            wheelz[i].teleport(pose);
         }
     }
 

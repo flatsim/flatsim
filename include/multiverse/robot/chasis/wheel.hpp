@@ -32,7 +32,7 @@ namespace mvs {
 
         void tick(float dt);
         void visualize();
-        void teleport(Transform t);
+        void teleport(concord::Pose pose);
         void update(float steering, float throttle, MotorJoint *joint);
     };
 } // namespace mvs
