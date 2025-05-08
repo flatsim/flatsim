@@ -2,7 +2,8 @@
 
 namespace mvs {
 
-    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter)
+    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                   muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
     void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
@@ -26,20 +27,11 @@ namespace mvs {
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
 
-        std::array<std::pair<Vec2, std::string>, 4> wheelOffsets = {{
-            {Vec2(w / 2, h / 2), "fr"},   // front-right
-            {Vec2(-w / 2, h / 2), "fl"},  // front-left
-            {Vec2(w / 2, -h / 2), "rr"},  // rear-right
-            {Vec2(-w / 2, -h / 2), "rl"}, // rear-left
-        }};
-
         for (int i = 0; i < 4; ++i) {
-            // Transform the local offset to world coordinates
-            Vec2 localOffset = wheelOffsets[i].first;
             // Rotate the offset according to car's rotation
             Vec2 rotatedOffset;
-            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
-            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
+            rotatedOffset.x = wheels_s[i].pose.point.enu.x * t.rotation.c - wheels_s[i].pose.point.enu.y * t.rotation.s;
+            rotatedOffset.y = wheels_s[i].pose.point.enu.x * t.rotation.s + wheels_s[i].pose.point.enu.y * t.rotation.c;
             // Add the rotated offset to the car's position
             Vec2 wheelPosition;
             wheelPosition.x = t.position.x + rotatedOffset.x;

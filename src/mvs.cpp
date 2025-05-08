@@ -57,13 +57,17 @@ int main() {
         robot_pose.point.enu.y = i * 3;
         robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f;
-        concord::Size chassis_size{0.8f, 1.4f, 0.0f};
+
+        float width = 0.8f;
+        float height = 1.4f;
+
+        concord::Size chassis_size{width, height, 0.0f};
 
         std::vector<concord::Bound> wheels;
-        wheels.push_back(concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
-        wheels.push_back(concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, height / 2, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, height / 2, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, -height / 2, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, -height / 2, 0.0f), concord::Size(0.2f, 0.4f, 0.0f)));
 
         std::vector<concord::Bound> karosseries;
         karosseries.push_back(concord::Bound(concord::Pose(2.0f, 2.0f, 0.0f), concord::Size(0.1f, 0.2f, 0.0f)));
