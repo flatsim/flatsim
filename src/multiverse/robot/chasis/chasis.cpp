@@ -32,17 +32,20 @@ namespace mvs {
         float dr = 0.1f;
         float jm = body->GetMass();
 
-        for (int i = 0; i < 4; ++i) {
-            wheels[i].init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag);
-            joints[i] =
-                world->CreateMotorJoint(body, wheels[i].wheel, wheels[i].wheel->GetPosition(), mf, torque, fr, dr, jm);
+        for (uint i = 0; i < wheels_s.size(); ++i) {
+            Wheel wheel;
+            wheel.init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
+                       angularDamping, force, friction, maxImpulse, brake, drag);
+            wheelz.push_back(wheel);
+
+            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
+            jointz.emplace_back(joint);
         }
     }
 
     void Chasis::tick(float dt) {
         for (int i = 0; i < 4; ++i) {
-            wheels[i].tick(dt);
+            wheelz[i].tick(dt);
         }
     }
 
@@ -71,9 +74,9 @@ namespace mvs {
         for (int i = 0; i < 4; ++i) {
             auto steer = std::clamp(steering[i], -MAX_STEER_DEG, MAX_STEER_DEG);
             float angle = DegToRad(steer);
-            joints[i]->SetAngularOffset(angle);
-            Vec2 f2 = wheels[i].forward * (throttle[i] * wheels[i].force);
-            wheels[i].wheel->ApplyForce(wheels[i].wheel->GetPosition(), f2, true);
+            jointz[i]->SetAngularOffset(angle);
+            Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
+            wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);
         }
     }
 
@@ -108,8 +111,8 @@ namespace mvs {
             wheelPosition.y = t.position.y + rotatedOffset.y;
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].teleport(wheelTf);
-            wheels[i].wheel->SetSleeping(true);
+            wheelz[i].teleport(wheelTf);
+            wheelz[i].wheel->SetSleeping(true);
         }
     }
 

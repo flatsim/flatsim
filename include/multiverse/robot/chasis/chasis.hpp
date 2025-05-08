@@ -26,18 +26,15 @@ namespace mvs {
 
     class Chasis {
       private:
-        // World *world;
+        std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        RigidBody *body;
         std::vector<Wheel> wheelz;
-        std::vector<MotorJoint> jointz;
-        Wheel wheels[4];
-        MotorJoint *joints[4];
-        std::vector<Karosserie *> karosserie;
+        std::vector<muli::MotorJoint *> jointz;
+        std::vector<Karosserie> karosserie;
         muli::CollisionFilter filter;
 
       public:
-        std::shared_ptr<rerun::RecordingStream> rec;
+        RigidBody *body;
         std::string name;
         pigment::RGB color;
         concord::Bound bound;
