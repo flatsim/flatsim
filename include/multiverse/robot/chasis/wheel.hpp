@@ -10,7 +10,8 @@ namespace mvs {
     // --- Utility functions ---
     inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
 
-    struct Wheel {
+    class Wheel {
+      public:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
         pigment::RGB color;
@@ -22,6 +23,7 @@ namespace mvs {
         float brake, drag;
         float friction, maxImpulse;
 
+        Wheel() = default;
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                   std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
                   float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,
