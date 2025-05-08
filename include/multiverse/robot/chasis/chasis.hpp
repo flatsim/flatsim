@@ -29,6 +29,8 @@ namespace mvs {
         // World *world;
         std::shared_ptr<muli::World> world;
         RigidBody *body;
+        std::vector<Wheel> wheelz;
+        std::vector<MotorJoint> jointz;
         Wheel wheels[4];
         MotorJoint *joints[4];
         std::vector<Karosserie *> karosserie;

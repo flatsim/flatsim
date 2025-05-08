@@ -27,18 +27,14 @@ namespace mvs {
         body->SetLinearDamping(linearDamping);
         body->SetAngularDamping(angularDamping);
 
-        for (int i = 0; i < 4; ++i) {
-
-            wheels[i].init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag);
-        }
-
         float mf = -1;
         float fr = -1;
         float dr = 0.1f;
         float jm = body->GetMass();
 
         for (int i = 0; i < 4; ++i) {
+            wheels[i].init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
+                           angularDamping, force, friction, maxImpulse, brake, drag);
             joints[i] =
                 world->CreateMotorJoint(body, wheels[i].wheel, wheels[i].wheel->GetPosition(), mf, torque, fr, dr, jm);
         }
