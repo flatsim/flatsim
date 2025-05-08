@@ -3,14 +3,17 @@
 
 namespace mvs {
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                     std::string name, concord::Bound bound, Transform tf, CollisionFilter filter,
+                     std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
                      float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,
                      float _brake, float _drag) {
         this->bound = bound;
         this->color = color;
         this->name = name;
         this->rec = rec;
-        wheel = world->CreateCapsule(bound.size.x, bound.size.y, false, tf);
+
+        auto wheelTf = shift(parent, bound);
+
+        wheel = world->CreateCapsule(bound.size.x, bound.size.y, false, wheelTf);
         wheel->SetCollisionFilter(filter);
         wheel->SetLinearDamping(linearDamping);
         wheel->SetAngularDamping(angularDamping);
@@ -19,6 +22,24 @@ namespace mvs {
         maxImpulse = _maxImpulse;
         brake = _brake;
         drag = _drag;
+    }
+
+    muli::Transform Wheel::shift(concord::Bound parent, concord::Bound child) {
+        muli::Rotation p_rotation(parent.pose.angle.yaw);
+        Vec2 rotatedOffset;
+        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
+        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
+        // Add the rotated offset to the car's position
+        Vec2 wheelPosition;
+        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
+        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
+        concord::Pose wheel_pose;
+        wheel_pose.point.enu.x = wheelPosition.x;
+        wheel_pose.point.enu.y = wheelPosition.y;
+        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
+        muli::Rotation rotation(wheel_pose.angle.yaw);
+        muli::Transform wheelTf{wheelPosition, rotation};
+        return wheelTf;
     }
 
     void Wheel::tick(float dt) {

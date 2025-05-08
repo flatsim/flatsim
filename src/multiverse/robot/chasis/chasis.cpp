@@ -28,25 +28,9 @@ namespace mvs {
         body->SetAngularDamping(angularDamping);
 
         for (int i = 0; i < 4; ++i) {
-            // Rotate the offset according to car's rotation
-            Vec2 rotatedOffset;
-            rotatedOffset.x = wheels_s[i].pose.point.enu.x * t.rotation.c - wheels_s[i].pose.point.enu.y * t.rotation.s;
-            rotatedOffset.y = wheels_s[i].pose.point.enu.x * t.rotation.s + wheels_s[i].pose.point.enu.y * t.rotation.c;
-            // Add the rotated offset to the car's position
-            Vec2 wheelPosition;
-            wheelPosition.x = t.position.x + rotatedOffset.x;
-            wheelPosition.y = t.position.y + rotatedOffset.y;
-            concord ::Bound wheel_bound;
-            wheel_bound.size = wheels_s[i].size;
-            concord::Pose wheel_pose;
-            wheel_pose.point.enu.x = wheelPosition.x;
-            wheel_pose.point.enu.y = wheelPosition.y;
-            wheel_pose.angle.yaw = 0.0f; // TODO: fix this
-            wheel_bound.pose = wheel_pose;
-            // Create the wheel transform
-            Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].init(world.get(), rec, color, name + std::to_string(i), wheel_bound, wheelTf, filter,
-                           linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
+
+            wheels[i].init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
+                           angularDamping, force, friction, maxImpulse, brake, drag);
         }
 
         float mf = -1;

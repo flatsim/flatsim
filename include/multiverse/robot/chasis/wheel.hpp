@@ -23,8 +23,12 @@ namespace mvs {
         float friction, maxImpulse;
 
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
-                  std::string name, concord::Bound bound, Transform tf, CollisionFilter filter, float linearDamping,
-                  float angularDamping, float _force, float _friction, float _maxImpulse, float _brake, float _drag);
+                  std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
+                  float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,
+                  float _brake, float _drag);
+
+        muli::Transform shift(concord::Bound parent, concord::Bound child);
+        // void set(concord::Bound chasus_boud, concord::Bound bound);
 
         void tick(float dt);
         void visualize();
