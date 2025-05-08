@@ -45,7 +45,7 @@ namespace mvs {
 
         void tick(float dt);
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                  std::vector<concord::Size> wheel_sizes = {}, std::vector<concord::Size> karosserie_sizes = {});
+                  std::vector<concord::Bound> wheels = {}, std::vector<concord::Bound> karosseries = {});
         void update(float steering, float throttle);
         void update(float steering[4], float throttle[4]);
         void teleport(concord::Pose pose);

@@ -19,8 +19,8 @@ namespace mvs {
         world_datum = datum;
     }
 
-    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Size> wheels,
-                              std::vector<concord::Size> karosserie) {
+    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Bound> wheels,
+                              std::vector<concord::Bound> karosserie) {
         robots.emplace_back([&] {
             pigment::RGB color = pigment::RGB::random();
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());

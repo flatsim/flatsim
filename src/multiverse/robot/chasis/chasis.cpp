@@ -2,14 +2,13 @@
 
 namespace mvs {
 
-    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                   concord::Bound bound, const pigment::RGB &color, std::string name,
-                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter)
-        : world(world), rec(rec), name(name), bound(bound), color(color) {}
+    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter)
+        : world(world), rec(rec), filter(filter) {}
 
     void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                      std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
+                      std::vector<concord::Bound> wheels_s, std::vector<concord::Bound> karosseries) {
 
+        this->bound = bound;
         this->color = color;
         this->name = name;
 
@@ -46,7 +45,7 @@ namespace mvs {
             wheelPosition.x = t.position.x + rotatedOffset.x;
             wheelPosition.y = t.position.y + rotatedOffset.y;
             concord ::Bound wheel_bound;
-            wheel_bound.size = wheel_sizes[i];
+            wheel_bound.size = wheels_s[i].size;
             concord::Pose wheel_pose;
             wheel_pose.point.enu.x = wheelPosition.x;
             wheel_pose.point.enu.y = wheelPosition.y;

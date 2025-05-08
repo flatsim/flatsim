@@ -32,6 +32,7 @@ namespace mvs {
         Wheel wheels[4];
         MotorJoint *joints[4];
         std::vector<Karosserie *> karosserie;
+        muli::CollisionFilter filter;
 
       public:
         std::shared_ptr<rerun::RecordingStream> rec;
@@ -40,12 +41,10 @@ namespace mvs {
         concord::Bound bound;
         uint32_t group;
 
-        Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
-               const pigment::RGB &color, std::string name, std::vector<concord::Size> wheel_sizes,
-               CollisionFilter filter);
+        Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
 
         void init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                  std::vector<concord::Size> wheel_sizes, CollisionFilter filter);
+                  std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosseries);
 
         void tick(float dt);
         void visualize();
