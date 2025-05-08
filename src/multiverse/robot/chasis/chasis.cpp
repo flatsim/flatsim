@@ -2,15 +2,17 @@
 
 namespace mvs {
 
-    Chasis::Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
-                   const pigment::RGB &color, std::string name, uint32_t cid, std::vector<concord::Size> wheel_sizes,
-                   CollisionFilter filter)
-        : world(world), rec(rec), name(name), bound(bound), color(color), group(cid) {
-        init(bound, color, name, cid, wheel_sizes, filter);
-    }
+    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                   concord::Bound bound, const pigment::RGB &color, std::string name,
+                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter)
+        : world(world), rec(rec), name(name), bound(bound), color(color) {}
 
-    void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name, uint32_t group,
+    void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
                       std::vector<concord::Size> wheel_sizes, CollisionFilter filter) {
+
+        this->color = color;
+        this->name = name;
+
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
 
@@ -52,8 +54,8 @@ namespace mvs {
             wheel_bound.pose = wheel_pose;
             // Create the wheel transform
             Transform wheelTf{wheelPosition, t.rotation};
-            wheels[i].init(world, rec, color, name + std::to_string(i), wheel_bound, wheelTf, filter, linearDamping,
-                           angularDamping, force, friction, maxImpulse, brake, drag);
+            wheels[i].init(world.get(), rec, color, name + std::to_string(i), wheel_bound, wheelTf, filter,
+                           linearDamping, angularDamping, force, friction, maxImpulse, brake, drag);
         }
 
         float mf = -1;

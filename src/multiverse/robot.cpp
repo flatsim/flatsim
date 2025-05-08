@@ -43,7 +43,9 @@ namespace mvs {
         concord::Bound bound;
         bound.size = size;
         bound.pose = pose;
-        chassis = std::make_unique<Chasis>(world.get(), rec, bound, color, name, group, wheel_sizes, filter);
+
+        chassis = std::make_unique<Chasis>(world, rec, bound, color, name, wheel_sizes, filter);
+        chassis->init(bound, color, name, wheel_sizes, filter);
 
         pulse = concord::Circle(this->position.point, 0.0);
     }

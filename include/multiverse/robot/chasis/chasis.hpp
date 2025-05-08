@@ -26,7 +26,8 @@ namespace mvs {
 
     class Chasis {
       private:
-        World *world;
+        // World *world;
+        std::shared_ptr<muli::World> world;
         RigidBody *body;
         Wheel wheels[4];
         MotorJoint *joints[4];
@@ -39,11 +40,11 @@ namespace mvs {
         concord::Bound bound;
         uint32_t group;
 
-        Chasis(World *world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
-               const pigment::RGB &color, std::string name, uint32_t group, std::vector<concord::Size> wheel_sizes,
+        Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, concord::Bound bound,
+               const pigment::RGB &color, std::string name, std::vector<concord::Size> wheel_sizes,
                CollisionFilter filter);
 
-        void init(concord::Bound &bound, const pigment::RGB &color, std::string name, uint32_t group,
+        void init(concord::Bound &bound, const pigment::RGB &color, std::string name,
                   std::vector<concord::Size> wheel_sizes, CollisionFilter filter);
 
         void tick(float dt);
