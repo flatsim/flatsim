@@ -2,6 +2,11 @@
 #include "pigment/types_hsv.hpp"
 
 namespace mvs {
+
+    Wheel::Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                 CollisionFilter filter)
+        : world(world), rec(rec), filter(filter) {}
+
     void Wheel::init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                      std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
                      float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,

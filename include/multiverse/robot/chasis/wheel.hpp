@@ -13,9 +13,11 @@ namespace mvs {
     class Wheel {
       public:
         std::shared_ptr<rerun::RecordingStream> rec;
+        std::shared_ptr<muli::World> world;
         std::string name;
         pigment::RGB color;
         concord::Bound bound;
+        muli::CollisionFilter filter;
 
         RigidBody *wheel;
         Vec2 forward, normal;
@@ -24,6 +26,7 @@ namespace mvs {
         float friction, maxImpulse;
 
         Wheel() = default;
+        Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
         void init(World *world, std::shared_ptr<rerun::RecordingStream> rec, const pigment::RGB &color,
                   std::string name, concord::Bound parent, concord::Bound bound, CollisionFilter filter,
                   float linearDamping, float angularDamping, float _force, float _friction, float _maxImpulse,

@@ -33,7 +33,7 @@ namespace mvs {
         float jm = body->GetMass();
 
         for (uint i = 0; i < wheels_s.size(); ++i) {
-            Wheel wheel;
+            Wheel wheel(world, rec, filter);
             wheel.init(world.get(), rec, color, name + std::to_string(i), bound, wheels_s[i], filter, linearDamping,
                        angularDamping, force, friction, maxImpulse, brake, drag);
             wheelz.push_back(wheel);
