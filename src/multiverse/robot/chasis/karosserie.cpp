@@ -68,7 +68,7 @@ namespace mvs {
         auto k_w = float(bound.size.x * 1.3);
         auto k_h = float(bound.size.y * 1.3);
         std::vector<rerun::Color> colors_a;
-        colors_a.push_back(rerun::Color(color.r, color.g, color.b, 40));
+        colors_a.push_back(rerun::Color(color.r, color.g, color.b));
         rec->log_static(
             this->name + "/karosserie",
             rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})

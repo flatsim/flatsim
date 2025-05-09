@@ -34,6 +34,7 @@ namespace mvs {
         muli::CollisionFilter filter;
 
       public:
+        std::shared_ptr<muli::RigidBody> bodyz;
         RigidBody *body;
         std::string name;
         pigment::RGB color;

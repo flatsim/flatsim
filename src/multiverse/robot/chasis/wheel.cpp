@@ -16,7 +16,7 @@ namespace mvs {
 
         auto wheelTf = shift(parent, bound);
 
-        wheel = world->CreateCapsule(bound.size.x, bound.size.y, false, wheelTf);
+        wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
         wheel->SetCollisionFilter(filter);
         wheel->SetLinearDamping(linearDamping);
         wheel->SetAngularDamping(angularDamping);
@@ -119,8 +119,7 @@ namespace mvs {
 
         rec->log_static(
             this->name + "/wheel",
-            rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0}},
-                                                        {{float(bound.size.x) / 2, float(bound.size.y) / 2, 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes({{x, y, 0}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})

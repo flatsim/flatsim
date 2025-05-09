@@ -12,6 +12,7 @@ namespace mvs {
         std::shared_ptr<muli::World> world;
         concord::Bound bound;
         muli::RigidBody *karosserie;
+        muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string name;
         pigment::RGB color;
