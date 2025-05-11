@@ -75,7 +75,7 @@ int main() {
         std::vector<concord::Bound> karosseries;
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
         karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
-        k_size = concord::Size(width * 0.7, height * 0.15f, 0.0f);
+        k_size = concord::Size(width * 0.9, height * 0.15f, 0.0f);
         karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
 
         sim->add_robot(robot_pose, chassis_size, wheels, karosseries);

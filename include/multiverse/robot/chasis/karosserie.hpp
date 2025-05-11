@@ -24,6 +24,9 @@ namespace mvs {
                   std::string name);
         void tick(float dt, muli::Transform t);
 
+        muli::Transform get_transform() const;
+        muli::RigidBody *get_body() const;
+
         muli::Transform shift(concord::Bound parent, concord::Bound child);
         void teleport(concord::Pose pose);
 

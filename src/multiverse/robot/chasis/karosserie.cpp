@@ -61,17 +61,20 @@ namespace mvs {
         karosserie->SetSleeping(true);
     }
 
+    muli::Transform Karosserie::get_transform() const { return karosserie->GetTransform(); }
+    muli::RigidBody *Karosserie::get_body() const { return karosserie; }
+
     void Karosserie::visualize() {
         auto k_x = karosserie->GetPosition().x;
         auto k_y = karosserie->GetPosition().y;
         auto k_th = karosserie->GetRotation().GetAngle();
-        auto k_w = float(bound.size.x * 1.3);
-        auto k_h = float(bound.size.y * 1.3);
+        auto k_w = float(bound.size.x);
+        auto k_h = float(bound.size.y);
         std::vector<rerun::Color> colors_a;
         colors_a.push_back(rerun::Color(color.r, color.g, color.b));
         rec->log_static(
             this->name + "/karosserie",
-            rerun::Boxes3D::from_centers_and_half_sizes({{k_x, k_y, 0}}, {{k_w / 2, k_h / 2, 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes({{k_x, k_y, 0}}, {{k_w, k_h, 0.0f}})
                 .with_radii({{0.02f}})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
