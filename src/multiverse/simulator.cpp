@@ -19,14 +19,13 @@ namespace mvs {
         world_datum = datum;
     }
 
-    void Simulator::add_robot(concord::Pose robot_pose, concord::Size chassis_size, std::vector<concord::Bound> wheels,
-                              std::vector<concord::Bound> karosserie) {
+    void Simulator::add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
+                              std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosserie) {
         throttles = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         steerings = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         robots.emplace_back([&] {
-            pigment::RGB color = pigment::RGB::random();
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
-            r->init(world_datum, robot_pose, chassis_size, color, "robot" + std::to_string(robots.size()), wheels,
+            r->init(world_datum, robot_pose, chassis_size, robot_color, "robot" + std::to_string(robots.size()), wheels,
                     karosserie);
             return r;
         }());

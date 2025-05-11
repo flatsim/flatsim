@@ -30,8 +30,8 @@ namespace mvs {
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         concord::Datum get_datum() const { return world_datum; }
 
-        void add_robot(concord::Pose robot_pose, concord::Size, std::vector<concord::Bound> wheels,
-                       std::vector<concord::Bound> karosserie);
+        void add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
+                       std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosserie);
 
         void on_joystick_axis(int axis, float value);
         void on_joystick_button(int button, bool pressed);

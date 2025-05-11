@@ -76,9 +76,11 @@ int main() {
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
         karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
         k_size = concord::Size(width * 0.9, height * 0.15f, 0.0f);
+        pigment::RGB color = pigment::RGB::random();
         karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
 
-        sim->add_robot(robot_pose, chassis_size, wheels, karosseries);
+        pigment::RGB robot_color = pigment::RGB::random();
+        sim->add_robot(robot_pose, robot_color, chassis_size, wheels, karosseries);
     }
 
     auto last_time = std::chrono::steady_clock::now();
