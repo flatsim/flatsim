@@ -40,8 +40,8 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        Layer<pigment::RGB> grid;
-        std::vector<std::shared_ptr<Layer<pigment::RGB>>> layers;
+        Layer grid;
+        std::vector<std::shared_ptr<Layer>> layers;
 
       public:
         World(std::shared_ptr<rerun::RecordingStream> rec);

@@ -37,7 +37,7 @@ namespace mvs {
 
         int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
         int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
-        grid = Layer<pigment::RGB>(rec, g_width, g_height, settings.get_grid_size(), settings.get_datum());
+        grid = Layer(rec, g_width, g_height, settings.get_grid_size(), settings.get_datum());
     }
     void World::tick(float dt) {
         world->Step(dt);
@@ -55,7 +55,7 @@ namespace mvs {
     }
 
     void World::add_layer(std::string name, float inradius) {
-        auto layer = std::make_shared<Layer<pigment::RGB>>(rec, grid.getGrid().rows(), grid.getGrid().cols(), inradius);
+        auto layer = std::make_shared<Layer>(rec, grid.getGrid().rows(), grid.getGrid().cols(), inradius);
         layers.push_back(layer);
     }
 

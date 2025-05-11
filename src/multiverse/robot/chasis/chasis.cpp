@@ -46,20 +46,25 @@ namespace mvs {
             jointz.emplace_back(joint);
         }
         //
+        auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
+        auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
+
         for (uint i = 0; i < karosseries.size(); ++i) {
             Karosserie karosserie(rec, world);
             karosserie.init(bound, karosseries[i], filter, color, name + std::to_string(i));
             karosseriez.push_back(karosserie);
-            // auto left_hook = Vec2(karosseriez[i].get_transform().position.x - karosseries[i].size.x / 2,
-            //                       karosseriez[i].get_transform().position.y);
-            // auto right_hook = Vec2(karosseriez[i].get_transform().position.x + karosseries[i].size.x / 2,
-            //                        karosseriez[i].get_transform().position.y);
-            // auto dist_left = distance(body->GetPosition().x, body->GetPosition().y, left_hook.x, left_hook.y);
-            // auto dist_right = distance(body->GetPosition().x, body->GetPosition().y, right_hook.x, right_hook.y);
-            // world->CreateLimitedDistanceJoint(body, karosseriez[i].get_body(),
-            //                                   Vec2(body->GetPosition().x, body->GetPosition().y), left_hook,
-            //                                   dist_left);
+            auto left_hook =
+                Vec2(karosseries[i].pose.point.enu.x - karosseries[i].size.x / 2, karosseries[i].pose.point.enu.y);
+            auto right_hook =
+                Vec2(karosseries[i].pose.point.enu.x + karosseries[i].size.x / 2, karosseries[i].pose.point.enu.y);
+
+            auto dist_left = distance(main_left_hook.x, main_left_hook.y, left_hook.x, left_hook.y);
+            auto dist_right = distance(main_right_hook.x, main_right_hook.y, right_hook.x, right_hook.y);
+
+            // world->CreateLimitedDistanceJoint(body, karosseriez[i].get_body(), main_left_hook, left_hook, dist_left);
             // world->CreateLimitedAngleJoint(body, karosseriez[i].get_body(), 0.1f, 0.1f);
+            // world->CreateLimitedDistanceJoint(body, karosseriez[i].get_body(), main_right_hook, right_hook,
+            // dist_right); world->CreateLimitedAngleJoint(body, karosseriez[i].get_body(), 0.1f, 0.1f);
         }
     }
 

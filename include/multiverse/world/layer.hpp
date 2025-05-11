@@ -9,26 +9,26 @@
 #include <vector>
 
 namespace mvs {
-    template <typename T> class Layer {
-        friend class concord::Grid<T>;
+    class Layer {
+        friend class concord::Grid<pigment::RGB>;
 
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
+        std::vector<uint8_t> image;
 
       public:
         Layer() = default;
         Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
               concord::Datum datum = concord::Datum(), bool centered = true);
 
-        concord::Grid<T> &getGrid() { return grid; }
-        const concord::Grid<T> &getGrid() const { return grid; }
+        concord::Grid<pigment::RGB> &getGrid() { return grid; }
 
-        template <typename U = T, typename = std::enable_if_t<std::is_same_v<U, pigment::RGB>>>
         void to_image(std::vector<uint8_t> &image);
+        std::vector<uint8_t> to_image();
 
         void visualize();
 
       private:
-        concord::Grid<T> grid;
+        concord::Grid<pigment::RGB> grid;
     };
 } // namespace mvs
