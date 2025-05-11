@@ -60,7 +60,7 @@ namespace mvs {
 
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
-        void pulse_vis(float p_s, float gps_mult = 5);
+        void pulse_vis(float p_s, float gps_mult = 5, float inc = 0.0015);
         void respawn();
 
       private:

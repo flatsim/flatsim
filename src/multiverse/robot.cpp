@@ -162,14 +162,15 @@ namespace mvs {
         pulse_vis(std::max(size.x, size.y) * 3.0f);
     }
 
-    void Robot::pulse_vis(float p_s, float gps_mult) {
+    void Robot::pulse_vis(float p_s, float gps_mult, float inc) {
         concord::Point point(this->position.point.enu.x, this->position.point.enu.y, 0.0f, datum);
         if (!pulsining) {
             return;
         }
 
+        // visualize local pulse
         std::vector<rerun::Vec3D> poi;
-        auto pulse_size = pulse.getRadius() + 0.0015;
+        auto pulse_size = pulse.getRadius() + inc;
         if (pulse.getRadius() > p_s) {
             pulsining = false;
             pulse_size = 0.0;
@@ -186,8 +187,9 @@ namespace mvs {
                 .with_colors({{rerun::Color(color.r, color.g, color.b)}})
                 .with_radii({{float(mapValue(pulse_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
 
+        // visualize gps pulse
         std::vector<rerun::LatLon> locators;
-        auto pulse_gps_size = pulse_gps.getRadius() + 0.0015 * gps_mult;
+        auto pulse_gps_size = pulse_gps.getRadius() + inc * gps_mult;
         if (pulse_gps.getRadius() > p_s * gps_mult) {
             pulsining = false;
             pulse_gps_size = 0.0;
