@@ -81,6 +81,10 @@ int main() {
 
         pigment::RGB robot_color = pigment::RGB::random();
         sim->add_robot(robot_pose, robot_color, chassis_size, wheels, karosseries);
+
+        std::vector<float> steerings_max = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        sim->set_controls(steerings_max, throttles_max);
     }
 
     auto last_time = std::chrono::steady_clock::now();
