@@ -1,6 +1,9 @@
 #include "multiverse/simulator.hpp"
 
 namespace mvs {
+    double mapper(double x, double in_min, double in_max, double out_min, double out_max) {
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     Simulator::~Simulator() {}
     void Simulator::tick(float dt) {
@@ -45,17 +48,18 @@ namespace mvs {
             auto thr_mult = 0.2f;
             if (axis == 0) {
                 steering = -value * ster_mult;
-                std::cout << "Steering " << steering << std::endl;
-                steerings[4] = steering;
-                steerings[5] = steering;
+                for (uint i = 0; i < steerings.size(); ++i) {
+                    steerings[i] = mapper(steering, 1.0f, -1.0f, steerings_max[i], -steerings_max[i]);
+                    std::cout << "Steering " << steerings[i] << std::endl;
+                }
             }
 
             if (axis == 1) {
                 auto preval = -value * thr_mult;
-                throttle = (fabs(preval) < 0.1f) ? 0.0f : preval;
-                std::cout << "Throttle " << throttle << std::endl;
-                throttles[4] = throttle;
-                throttles[5] = throttle;
+                for (uint i = 0; i < throttles.size(); ++i) {
+                    throttles[i] = mapper(preval, 1.0f, -1.0f, throttles_max[i], -throttles_max[i]);
+                    std::cout << "Throttle " << throttles[i] << std::endl;
+                }
             }
         }
     }
