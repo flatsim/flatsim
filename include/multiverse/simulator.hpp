@@ -27,12 +27,13 @@ namespace mvs {
         void tick(float dt);
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         concord::Datum get_datum() const { return world_datum; }
+        Robot &get_robot(uint i) { return *robots[i]; }
+        int num_robots() const { return robots.size(); }
 
         void add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
                        std::vector<concord::Bound> wheels, std::pair<std::vector<float>, std::vector<float>> controls,
                        std::vector<concord::Bound> karosserie);
-
-        void on_joystick_axis(int axis, float value);
-        void on_joystick_button(int button, bool pressed);
+        void set_controls(uint robot_idx, float steering, float throttle);
+        void set_controls(std::string robot_name, float steering, float throttle);
     };
 } // namespace mvs

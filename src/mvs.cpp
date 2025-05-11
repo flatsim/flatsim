@@ -95,17 +95,46 @@ int main() {
     // 7) Main loop: only joystick + simulation tick
     while (true) {
         // --- read one joystick event if available ---
+        for (int i = 0; i < sim->num_robots(); ++i) {
+            if (selected_robot_idx == i) {
+                continue;
+            }
+            sim->get_robot(i).set_linear(0.0f);
+            sim->get_robot(i).set_angular(0.0f);
+        }
         js_event e;
         ssize_t bytes = read(js_fd, &e, sizeof(e));
         if (bytes == sizeof(e)) {
             auto type = e.type & ~JS_EVENT_INIT;
             if (type == JS_EVENT_AXIS && e.number < num_axes) {
-                float normalized = e.value / 32767.0f;
-                axis_states[e.number] = e.value;
-                sim->on_joystick_axis(int(e.number), normalized);
+                int axis = int(e.number);
+                float value = e.value / 32767.0f;
+                if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                    if (axis == 0) {
+                        float steering = value * 30.0f;
+                        sim->get_robot(selected_robot_idx).set_angular(steering);
+                    }
+
+                    if (axis == 1) {
+                        float throttle = value * 0.2f;
+                        sim->get_robot(selected_robot_idx).set_linear(throttle);
+                    }
+                }
             } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
-                button_states[e.number] = e.value;
-                sim->on_joystick_button(int(e.number), e.value != 0);
+                int button = int(e.number);
+                bool pressed = e.value != 0;
+                if (button < 4 && pressed) {
+                    selected_robot_idx = button;
+                    std::cout << "Selected robot #" << selected_robot_idx << std::endl;
+                }
+                if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                    if ((button == 4 || button == 5) && pressed) {
+                        sim->get_robot(selected_robot_idx).respawn();
+                    }
+                    if (button == 9 && pressed) {
+                        sim->get_robot(selected_robot_idx).pulsining = true;
+                    }
+                }
             }
         }
 

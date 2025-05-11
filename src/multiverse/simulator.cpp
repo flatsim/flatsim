@@ -31,32 +31,20 @@ namespace mvs {
             return r;
         }());
     }
-
-    void Simulator::on_joystick_axis(int axis, float value) {
-        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            if (axis == 0) {
-                float steering = value * 30.0f;
-                robots[selected_robot_idx]->set_angular(steering);
-            }
-
-            if (axis == 1) {
-                float throttle = value * 0.2f;
-                robots[selected_robot_idx]->set_linear(throttle);
+    void Simulator::set_controls(uint robot_idx, float steering, float throttle) {
+        if (robot_idx >= 0 && robot_idx < robots.size()) {
+            robots[robot_idx]->set_angular(steering);
+            robots[robot_idx]->set_linear(throttle);
+        }
+    }
+    void Simulator::set_controls(std::string robot_name, float steering, float throttle) {
+        for (uint i = 0; i < robots.size(); ++i) {
+            if (robots[i]->id() == robot_name) {
+                robots[i]->set_angular(steering);
+                robots[i]->set_linear(throttle);
+                break;
             }
         }
     }
-    void Simulator::on_joystick_button(int button, bool pressed) {
-        if (button < 4 && pressed) {
-            selected_robot_idx = button;
-            std::cout << "Selected robot #" << selected_robot_idx << std::endl;
-        }
-        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            if ((button == 4 || button == 5) && pressed) {
-                robots[selected_robot_idx]->respawn();
-            }
-            if (button == 9 && pressed) {
-                robots[selected_robot_idx]->pulsining = true;
-            }
-        }
-    }
+
 } // namespace mvs
