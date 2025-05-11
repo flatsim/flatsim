@@ -20,17 +20,27 @@ namespace mvs {
     }
 
     void Simulator::add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
-                              std::vector<concord::Bound> wheels,
+                              std::string name, std::string uuid, std::vector<concord::Bound> wheels,
                               std::pair<std::vector<float>, std::vector<float>> controls,
                               std::vector<concord::Bound> karosserie) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
-            r->init(world_datum, robot_pose, chassis_size, robot_color, "robot" + std::to_string(robots.size()), wheels,
-                    karosserie);
+            r->init(world_datum, robot_pose, chassis_size, robot_color, name, uuid, wheels, karosserie);
             r->set_controls(controls.first, controls.second);
             return r;
         }());
     }
+
+    void Simulator::add_robot(RobotInfo robot_info) {
+        robots.emplace_back([&] {
+            auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
+            r->init(world_datum, robot_info.bound.pose, robot_info.bound.size, robot_info.color, robot_info.name,
+                    robot_info.uuid, robot_info.wheels, robot_info.karosserie);
+            r->set_controls(robot_info.controls.first, robot_info.controls.second);
+            return r;
+        }());
+    }
+
     void Simulator::set_controls(uint robot_idx, float steering, float throttle) {
         if (robot_idx >= 0 && robot_idx < robots.size()) {
             robots[robot_idx]->set_angular(steering);

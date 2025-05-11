@@ -21,6 +21,7 @@ namespace mvs {
     class Robot {
       private:
         std::string name;
+        std::string uuid;
         uint32_t group;
         bool controls_set = false;
         std::shared_ptr<rerun::RecordingStream> rec;
@@ -51,7 +52,8 @@ namespace mvs {
 
         void tick(float dt);
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                  std::vector<concord::Bound> wheels = {}, std::vector<concord::Bound> karosseries = {});
+                  std::string uuid, std::vector<concord::Bound> wheels = {},
+                  std::vector<concord::Bound> karosseries = {});
         void set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max);
         void reset_controls();
 

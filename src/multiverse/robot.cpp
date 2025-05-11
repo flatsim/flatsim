@@ -30,7 +30,7 @@ namespace mvs {
     }
 
     void Robot::init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                     std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosseries) {
+                     std::string uuid, std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosseries) {
         std::cout << "Initializing robot " << name << "...\n";
         this->datum = datum;
         this->color = color;

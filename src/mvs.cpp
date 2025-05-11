@@ -56,7 +56,10 @@ int main() {
     sim->init(world_datum, world_size, grid_size);
 
     for (int i = 0; i < 4; ++i) {
-        std::cout << "creating robot " << i << std::endl;
+        mvs::RobotInfo robot_info;
+        robot_info.name = "robot" + std::to_string(i);
+        robot_info.uuid = "robot" + std::to_string(i);
+
         concord::Pose robot_pose;
         robot_pose.point.enu.x = i * 3;
         robot_pose.point.enu.y = i * 3;
@@ -65,8 +68,8 @@ int main() {
 
         float width = 0.8f;
         float height = 1.95f;
-
         concord::Size chassis_size{width, height, 0.0f};
+        robot_info.bound = concord::Bound(robot_pose, chassis_size);
 
         std::vector<concord::Bound> wheels;
         concord::Size w_size{width * 0.25, height * 0.2f, 0.0f};
@@ -76,20 +79,24 @@ int main() {
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, 0.1, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
+        robot_info.wheels = wheels;
 
         std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, deg2rad(45.0f), deg2rad(45.0f)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
         std::pair<std::vector<float>, std::vector<float>> controls{steerings_max, throttles_max};
+        robot_info.controls = controls;
 
         std::vector<concord::Bound> karosseries;
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
         karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
         k_size = concord::Size(width * 0.9, height * 0.15f, 0.0f);
-        pigment::RGB color = pigment::RGB::random();
         karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
+        robot_info.karosserie = karosseries;
 
         pigment::RGB robot_color = pigment::RGB::random();
-        sim->add_robot(robot_pose, robot_color, chassis_size, wheels, controls, karosseries);
+        robot_info.color = robot_color;
+
+        sim->add_robot(robot_info);
     }
 
     auto last_time = std::chrono::steady_clock::now();
