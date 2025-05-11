@@ -44,21 +44,17 @@ namespace mvs {
 
     void Simulator::on_joystick_axis(int axis, float value) {
         if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            auto ster_mult = 30.0f;
-            auto thr_mult = 0.2f;
             if (axis == 0) {
-                steering = -value * ster_mult;
+                steering = value * 30.0f;
                 for (uint i = 0; i < steerings.size(); ++i) {
-                    steerings[i] = mapper(steering, 1.0f, -1.0f, steerings_max[i], -steerings_max[i]);
-                    std::cout << "Steering " << steerings[i] << std::endl;
+                    steerings[i] = mapper(steering, -1.0f, 1.0f, steerings_max[i], -steerings_max[i]);
                 }
             }
 
             if (axis == 1) {
-                auto preval = -value * thr_mult;
+                throttle = value * 0.2f;
                 for (uint i = 0; i < throttles.size(); ++i) {
-                    throttles[i] = mapper(preval, 1.0f, -1.0f, throttles_max[i], -throttles_max[i]);
-                    std::cout << "Throttle " << throttles[i] << std::endl;
+                    throttles[i] = mapper(throttle, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
                 }
             }
         }

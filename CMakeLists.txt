@@ -57,9 +57,20 @@ target_include_directories(multiverse INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
+include(FetchContent)
+FetchContent_Declare(
+      spdlog
+      GIT_REPOSITORY https://github.com/gabime/spdlog.git
+      GIT_TAG v1.15.0
+)
+FetchContent_MakeAvailable(spdlog)
+
+
 target_link_libraries(multiverse INTERFACE muli)
 target_link_libraries(multiverse INTERFACE concord::concord)
 target_link_libraries(multiverse INTERFACE pigment::pigment)
+target_link_libraries(multiverse INTERFACE rerun_sdk)
+target_link_libraries(multiverse INTERFACE spdlog::spdlog)
 
 
 install(
@@ -68,11 +79,7 @@ install(
 )
 include_directories(include)
 
-set(exe
-  src/mvs.cpp
-)
-
-set(lib
+set(int_deps
     src/multiverse/robot/chasis/karosserie.cpp
     src/multiverse/robot/chasis/chasis.cpp
     src/multiverse/robot/chasis/wheel.cpp
@@ -83,11 +90,16 @@ set(lib
     src/multiverse/simulator.cpp
 )
 
-set(dependencies
+set(ext_deps
   muli
   concord::concord
   pigment::pigment
   rerun_sdk
+  spdlog::spdlog
+)
+
+set(exe
+  src/mvs.cpp
 )
 
 set(exec_names)
@@ -96,11 +108,11 @@ set(exec_names)
 foreach(src_file IN LISTS exe)
   get_filename_component(exec_name "${src_file}" NAME_WE)
   add_executable(${exec_name} "${src_file}")
-  foreach(lib_file IN LISTS lib)
+  foreach(lib_file IN LISTS int_deps)
     target_compile_options(${exec_name} PRIVATE ${params})
     target_sources(${exec_name} PRIVATE "${lib_file}")
   endforeach()
-  target_link_libraries(${exec_name} ${dependencies})
+  target_link_libraries(${exec_name} ${ext_deps})
   install(TARGETS ${exec_name} DESTINATION bin)
   list(APPEND exec_names ${exec_name})
 endforeach()

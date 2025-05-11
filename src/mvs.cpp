@@ -19,6 +19,8 @@ int main() {
         return 1;
     }
 
+    int selected_robot_idx = 0;
+
     // 2) Query number of axes/buttons
     unsigned char num_axes = 0, num_buttons = 0;
     ioctl(js_fd, JSIOCGAXES, &num_axes);
@@ -44,8 +46,8 @@ int main() {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    concord::Size world_size{50.0f, 50.0f, 100.0f};
-    float grid_size = 0.5f;
+    concord::Size world_size{200.0f, 200.0f, 100.0f};
+    float grid_size = 2.0f;
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
@@ -82,7 +84,7 @@ int main() {
         pigment::RGB robot_color = pigment::RGB::random();
         sim->add_robot(robot_pose, robot_color, chassis_size, wheels, karosseries);
 
-        std::vector<float> steerings_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 1.0f, 1.0f};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
         sim->set_controls(steerings_max, throttles_max);
     }

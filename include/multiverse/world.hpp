@@ -27,6 +27,8 @@ namespace mvs {
             world_datum_ = datum;
             world_size_ = world_size;
             grid_size_ = grid_size;
+            // this->world_bounds =
+            // AABB(Vec2(-world_size.x / 2.0f, -world_size.y / 2.0f), Vec2(world_size.x / 2.0f, world_size.y / 2.0f));
         }
         concord::Datum get_datum() const { return world_datum_; }
         concord::Size get_world_size() const { return world_size_; }
