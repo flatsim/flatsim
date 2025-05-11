@@ -25,6 +25,9 @@ namespace mvs {
         chassis->tick(dt);
 
         visualize();
+        if (controls_set) {
+            chassis->update(steerings, throttles);
+        }
     }
 
     void Robot::init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
@@ -49,12 +52,36 @@ namespace mvs {
         chassis = std::make_unique<Chasis>(world, rec, filter);
         chassis->init(bound, color, name, wheels, karosseries);
 
+        steerings.resize(wheels.size(), 0.0f);
+        throttles.resize(wheels.size(), 0.0f);
+
         pulse = concord::Circle(this->position.point, 0.0);
     }
 
-    void Robot::update(std::vector<float> steering, std::vector<float> throttle) {
-        chassis->update(steering, throttle);
+    void Robot::set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max) {
+        this->steerings_max = steerings_max;
+        this->throttles_max = throttles_max;
+        controls_set = true;
     }
+
+    void Robot::set_angular(float angular) {
+        if (!controls_set) {
+            return;
+        }
+        for (uint i = 0; i < steerings.size(); ++i) {
+            steerings[i] = mapValue(angular, -1.0f, 1.0f, steerings_max[i], -steerings_max[i]);
+        }
+    }
+
+    void Robot::set_linear(float linear) {
+        if (!controls_set) {
+            return;
+        }
+        for (uint i = 0; i < throttles.size(); ++i) {
+            throttles[i] = mapValue(linear, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
+        }
+    }
+
     void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
     void Robot::respawn() { chassis->teleport(spawn_position); }
 

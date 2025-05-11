@@ -22,10 +22,14 @@ namespace mvs {
       private:
         std::string name;
         uint32_t group;
+        bool controls_set = false;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chasis> chassis;
+
+        std::vector<float> steerings, throttles;
+        std::vector<float> steerings_max, throttles_max;
 
         muli::CollisionFilter filter;
 
@@ -48,7 +52,12 @@ namespace mvs {
         void tick(float dt);
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
                   std::vector<concord::Bound> wheels = {}, std::vector<concord::Bound> karosseries = {});
-        void update(std::vector<float> steering, std::vector<float> throttle);
+        void set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max);
+
+        void set_angular(float angular);
+        void set_linear(float linear);
+
+        void update(float angular, float linear);
         void teleport(concord::Pose pose);
         void pulse_vis(float p_s);
         void respawn();

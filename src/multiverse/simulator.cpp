@@ -11,11 +11,6 @@ namespace mvs {
         for (auto &robott : robots) {
             robott->tick(dt);
         }
-        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-            if (controls_set) {
-                robots[selected_robot_idx]->update(steerings, throttles);
-            }
-        }
     }
     void Simulator::init(concord::Datum datum, concord::Size world_size, float grid_size) {
         world = std::make_shared<mvs::World>(rec);
@@ -25,37 +20,28 @@ namespace mvs {
     }
 
     void Simulator::add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
-                              std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosserie) {
+                              std::vector<concord::Bound> wheels,
+                              std::pair<std::vector<float>, std::vector<float>> controls,
+                              std::vector<concord::Bound> karosserie) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
             r->init(world_datum, robot_pose, chassis_size, robot_color, "robot" + std::to_string(robots.size()), wheels,
                     karosserie);
+            r->set_controls(controls.first, controls.second);
             return r;
         }());
-    }
-
-    void Simulator::set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max) {
-        this->steerings_max = steerings_max;
-        this->throttles_max = throttles_max;
-        this->steerings.resize(steerings_max.size(), 0.0f);
-        this->throttles.resize(throttles_max.size(), 0.0f);
-        controls_set = true;
     }
 
     void Simulator::on_joystick_axis(int axis, float value) {
         if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
             if (axis == 0) {
-                steering = value * 30.0f;
-                for (uint i = 0; i < steerings.size(); ++i) {
-                    steerings[i] = mapper(steering, -1.0f, 1.0f, steerings_max[i], -steerings_max[i]);
-                }
+                float steering = value * 30.0f;
+                robots[selected_robot_idx]->set_angular(steering);
             }
 
             if (axis == 1) {
-                throttle = value * 0.2f;
-                for (uint i = 0; i < throttles.size(); ++i) {
-                    throttles[i] = mapper(throttle, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
-                }
+                float throttle = value * 0.2f;
+                robots[selected_robot_idx]->set_linear(throttle);
             }
         }
     }

@@ -20,9 +20,6 @@ namespace mvs {
         bool controls_set = false;
         std::shared_ptr<muli::World> physics_world;
         int selected_robot_idx = -1;
-        float steering = 0.0f, throttle = 0.0f;
-        std::vector<float> steerings, throttles;
-        std::vector<float> steerings_max, throttles_max;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
@@ -32,9 +29,8 @@ namespace mvs {
         concord::Datum get_datum() const { return world_datum; }
 
         void add_robot(concord::Pose robot_pose, pigment::RGB robot_color, concord::Size chassis_size,
-                       std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosserie);
-
-        void set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max);
+                       std::vector<concord::Bound> wheels, std::pair<std::vector<float>, std::vector<float>> controls,
+                       std::vector<concord::Bound> karosserie);
 
         void on_joystick_axis(int axis, float value);
         void on_joystick_button(int button, bool pressed);

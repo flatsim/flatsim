@@ -74,6 +74,10 @@ int main() {
         wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
 
+        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 1.0f, 1.0f};
+        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+        std::pair<std::vector<float>, std::vector<float>> controls{steerings_max, throttles_max};
+
         std::vector<concord::Bound> karosseries;
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
         karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
@@ -82,11 +86,7 @@ int main() {
         karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
 
         pigment::RGB robot_color = pigment::RGB::random();
-        sim->add_robot(robot_pose, robot_color, chassis_size, wheels, karosseries);
-
-        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 1.0f, 1.0f};
-        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-        sim->set_controls(steerings_max, throttles_max);
+        sim->add_robot(robot_pose, robot_color, chassis_size, wheels, controls, karosseries);
     }
 
     auto last_time = std::chrono::steady_clock::now();
