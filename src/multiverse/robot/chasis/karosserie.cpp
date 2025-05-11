@@ -74,7 +74,7 @@ namespace mvs {
         colors_a.push_back(rerun::Color(color.r, color.g, color.b));
         rec->log_static(
             this->name + "/karosserie",
-            rerun::Boxes3D::from_centers_and_sizes({{k_x, k_y, 0}}, {{k_w, k_h, 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes({{k_x, k_y, 0.1f}}, {{k_w, k_h, 0.0f}})
                 .with_radii({{0.02f}})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})

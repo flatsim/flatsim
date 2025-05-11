@@ -46,8 +46,8 @@ int main() {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    concord::Size world_size{200.0f, 200.0f, 100.0f};
-    float grid_size = 2.0f;
+    concord::Size world_size{500.0f, 500.0f, 100.0f};
+    float grid_size = 5.0f;
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
@@ -57,7 +57,7 @@ int main() {
         concord::Pose robot_pose;
         robot_pose.point.enu.x = i * 3;
         robot_pose.point.enu.y = i * 3;
-        robot_pose.point.enu.toWGS(world_datum);
+        robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f;
 
         float width = 0.8f;
@@ -96,11 +96,9 @@ int main() {
     while (true) {
         // --- read one joystick event if available ---
         for (int i = 0; i < sim->num_robots(); ++i) {
-            if (selected_robot_idx == i) {
-                continue;
+            if (selected_robot_idx != i) {
+                sim->set_controls(i, 0.0f, 0.0f);
             }
-            sim->get_robot(i).set_linear(0.0f);
-            sim->get_robot(i).set_angular(0.0f);
         }
         js_event e;
         ssize_t bytes = read(js_fd, &e, sizeof(e));
@@ -111,12 +109,13 @@ int main() {
                 float value = e.value / 32767.0f;
                 if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
                     if (axis == 0) {
-                        float steering = value * 30.0f;
+                        float steering = value * 45.0f;
                         sim->get_robot(selected_robot_idx).set_angular(steering);
                     }
 
                     if (axis == 1) {
                         float throttle = value * 0.2f;
+                        throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
                         sim->get_robot(selected_robot_idx).set_linear(throttle);
                     }
                 }

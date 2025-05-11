@@ -59,12 +59,13 @@ namespace mvs {
 
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
-        void pulse_vis(float p_s);
+        void pulse_vis(float p_s, float gps_mult = 5);
         void respawn();
 
       private:
         concord::Datum datum;
         concord::Circle pulse;
+        concord::Circle pulse_gps;
         void visualize_once();
         void visualize();
     };

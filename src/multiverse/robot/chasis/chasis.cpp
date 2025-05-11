@@ -84,7 +84,7 @@ namespace mvs {
         auto h = float(bound.size.y);
         rec->log_static(
             this->name + "/chassis",
-            rerun::Boxes3D::from_centers_and_sizes({{x, y, 0}}, {{w, h, 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
                 .with_radii({{0.02f}})
                 .with_labels({this->name})
                 // .with_fill_mode(rerun::FillMode::Solid)
