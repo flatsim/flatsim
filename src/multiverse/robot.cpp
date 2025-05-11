@@ -64,6 +64,15 @@ namespace mvs {
         controls_set = true;
     }
 
+    void Robot::reset_controls() {
+        for (uint i = 0; i < steerings.size(); ++i) {
+            steerings[i] = 0.0f;
+        }
+        for (uint i = 0; i < throttles.size(); ++i) {
+            throttles[i] = 0.0f;
+        }
+    }
+
     void Robot::set_angular(float angular) {
         if (!controls_set) {
             return;
@@ -82,8 +91,14 @@ namespace mvs {
         }
     }
 
-    void Robot::teleport(concord::Pose pose) { chassis->teleport(pose); }
-    void Robot::respawn() { chassis->teleport(spawn_position); }
+    void Robot::teleport(concord::Pose pose) {
+        reset_controls();
+        chassis->teleport(pose);
+    }
+    void Robot::respawn() {
+        reset_controls();
+        chassis->teleport(spawn_position);
+    }
 
     void Robot::visualize() {
         chassis->visualize();

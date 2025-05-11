@@ -53,6 +53,7 @@ namespace mvs {
         void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
                   std::vector<concord::Bound> wheels = {}, std::vector<concord::Bound> karosseries = {});
         void set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max);
+        void reset_controls();
 
         void set_angular(float angular);
         void set_linear(float linear);
