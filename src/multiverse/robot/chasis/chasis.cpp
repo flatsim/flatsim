@@ -100,10 +100,7 @@ namespace mvs {
     }
 
     void Chasis::update(std::vector<float> steering, std::vector<float> throttle) {
-        // constexpr float MAX_STEER_DEG = 45.0f;
         for (uint i = 0; i < wheelz.size(); ++i) {
-            // auto steer = std::clamp(steering[i], -MAX_STEER_DEG, MAX_STEER_DEG);
-            // float angle = DegToRad(steer);
             jointz[i]->SetAngularOffset(steering[i]);
             Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
             wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);

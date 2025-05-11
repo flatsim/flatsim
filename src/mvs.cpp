@@ -10,6 +10,9 @@
 #include "multiverse/simulator.hpp"
 #include "rerun/recording_stream.hpp"
 
+float rad2deg(float rad) { return rad * 180.0f / M_PI; }
+float deg2rad(float deg) { return deg * M_PI / 180.0f; }
+
 int main() {
     // 1) Open joystick device
     const char *js_device = "/dev/input/js0";
@@ -74,7 +77,7 @@ int main() {
         wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
 
-        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 0.78f, 0.78f};
+        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, deg2rad(45.0f), deg2rad(45.0f)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
         std::pair<std::vector<float>, std::vector<float>> controls{steerings_max, throttles_max};
 
@@ -114,7 +117,7 @@ int main() {
                     }
 
                     if (axis == 1) {
-                        float throttle = value * 0.2f;
+                        float throttle = value * 0.1f;
                         throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
                         sim->get_robot(selected_robot_idx).set_linear(throttle);
                     }
