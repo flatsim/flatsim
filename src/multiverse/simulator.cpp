@@ -42,19 +42,9 @@ namespace mvs {
     }
 
     void Simulator::set_controls(uint robot_idx, float steering, float throttle) {
-        if (robot_idx >= 0 && robot_idx < robots.size()) {
+        if (robot_idx < robots.size()) {
             robots[robot_idx]->set_angular(steering);
             robots[robot_idx]->set_linear(throttle);
         }
     }
-    void Simulator::set_controls(std::string robot_name, float steering, float throttle) {
-        for (uint i = 0; i < robots.size(); ++i) {
-            if (robots[i]->id() == robot_name) {
-                robots[i]->set_angular(steering);
-                robots[i]->set_linear(throttle);
-                break;
-            }
-        }
-    }
-
 } // namespace mvs

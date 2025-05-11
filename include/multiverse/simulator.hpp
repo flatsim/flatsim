@@ -47,6 +47,5 @@ namespace mvs {
                        std::vector<concord::Bound> karosserie);
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
-        void set_controls(std::string robot_name, float steering, float throttle);
     };
 } // namespace mvs
