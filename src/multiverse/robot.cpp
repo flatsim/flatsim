@@ -163,47 +163,41 @@ namespace mvs {
     }
 
     void Robot::pulse_vis(float p_s, float gps_mult) {
-        auto pulse_size = pulse.getRadius() + 0.0015;
-        auto pulse_gps_size = pulse_gps.getRadius() + 0.0015 * gps_mult;
-        auto hsv = pigment::HSV::fromRGB(color);
-        hsv.adjustBrightness(0.5f);
-        auto c = hsv.toRGB();
-        auto this_c = rerun::Color(c.r, c.g, c.b);
+        concord::Point point(this->position.point.enu.x, this->position.point.enu.y, 0.0f, datum);
         if (!pulsining) {
             return;
-        } else if (pulse.getRadius() > p_s) {
+        }
+
+        std::vector<rerun::Vec3D> poi;
+        auto pulse_size = pulse.getRadius() + 0.0015;
+        if (pulse.getRadius() > p_s) {
             pulsining = false;
             pulse_size = 0.0;
-        } else if (pulse_gps.getRadius() > p_s * gps_mult) {
-            pulsining = false;
-            pulse_gps_size = 0.0;
         }
-        auto x = this->position.point.enu.x;
-        auto y = this->position.point.enu.y;
-        concord::Point p;
-        p.enu.x = x;
-        p.enu.y = y;
-        pulse = concord::Circle(p, pulse_size);
-        pulse_gps = concord::Circle(p, pulse_gps_size);
+        pulse = concord::Circle(point, pulse_size);
         auto pointss = pulse.as_polygon(50, datum);
-        auto pointss_gps = pulse_gps.as_polygon(50, datum);
-        std::vector<rerun::Vec3D> poi;
-        std::vector<rerun::LatLon> locators;
-
         for (auto &point : pointss) {
             poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
         }
-        for (auto &point : pointss_gps) {
-            locators.push_back(rerun::LatLon(point.wgs.lat, point.wgs.lon));
-        }
-        locators.push_back(rerun::LatLon(pointss_gps[0].wgs.lat, pointss_gps[0].wgs.lon));
         poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
         rec->log_static(
             this->name + "/pulse/enu",
             rerun::LineStrips3D({{poi}})
-                .with_colors({{this_c}})
+                .with_colors({{rerun::Color(color.r, color.g, color.b)}})
                 .with_radii({{float(mapValue(pulse_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
 
+        std::vector<rerun::LatLon> locators;
+        auto pulse_gps_size = pulse_gps.getRadius() + 0.0015 * gps_mult;
+        if (pulse_gps.getRadius() > p_s * gps_mult) {
+            pulsining = false;
+            pulse_gps_size = 0.0;
+        }
+        pulse_gps = concord::Circle(point, pulse_gps_size);
+        auto pointss_gps = pulse_gps.as_polygon(50, datum);
+        for (auto &point : pointss_gps) {
+            locators.push_back(rerun::LatLon(point.wgs.lat, point.wgs.lon));
+        }
+        locators.push_back(rerun::LatLon(pointss_gps[0].wgs.lat, pointss_gps[0].wgs.lon));
         auto linestr = rerun::components::GeoLineString::from_lat_lon(locators);
         rec->log_static(
             this->name + "/pulse/wgs",
