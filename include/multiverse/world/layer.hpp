@@ -10,7 +10,8 @@
 
 namespace mvs {
     class Layer {
-        friend class concord::Grid<pigment::RGB>;
+      public:
+        std::string name;
 
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
@@ -18,7 +19,7 @@ namespace mvs {
 
       public:
         Layer() = default;
-        Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
+        Layer(std::shared_ptr<rerun::RecordingStream> rec, std::string name, std::size_t rows, std::size_t cols, double inradius,
               concord::Datum datum = concord::Datum(), bool centered = true);
 
         concord::Grid<pigment::RGB> &getGrid() { return grid; }

@@ -2,9 +2,9 @@
 
 namespace mvs {
 
-    Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::size_t rows, std::size_t cols, double inradius,
-                 concord::Datum datum, bool centered)
-        : rec(rec) {
+    Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, std::string name, std::size_t rows, std::size_t cols,
+                 double inradius, concord::Datum datum, bool centered)
+        : rec(rec), name(name) {
         grid = concord::Grid<pigment::RGB>(rows, cols, inradius, datum, centered);
         image.resize(grid.rows() * grid.cols() * 3);
     }
@@ -35,7 +35,7 @@ namespace mvs {
 
     void Layer::visualize() {
         to_image(image);
-        rec->log_static("grid", rerun::Image::from_rgb24(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
+        rec->log_static(name, rerun::Image::from_rgb24(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
         // auto gs = float(grid.inradius() / 2);
         // rec->log_static("grid", rerun::Boxes3D::from_centers_and_half_sizes(grid.flatten_points(), {{gs, gs, 0.0f}})
         //                             .with_colors(rerun::Color(110, 90, 60))
