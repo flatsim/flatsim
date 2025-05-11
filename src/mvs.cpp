@@ -74,7 +74,7 @@ int main() {
         wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
 
-        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 1.0f, 1.0f};
+        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, 0.78f, 0.78f};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
         std::pair<std::vector<float>, std::vector<float>> controls{steerings_max, throttles_max};
 
@@ -109,7 +109,7 @@ int main() {
                 float value = e.value / 32767.0f;
                 if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
                     if (axis == 0) {
-                        float steering = value * 45.0f;
+                        float steering = value;
                         sim->get_robot(selected_robot_idx).set_angular(steering);
                     }
 
