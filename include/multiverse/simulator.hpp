@@ -1,6 +1,7 @@
 #pragma once
 
 #include "multiverse/robot.hpp"
+#include "multiverse/types.hpp"
 #include "multiverse/world.hpp"
 
 #include "pigment/types_basic.hpp"
@@ -9,17 +10,6 @@
 #include <rerun.hpp>
 
 namespace mvs {
-    struct RobotInfo {
-        std::string name;
-        std::string uuid;
-        pigment::RGB color;
-        concord::Bound bound;
-        concord::Size size;
-        std::vector<concord::Bound> wheels;
-        std::pair<std::vector<float>, std::vector<float>> controls;
-        std::vector<concord::Bound> karosserie;
-    };
-
     class Simulator {
       public:
         std::shared_ptr<World> world;
@@ -45,7 +35,7 @@ namespace mvs {
                        std::string uuid, std::vector<concord::Bound> wheels,
                        std::pair<std::vector<float>, std::vector<float>> controls,
                        std::vector<concord::Bound> karosserie);
-        void add_robot(RobotInfo robot_info);
+        void add_robot(Robo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
     };
 } // namespace mvs

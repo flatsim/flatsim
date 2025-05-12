@@ -2,14 +2,12 @@
 
 namespace mvs {
 
-    Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum) : rec(rec), datum(datum) {}
+    Layer::Layer(std::shared_ptr<rerun::RecordingStream> concord::Datum datum) : rec(rec), datum(datum) {}
 
-    void Layer::init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered) {
-        this->name = name;
-        this->inradius = inradius;
-
+    void Layer::init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered)
+        : rec(rec), name(name), inradius(inradius) {
         grid = concord::Grid<pigment::RGB>(rows, cols, inradius, datum, centered);
-        image.resize(grid.rows() * grid.cols() * 4, 0);
+        image.resize(grid.rows() * grid.cols() * 3, 0);
         for (auto &[p, c] : grid) {
             c.r = 255;
             c.g = 255;
@@ -50,14 +48,6 @@ namespace mvs {
             }
         }
         return image;
-    }
-
-    void Layer::tick(float dt) {
-        freq++;
-        if (freq % 100 == 0) {
-            visualize();
-            freq = 0;
-        }
     }
 
     void Layer::visualize() {

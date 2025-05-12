@@ -48,12 +48,14 @@ namespace mvs {
         ~World();
 
         const WorldSettings &get_settings() const { return settings; }
-        // get world shared pointer
         std::shared_ptr<muli::World> get_world() const { return world; }
+
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         void tick(float dt);
         void visualize();
-        void add_layer(std::string name, float inradius);
+
+        void add_layer(std::string name, concord::Bound field, float inradius);
+        void add_layer(std::string name, std::size_t rows, std::size_t cols, float inradius);
 
       private:
         std::vector<std::array<float, 3>> enu_corners_;

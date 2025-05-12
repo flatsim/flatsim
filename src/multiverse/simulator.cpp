@@ -31,7 +31,7 @@ namespace mvs {
         }());
     }
 
-    void Simulator::add_robot(RobotInfo robot_info) {
+    void Simulator::add_robot(Robo robot_info) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
             r->init(world_datum, robot_info.bound.pose, robot_info.bound.size, robot_info.color, robot_info.name,

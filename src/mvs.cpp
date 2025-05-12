@@ -56,7 +56,7 @@ int main() {
     sim->init(world_datum, world_size, grid_size);
 
     for (int i = 0; i < 4; ++i) {
-        mvs::RobotInfo robot_info;
+        mvs::Robo robot_info;
         robot_info.name = "robot" + std::to_string(i);
         robot_info.uuid = "robot" + std::to_string(i);
 

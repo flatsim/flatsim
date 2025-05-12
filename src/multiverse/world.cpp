@@ -37,16 +37,20 @@ namespace mvs {
 
         int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
         int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
-        grid = Layer(rec, "grid", g_width, g_height, settings.get_grid_size(), settings.get_datum());
+        grid = Layer(rec, settings.get_datum());
+        grid.init("grid", g_width, g_height, settings.get_grid_size());
     }
+
     void World::tick(float dt) {
         world->Step(dt);
+        grid.tick(dt);
+        for (auto &layer : layers) {
+            layer->tick(dt);
+        }
         visualize();
     }
     //
     void World::visualize() {
-        grid.visualize();
-
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
@@ -54,8 +58,17 @@ namespace mvs {
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
     }
 
-    void World::add_layer(std::string name, float inradius) {
-        auto layer = std::make_shared<Layer>(rec, name, grid.getGrid().rows(), grid.getGrid().cols(), inradius);
+    void World::add_layer(std::string name, concord::Bound field, float inradius) {
+        auto layer = std::make_shared<Layer>(rec, settings.get_datum());
+        auto rows = static_cast<std::size_t>(field.size.x / inradius);
+        auto cols = static_cast<std::size_t>(field.size.y / inradius);
+        layer->init(name, rows, cols, inradius);
+        layers.push_back(layer);
+    }
+
+    void World::add_layer(std::string name, std::size_t rows, std::size_t cols, float inradius) {
+        auto layer = std::make_shared<Layer>(rec, settings.get_datum());
+        layer->init(name, rows, cols, inradius);
         layers.push_back(layer);
     }
 

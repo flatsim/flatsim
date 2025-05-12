@@ -4,6 +4,7 @@
 #include "concord/types_grid.hpp"
 #include "pigment/types_basic.hpp"
 #include "rerun.hpp"
+#include "spdlog/spdlog.h"
 
 #include <type_traits>
 #include <vector>
@@ -16,12 +17,16 @@ namespace mvs {
 
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
+        concord::Datum datum;
         std::vector<uint8_t> image;
+        uint freq = 0;
 
       public:
         Layer() = default;
-        Layer(std::shared_ptr<rerun::RecordingStream> rec, std::string name, std::size_t rows, std::size_t cols,
-              double inradius, concord::Datum datum = concord::Datum(), bool centered = true);
+        Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum);
+
+        void init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered = true);
+        void tick(float dt);
 
         concord::Grid<pigment::RGB> &getGrid() { return grid; }
 
