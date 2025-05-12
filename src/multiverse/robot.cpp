@@ -16,11 +16,11 @@ namespace mvs {
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
-            sensor->tick(dt, position);
+            sensor->tick(dt, pose);
         }
-        this->position.point.enu.x = chassis->get_transform().position.x;
-        this->position.point.enu.y = chassis->get_transform().position.y;
-        this->position.point.wgs = this->position.point.enu.toWGS(datum);
+        this->pose.point.enu.x = chassis->get_transform().position.x;
+        this->pose.point.enu.y = chassis->get_transform().position.y;
+        this->pose.point.wgs = this->pose.point.enu.toWGS(datum);
         chassis->tick(dt);
 
         visualize();
@@ -38,13 +38,6 @@ namespace mvs {
         this->size = size;
         this->spawn_position = pose;
 
-        wheel_nr = wheels.size();
-
-        Transform t;
-        t.position.x = pose.point.enu.x;
-        t.position.y = pose.point.enu.y;
-        t.rotation = pose.angle.yaw; // in radians
-
         concord::Bound bound;
         bound.size = size;
         bound.pose = pose;
@@ -54,13 +47,31 @@ namespace mvs {
 
         steerings.resize(wheels.size(), 0.0f);
         throttles.resize(wheels.size(), 0.0f);
-
-        pulse = concord::Circle(this->position.point, 0.0);
     }
 
     void Robot::set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max) {
         this->steerings_max = steerings_max;
         this->throttles_max = throttles_max;
+        controls_set = true;
+    }
+
+    void Robot::init(concord::Datum datum, Robo robo) {
+        this->datum = datum;
+        this->color = robo.color;
+        this->name = robo.name;
+        this->uuid = robo.uuid;
+        this->size = robo.size;
+        this->pose = robo.bound.pose;
+        this->spawn_position = robo.bound.pose;
+
+        chassis = std::make_unique<Chasis>(world, rec, filter);
+        chassis->init(robo.bound, color, name, robo.wheels, robo.karosserie);
+
+        steerings.resize(robo.wheels.size(), 0.0f);
+        steerings_max = robo.controls.first;
+        throttles.resize(robo.wheels.size(), 0.0f);
+        throttles_max = robo.controls.second;
+
         controls_set = true;
     }
 
@@ -103,16 +114,16 @@ namespace mvs {
     void Robot::visualize() {
         chassis->visualize();
 
-        auto x = this->position.point.enu.x;
-        auto y = this->position.point.enu.y;
+        auto x = this->pose.point.enu.x;
+        auto y = this->pose.point.enu.y;
 
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(color.r, color.g, color.b));
 
         rec->log_static(this->name + "/pose", rerun::Points3D({{float(x), float(y), 0.1f}}).with_colors(colors));
 
-        auto lat = float(this->position.point.wgs.lat);
-        auto lon = float(this->position.point.wgs.lon);
+        auto lat = float(this->pose.point.wgs.lat);
+        auto lon = float(this->pose.point.wgs.lon);
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
@@ -129,54 +140,43 @@ namespace mvs {
 
         std::array<Vec2, 3> arrow_world_points;
         for (int i = 0; i < 3; ++i) {
-            // Get local offset
             Vec2 localOffset = arrow_head_offsets[i];
-
-            // Rotate the offset according to car's rotation
             Vec2 rotatedOffset;
             rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
             rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
-
-            // Add the rotated offset to the car's position
             arrow_world_points[i].x = t.position.x + rotatedOffset.x;
             arrow_world_points[i].y = t.position.y + rotatedOffset.y;
         }
-
         const rerun::Position3D vertex_positions[3] = {{arrow_world_points[0].x, arrow_world_points[0].y, 0.1f},
                                                        {arrow_world_points[1].x, arrow_world_points[1].y, 0.1f},
                                                        {arrow_world_points[2].x, arrow_world_points[2].y, 0.1f}};
-
-        pigment::HSV hsv = pigment::HSV::fromRGB(color);
-        hsv.adjustBrightness(0.7f);
-        auto c = hsv.toRGB();
-
         const rerun::Color vertex_colors[3] = {
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
-            {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)},
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
         };
         rec->log_static(this->name + "/heading", rerun::Mesh3D(vertex_positions)
                                                      .with_vertex_normals({{0.0, 0.0, 1.0}})
                                                      .with_vertex_colors(vertex_colors)
                                                      .with_triangle_indices({{2, 1, 0}}));
-        pulse_vis(std::max(size.x, size.y) * 3.0f);
+        visualize_pulse(std::max(size.x, size.y) * 3.0f);
     }
 
-    void Robot::pulse_vis(float p_s, float gps_mult, float inc) {
-        concord::Point point(this->position.point.enu.x, this->position.point.enu.y, 0.0f, datum);
+    void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
+        concord::Point point(this->pose.point.enu.x, this->pose.point.enu.y, 0.0f, datum);
         if (!pulsining) {
             return;
         }
 
         // visualize local pulse
         std::vector<rerun::Vec3D> poi;
-        auto pulse_size = pulse.getRadius() + inc;
-        if (pulse.getRadius() > p_s) {
+        auto pulse_size = pulse_enu.getRadius() + inc;
+        if (pulse_enu.getRadius() > p_s) {
             pulsining = false;
             pulse_size = 0.0;
         }
-        pulse = concord::Circle(point, pulse_size);
-        auto pointss = pulse.as_polygon(50, datum);
+        pulse_enu = concord::Circle(point, pulse_size);
+        auto pointss = pulse_enu.as_polygon(50, datum);
         for (auto &point : pointss) {
             poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
         }

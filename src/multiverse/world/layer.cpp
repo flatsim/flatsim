@@ -11,9 +11,9 @@ namespace mvs {
         grid = concord::Grid<pigment::RGB>(rows, cols, inradius, datum, centered);
         image.resize(grid.rows() * grid.cols() * 4, 0);
         for (auto &[p, c] : grid) {
-            c.r = 255;
-            c.g = 255;
-            c.b = 255;
+            c.r = 70;
+            c.g = 70;
+            c.b = 50;
             c.a = 255;
         }
     }
@@ -54,7 +54,7 @@ namespace mvs {
 
     void Layer::tick(float dt) {
         freq++;
-        if (freq % 100 == 0) {
+        if (freq % 1000 == 0) {
             visualize();
             freq = 0;
         }
@@ -66,15 +66,20 @@ namespace mvs {
 
         float g_w = float(grid.cols()) * inradius;
         float g_h = float(grid.rows()) * inradius;
-
-        // rerun::components::ImageBuffer buf(image);
-        // const rerun::Position3D vertex_positions[4] = {
-        //     {-g_w / 2, -g_h / 2, 0.0f}, {g_w / 2, -g_h / 2, 0.0f}, {g_w / 2, g_h / 2, 0.0f}, {-g_w / 2, g_h / 2,
-        //     0.0f}};
+        rerun::components::ImageBuffer buf(image);
+        const rerun::Position3D vertex_positions[4] = {{-g_w / 2, -g_h / 2, -0.1f},
+                                                       {g_w / 2, -g_h / 2, -0.1f},
+                                                       {g_w / 2, g_h / 2, -0.1f},
+                                                       {-g_w / 2, g_h / 2, -0.1f}};
         // rec->log_static(this->name + "/texture", rerun::Mesh3D(vertex_positions)
-        //                                              .with_vertex_normals({{0.0, 0.0, 1.0}})
+        //                                              .with_vertex_normals({{0.0, 0.0, 0.0}})
         //                                              .with_albedo_texture_buffer(buf)
         //                                              .with_triangle_indices({{0, 1, 2}, {0, 2, 3}}));
+
+        // rec->log_static("grid", rerun::Boxes3D::from_centers_and_sizes(
+        //                             grid.flatten_points(), {{float(grid.inradius()), float(grid.inradius()), 0.0f}})
+        //                             .with_colors(rerun::Color(110, 90, 60))
+        //                             .with_radii({{0.005f}}));
     }
 
 } // namespace mvs

@@ -6,6 +6,7 @@
 
 namespace mvs {
     struct Robo {
+        uint RCI;
         std::string name;
         std::string uuid;
         pigment::RGB color;
@@ -15,4 +16,6 @@ namespace mvs {
         std::pair<std::vector<float>, std::vector<float>> controls;
         std::vector<concord::Bound> karosserie;
     };
+
+    enum class OperationMode { IDLE, TRANSPORT, WORK };
 } // namespace mvs

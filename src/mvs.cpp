@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "multiverse/simulator.hpp"
+#include "multiverse/types.hpp"
 #include "rerun/recording_stream.hpp"
 
 float rad2deg(float rad) { return rad * 180.0f / M_PI; }
@@ -57,6 +58,7 @@ int main() {
 
     for (int i = 0; i < 4; ++i) {
         mvs::Robo robot_info;
+        robot_info.RCI = 3;
         robot_info.name = "robot" + std::to_string(i);
         robot_info.uuid = "robot" + std::to_string(i);
 
@@ -141,7 +143,7 @@ int main() {
                         sim->get_robot(selected_robot_idx).respawn();
                     }
                     if (button == 9 && pressed) {
-                        sim->get_robot(selected_robot_idx).pulsining = true;
+                        sim->get_robot(selected_robot_idx).pulse();
                     }
                 }
             }
