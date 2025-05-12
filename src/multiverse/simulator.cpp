@@ -22,10 +22,7 @@ namespace mvs {
     void Simulator::add_robot(Robo robot_info) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
-            // r->init(world_datum, robot_info);
-            r->init(world_datum, robot_info.bound.pose, robot_info.bound.size, robot_info.color, robot_info.name,
-                    robot_info.uuid, robot_info.wheels, robot_info.karosserie);
-            r->set_controls(robot_info.controls.first, robot_info.controls.second);
+            r->init(world_datum, robot_info);
             return r;
         }());
     }

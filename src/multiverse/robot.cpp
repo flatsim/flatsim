@@ -22,45 +22,18 @@ namespace mvs {
         this->pose.point.enu.y = chassis->get_transform().position.y;
         this->pose.point.wgs = this->pose.point.enu.toWGS(datum);
         chassis->tick(dt);
+        chassis->update(steerings, throttles);
 
         visualize();
-        if (controls_set) {
-            chassis->update(steerings, throttles);
-        }
-    }
-
-    void Robot::init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                     std::string uuid, std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosseries) {
-        std::cout << "Initializing robot " << name << "...\n";
-        this->datum = datum;
-        this->color = color;
-        this->name = name;
-        this->size = size;
-        this->spawn_position = pose;
-
-        concord::Bound bound;
-        bound.size = size;
-        bound.pose = pose;
-
-        chassis = std::make_unique<Chasis>(world, rec, filter);
-        chassis->init(bound, color, name, wheels, karosseries);
-
-        steerings.resize(wheels.size(), 0.0f);
-        throttles.resize(wheels.size(), 0.0f);
-    }
-
-    void Robot::set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max) {
-        this->steerings_max = steerings_max;
-        this->throttles_max = throttles_max;
-        controls_set = true;
     }
 
     void Robot::init(concord::Datum datum, Robo robo) {
+        spdlog::info("Initializing robot {}...", name);
         this->datum = datum;
         this->color = robo.color;
         this->name = robo.name;
         this->uuid = robo.uuid;
-        this->size = robo.size;
+        this->size = robo.bound.size;
         this->pose = robo.bound.pose;
         this->spawn_position = robo.bound.pose;
 
@@ -71,8 +44,6 @@ namespace mvs {
         steerings_max = robo.controls.first;
         throttles.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controls.second;
-
-        controls_set = true;
     }
 
     void Robot::reset_controls() {
@@ -85,18 +56,12 @@ namespace mvs {
     }
 
     void Robot::set_angular(float angular) {
-        if (!controls_set) {
-            return;
-        }
         for (uint i = 0; i < steerings.size(); ++i) {
             steerings[i] = mapValue(angular, -1.0f, 1.0f, steerings_max[i], -steerings_max[i]);
         }
     }
 
     void Robot::set_linear(float linear) {
-        if (!controls_set) {
-            return;
-        }
         for (uint i = 0; i < throttles.size(); ++i) {
             throttles[i] = mapValue(linear, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
         }

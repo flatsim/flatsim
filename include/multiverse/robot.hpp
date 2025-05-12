@@ -14,6 +14,7 @@
 #include "multiverse/types.hpp"
 #include "multiverse/world.hpp"
 #include "pigment/types_basic.hpp"
+#include "spdlog/spdlog.h"
 
 #include <rerun.hpp>
 #include <vector>
@@ -26,7 +27,6 @@ namespace mvs {
         std::string name;
         std::string uuid;
         bool pulsining = false;
-        bool controls_set = false;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
@@ -52,10 +52,6 @@ namespace mvs {
         const concord::Pose &get_position() const { return pose; }
 
         void tick(float dt);
-        void init(concord::Datum datum, concord::Pose pose, concord::Size size, pigment::RGB color, std::string name,
-                  std::string uuid, std::vector<concord::Bound> wheels = {},
-                  std::vector<concord::Bound> karosseries = {});
-        void set_controls(std::vector<float> steerings_max, std::vector<float> throttles_max);
         void init(concord::Datum datum, Robo robo);
         void reset_controls();
 

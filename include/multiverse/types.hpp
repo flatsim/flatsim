@@ -11,7 +11,6 @@ namespace mvs {
         std::string uuid;
         pigment::RGB color;
         concord::Bound bound;
-        concord::Size size;
         std::vector<concord::Bound> wheels;
         std::pair<std::vector<float>, std::vector<float>> controls;
         std::vector<concord::Bound> karosserie;
