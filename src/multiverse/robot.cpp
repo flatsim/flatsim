@@ -42,8 +42,10 @@ namespace mvs {
 
         steerings.resize(robo.wheels.size(), 0.0f);
         steerings_max = robo.controlz.steerings_max;
+        steerings_diff = robo.controlz.steerings_diff;
         throttles.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controlz.throttles_max;
+        throttles_diff = robo.controlz.throttles_diff;
     }
 
     void Robot::reset_controls() {
@@ -56,8 +58,12 @@ namespace mvs {
     }
 
     void Robot::set_angular(float angular) {
-        for (uint i = 0; i < steerings.size(); ++i) {
-            steerings[i] = mapValue(angular, -1.0f, 1.0f, steerings_max[i], -steerings_max[i]);
+        constexpr float in_min = -1.0f, in_max = 1.0f;
+        const float sign = (angular < 0.0f ? -1.0f : 1.0f);
+        for (size_t i = 0; i < steerings.size(); ++i) {
+            float o1 = steerings_max[i] - sign * steerings_diff[i];
+            float o2 = -steerings_max[i] + sign * steerings_diff[i];
+            steerings[i] = mapValue(angular, in_min, in_max, o1, o2);
         }
     }
 
