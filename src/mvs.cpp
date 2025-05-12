@@ -50,7 +50,7 @@ int main() {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    concord::Size world_size{500.0f, 500.0f, 100.0f};
+    concord::Size world_size{100.0f, 100.0f, 100.0f};
     float grid_size = 0.2f;
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
@@ -63,8 +63,8 @@ int main() {
         robot_info.uuid = "robot" + std::to_string(i);
 
         concord::Pose robot_pose;
-        robot_pose.point.enu.x = sim->get_world().at(10 * i, 0).enu.x;
-        robot_pose.point.enu.y = sim->get_world().at(10 * i, 0).enu.y;
+        robot_pose.point.enu.x = sim->get_world().at((10 * i) + 10, 10).enu.x;
+        robot_pose.point.enu.y = sim->get_world().at((10 * i) + 10, 10).enu.y;
         robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f;
 
@@ -85,7 +85,7 @@ int main() {
 
         std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-        std::vector<float> steerings_diff = {deg2rad(2), -deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
+        std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 
         std::vector<concord::Bound> karosseries;
