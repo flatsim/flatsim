@@ -10,12 +10,19 @@
 #include <vector>
 
 namespace mvs {
+
+    template <typename T> struct GridData {
+        pigment::RGB color;
+        T data;
+    };
+
     class Layer {
       public:
         std::string name;
         float inradius;
 
       private:
+        concord::Grid<pigment::RGB> grid;
         std::shared_ptr<rerun::RecordingStream> rec;
         concord::Datum datum;
         std::vector<uint8_t> image;
@@ -34,8 +41,5 @@ namespace mvs {
         concord::Point at(uint x, uint y) const;
 
         concord::Grid<pigment::RGB> &getGrid() { return grid; }
-
-      private:
-        concord::Grid<pigment::RGB> grid;
     };
 } // namespace mvs

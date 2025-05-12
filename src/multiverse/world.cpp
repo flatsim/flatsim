@@ -56,6 +56,12 @@ namespace mvs {
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+
+        rec->log_static("grid", rerun::Boxes3D::from_centers_and_sizes(
+                                    grid.getGrid().flatten_points(),
+                                    {{float(grid.getGrid().inradius()), float(grid.getGrid().inradius()), 0.0f}})
+                                    .with_colors(rerun::Color(110, 90, 60))
+                                    .with_radii({{0.005f}}));
     }
 
     void World::add_layer(std::string name, concord::Bound field, float inradius) {

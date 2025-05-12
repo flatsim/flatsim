@@ -51,7 +51,7 @@ int main() {
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.987305, 5.663625, 53.801823};
     concord::Size world_size{100.0f, 100.0f, 100.0f};
-    float grid_size = 0.2f;
+    float grid_size = 1.0f;
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
