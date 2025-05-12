@@ -63,6 +63,7 @@ namespace mvs {
         for (size_t i = 0; i < steerings.size(); ++i) {
             float o1 = steerings_max[i] - sign * steerings_diff[i];
             float o2 = -steerings_max[i] + sign * steerings_diff[i];
+            throttles_diff[i] += sign * steerings[i];
             steerings[i] = mapValue(angular, in_min, in_max, o1, o2);
         }
     }
@@ -71,7 +72,7 @@ namespace mvs {
         constexpr float in_min = -1.0f, in_max = 1.0f;
         for (uint i = 0; i < throttles.size(); ++i) {
             float o1 = throttles_max[i] + throttles_diff[i];
-            float o2 = -throttles_max[i] - throttles_diff[i];
+            float o2 = -throttles_max[i] + throttles_diff[i];
             throttles[i] = mapValue(linear, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
         }
     }
