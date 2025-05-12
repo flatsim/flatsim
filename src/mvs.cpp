@@ -85,9 +85,8 @@ int main() {
 
         std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-        std::vector<float> steerings_diff = {deg2rad(2), -deg2rad(2), 0.0f, 0.0f, deg2rad(10), -deg2rad(10)};
-        std::vector<float> throttles_diff = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, throttles_diff};
+        std::vector<float> steerings_diff = {deg2rad(2), -deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
+        robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 
         std::vector<concord::Bound> karosseries;
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};

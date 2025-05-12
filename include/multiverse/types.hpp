@@ -9,7 +9,6 @@ namespace mvs {
         std::vector<float> steerings_max;
         std::vector<float> throttles_max;
         std::vector<float> steerings_diff;
-        std::vector<float> throttles_diff;
     };
     struct Robo {
         uint RCI;

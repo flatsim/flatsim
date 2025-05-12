@@ -44,8 +44,8 @@ namespace mvs {
         steerings_max = robo.controlz.steerings_max;
         steerings_diff = robo.controlz.steerings_diff;
         throttles.resize(robo.wheels.size(), 0.0f);
+        throttles_diff.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controlz.throttles_max;
-        throttles_diff = robo.controlz.throttles_diff;
     }
 
     void Robot::reset_controls() {
@@ -68,7 +68,10 @@ namespace mvs {
     }
 
     void Robot::set_linear(float linear) {
+        constexpr float in_min = -1.0f, in_max = 1.0f;
         for (uint i = 0; i < throttles.size(); ++i) {
+            float o1 = throttles_max[i] + throttles_diff[i];
+            float o2 = -throttles_max[i] - throttles_diff[i];
             throttles[i] = mapValue(linear, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
         }
     }
