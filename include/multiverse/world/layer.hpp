@@ -31,7 +31,7 @@ namespace mvs {
         void visualize();
         void to_image(std::vector<uint8_t> &image);
         std::vector<uint8_t> to_image();
-        concord::Pose at(uint x, uint y) const;
+        concord::Point at(uint x, uint y) const;
 
         concord::Grid<pigment::RGB> &getGrid() { return grid; }
 

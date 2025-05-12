@@ -54,6 +54,11 @@ namespace mvs {
         return image;
     }
 
+    concord::Point Layer::at(uint x, uint y) const {
+        auto p = grid.at(x, y);
+        return p.first;
+    }
+
     void Layer::tick(float dt) {
         freq++;
         if (freq % 1000 == 0) {

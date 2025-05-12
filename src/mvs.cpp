@@ -63,8 +63,8 @@ int main() {
         robot_info.uuid = "robot" + std::to_string(i);
 
         concord::Pose robot_pose;
-        robot_pose.point.enu.x = i * 3;
-        robot_pose.point.enu.y = i * 3;
+        robot_pose.point.enu.x = sim->get_world().at(10 * i, 0).enu.x;
+        robot_pose.point.enu.y = sim->get_world().at(10 * i, 0).enu.y;
         robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f;
 
