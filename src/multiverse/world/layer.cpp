@@ -7,6 +7,8 @@ namespace mvs {
     void Layer::init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered) {
         this->name = name;
         this->inradius = inradius;
+        this->rows = rows;
+        this->cols = cols;
 
         grid = concord::Grid<pigment::RGB>(rows, cols, inradius, datum, centered);
         image.resize(grid.rows() * grid.cols() * 4, 0);

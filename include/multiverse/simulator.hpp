@@ -25,13 +25,15 @@ namespace mvs {
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
-        void tick(float dt);
-        void init(concord::Datum datum, concord::Size world_size, float grid_size);
-        concord::Datum get_datum() const { return world_datum; }
-        Robot &get_robot(uint i) { return *robots[i]; }
-        int num_robots() const { return robots.size(); }
 
+        void init(concord::Datum datum, concord::Size world_size, float grid_size);
+        void tick(float dt);
         void add_robot(Robo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
+
+        Robot &get_robot(uint i) { return *robots[i]; }
+        int num_robots() const { return robots.size(); }
+        World &get_world() { return *world; }
+        concord::Datum get_datum() const { return world_datum; }
     };
 } // namespace mvs

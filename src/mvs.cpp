@@ -56,7 +56,7 @@ int main() {
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
         mvs::Robo robot_info;
         robot_info.RCI = 3;
         robot_info.name = "robot" + std::to_string(i);
@@ -83,10 +83,11 @@ int main() {
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
         robot_info.wheels = wheels;
 
-        std::vector<float> steerings_max = {-0.3f, -0.3f, 0.0f, 0.0f, deg2rad(45.0f), deg2rad(45.0f)};
+        std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
-        std::pair<std::vector<float>, std::vector<float>> controls{steerings_max, throttles_max};
-        robot_info.controls = controls;
+        std::vector<float> steerings_diff = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        std::vector<float> throttles_diff = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, throttles_diff};
 
         std::vector<concord::Bound> karosseries;
         concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
@@ -95,7 +96,7 @@ int main() {
         karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
         robot_info.karosserie = karosseries;
 
-        pigment::RGB robot_color = pigment::RGB::random();
+        pigment::RGB robot_color = pigment::RGB(255, 200, 0);
         robot_info.color = robot_color;
 
         sim->add_robot(robot_info);

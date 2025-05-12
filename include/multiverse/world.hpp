@@ -47,15 +47,15 @@ namespace mvs {
         World(std::shared_ptr<rerun::RecordingStream> rec);
         ~World();
 
-        const WorldSettings &get_settings() const { return settings; }
-        std::shared_ptr<muli::World> get_world() const { return world; }
-
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         void tick(float dt);
         void visualize();
-
         void add_layer(std::string name, concord::Bound field, float inradius);
         void add_layer(std::string name, std::size_t rows, std::size_t cols, float inradius);
+        // concord::Pose at(uint x, uint y) const { return grid.at(x, y); }
+
+        std::shared_ptr<muli::World> get_world() const { return world; }
+        const WorldSettings &get_settings() const { return settings; }
 
       private:
         std::vector<std::array<float, 3>> enu_corners_;

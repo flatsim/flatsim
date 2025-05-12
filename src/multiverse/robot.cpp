@@ -41,9 +41,9 @@ namespace mvs {
         chassis->init(robo.bound, color, name, robo.wheels, robo.karosserie);
 
         steerings.resize(robo.wheels.size(), 0.0f);
-        steerings_max = robo.controls.first;
+        steerings_max = robo.controlz.steerings_max;
         throttles.resize(robo.wheels.size(), 0.0f);
-        throttles_max = robo.controls.second;
+        throttles_max = robo.controlz.throttles_max;
     }
 
     void Robot::reset_controls() {
@@ -135,12 +135,12 @@ namespace mvs {
 
         // visualize local pulse
         std::vector<rerun::Vec3D> poi;
-        auto pulse_size = pulse_enu.getRadius() + inc;
+        auto pulse_enu_size = pulse_enu.getRadius() + inc;
         if (pulse_enu.getRadius() > p_s) {
             pulsining = false;
-            pulse_size = 0.0;
+            pulse_enu_size = 0.0;
         }
-        pulse_enu = concord::Circle(point, pulse_size);
+        pulse_enu = concord::Circle(point, pulse_enu_size);
         auto pointss = pulse_enu.as_polygon(50, datum);
         for (auto &point : pointss) {
             poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
@@ -150,7 +150,7 @@ namespace mvs {
             this->name + "/pulse/enu",
             rerun::LineStrips3D({{poi}})
                 .with_colors({{rerun::Color(color.r, color.g, color.b)}})
-                .with_radii({{float(mapValue(pulse_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
+                .with_radii({{float(mapValue(pulse_enu_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
 
         // visualize gps pulse
         std::vector<rerun::LatLon> locators;

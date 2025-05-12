@@ -19,6 +19,7 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         concord::Datum datum;
         std::vector<uint8_t> image;
+        size_t rows, cols;
         uint freq = 0;
 
       public:
@@ -27,13 +28,12 @@ namespace mvs {
 
         void init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered = true);
         void tick(float dt);
-
-        concord::Grid<pigment::RGB> &getGrid() { return grid; }
-
+        void visualize();
         void to_image(std::vector<uint8_t> &image);
         std::vector<uint8_t> to_image();
+        concord::Pose at(uint x, uint y) const;
 
-        void visualize();
+        concord::Grid<pigment::RGB> &getGrid() { return grid; }
 
       private:
         concord::Grid<pigment::RGB> grid;

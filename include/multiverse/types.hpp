@@ -5,6 +5,12 @@
 #include "rerun.hpp"
 
 namespace mvs {
+    struct Controllz {
+        std::vector<float> steerings_max;
+        std::vector<float> throttles_max;
+        std::vector<float> steerings_diff;
+        std::vector<float> throttles_diff;
+    };
     struct Robo {
         uint RCI;
         std::string name;
@@ -12,7 +18,7 @@ namespace mvs {
         pigment::RGB color;
         concord::Bound bound;
         std::vector<concord::Bound> wheels;
-        std::pair<std::vector<float>, std::vector<float>> controls;
+        Controllz controlz;
         std::vector<concord::Bound> karosserie;
     };
 
