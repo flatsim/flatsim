@@ -75,15 +75,11 @@ namespace mvs {
 
     // void World::add_layer(std::string name, concord::Bound field, float inradius, bool centered) {
     void World::add_layer(Layz layz) {
-        auto name = layz.name;
         auto field = layz.field;
-        auto inradius = layz.resolution;
-        auto centered = layz.centered;
-
         auto layer = std::make_shared<Layer>(rec, settings.get_datum());
-        auto rows = static_cast<std::size_t>(field.size.x / inradius);
-        auto cols = static_cast<std::size_t>(field.size.y / inradius);
-        layer->init(name, rows, cols, inradius, centered);
+        auto rows = static_cast<std::size_t>(field.size.x / layz.resolution);
+        auto cols = static_cast<std::size_t>(field.size.y / layz.resolution);
+        layer->init(layz.name, layz.uuid, layz.color, rows, cols, layz.resolution, layz.centered);
         layers.push_back(layer);
     }
 } // namespace mvs

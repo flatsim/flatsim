@@ -27,6 +27,8 @@ namespace mvs {
     // WORLD
     struct Layz {
         std::string name;
+        std::string uuid;
+        pigment::RGB color;
         concord::Bound field;
         float resolution;
         bool centered;

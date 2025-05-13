@@ -11,24 +11,21 @@ namespace mvs {
     Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum)
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
-    void Layer::init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered) {
-        spdlog::info("Initializing layer {}", name);
-        spdlog::info("Centered: {}", centered);
-        spdlog::info("Inradius: {}", inradius);
-        spdlog::info("Rows: {}", rows);
-        spdlog::info("Cols: {}", cols);
+    void Layer::init(std::string name, std::string uuid, pigment::RGB color, std::size_t rows, std::size_t cols,
+                     double resolution, bool centered) {
         this->name = name;
-        this->inradius = inradius;
+        this->uuid = uuid;
+        this->color = color;
+        this->resolution = resolution;
         this->rows = rows;
         this->cols = cols;
 
-        grid = concord::Grid<GridData>(rows, cols, inradius, datum, centered);
+        grid = concord::Grid<GridData>(rows, cols, resolution, datum, centered);
         image.resize(grid.rows() * grid.cols() * 4, 0);
         for (auto &[p, gd] : grid) {
-            gd.color.r = 70;
-            gd.color.g = 70;
-            gd.color.b = 50;
-            gd.color.a = 255;
+            gd.color.r = float(color.r);
+            gd.color.g = float(color.g);
+            gd.color.b = float(color.b);
             gd.data = 0.0f;
         }
 
@@ -95,17 +92,17 @@ namespace mvs {
     }
 
     void Layer::visualize() {
+        rerun::Color colorz(this->color.r, this->color.g, this->color.b);
         to_image(image);
         rec->log_static(name + "/image",
                         rerun::Image::from_rgba32(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
 
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
-        rec->log_static(name + "/border",
-                        rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+        rec->log_static(name + "/border", rerun::LineStrips3D(border__).with_colors({{colorz}}).with_radii({{0.1f}}));
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static(name + "/border",
-                        rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+                        rerun::GeoLineStrings(linestring).with_colors({{colorz}}).with_radii({{0.1f}}));
 
         // float g_w = float(grid.cols()) * inradius;
         // float g_h = float(grid.rows()) * inradius;

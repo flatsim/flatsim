@@ -22,13 +22,15 @@ namespace mvs {
     class Layer {
       public:
         std::string name;
-        float inradius;
+        std::string uuid;
+        float resolution;
 
       private:
         concord::Grid<GridData> grid;
         std::shared_ptr<rerun::RecordingStream> rec;
         entropy::NoiseGen noise;
         concord::Datum datum;
+        pigment::RGB color;
         std::vector<uint8_t> image;
         std::vector<uint8_t> data_img;
         size_t rows, cols;
@@ -42,7 +44,8 @@ namespace mvs {
         Layer() = default;
         Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum);
 
-        void init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered = true);
+        void init(std::string name, std::string uuid, pigment::RGB color, std::size_t rows, std::size_t cols,
+                  double resolution, bool centered = true);
         void tick(float dt);
         void add_noise();
         void to_image(std::vector<uint8_t> &image);
