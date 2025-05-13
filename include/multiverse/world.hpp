@@ -50,8 +50,8 @@ namespace mvs {
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         void tick(float dt);
         void visualize();
-        void add_layer(std::string name, concord::Bound field, float inradius);
-        void add_layer(std::string name, std::size_t rows, std::size_t cols, float inradius);
+        void add_layer(std::string name, concord::Bound field, float inradius, bool centered = true);
+        void add_layer(std::string name, concord::Bound field, float row, float col, bool centered = true);
         concord::Point at(uint x, uint y) const { return grid.at(x, y); }
 
         std::shared_ptr<muli::World> get_world() const { return world; }

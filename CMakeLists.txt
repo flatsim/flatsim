@@ -44,6 +44,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pigment)
 
 FetchContent_Declare(
+  entropy
+  GIT_REPOSITORY https://github.com/smolfetch/entropy.git
+  GIT_TAG        main
+)
+FetchContent_MakeAvailable(entropy)
+
+FetchContent_Declare(
     rerun_sdk 
     URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
 )
@@ -69,6 +76,7 @@ FetchContent_MakeAvailable(spdlog)
 target_link_libraries(multiverse INTERFACE muli)
 target_link_libraries(multiverse INTERFACE concord::concord)
 target_link_libraries(multiverse INTERFACE pigment::pigment)
+target_link_libraries(multiverse INTERFACE entropy::entropy)
 target_link_libraries(multiverse INTERFACE rerun_sdk)
 target_link_libraries(multiverse INTERFACE spdlog::spdlog)
 
@@ -94,6 +102,7 @@ set(ext_deps
   muli
   concord::concord
   pigment::pigment
+  entropy::entropy
   rerun_sdk
   spdlog::spdlog
 )

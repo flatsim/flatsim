@@ -64,7 +64,7 @@ namespace mvs {
                                     .with_radii({{0.005f}}));
     }
 
-    void World::add_layer(std::string name, concord::Bound field, float inradius) {
+    void World::add_layer(std::string name, concord::Bound field, float inradius, bool centered) {
         auto layer = std::make_shared<Layer>(rec, settings.get_datum());
         auto rows = static_cast<std::size_t>(field.size.x / inradius);
         auto cols = static_cast<std::size_t>(field.size.y / inradius);
@@ -72,9 +72,14 @@ namespace mvs {
         layers.push_back(layer);
     }
 
-    void World::add_layer(std::string name, std::size_t rows, std::size_t cols, float inradius) {
+    void World::add_layer(std::string name, concord::Bound field, float row, float col, bool centered) {
         auto layer = std::make_shared<Layer>(rec, settings.get_datum());
-        layer->init(name, rows, cols, inradius);
+        auto inradius_x = field.size.x / col;
+        auto inradius_y = field.size.y / row;
+        auto inradius = std::min(inradius_x, inradius_y);
+        auto rows = static_cast<std::size_t>(field.size.x / inradius);
+        auto cols = static_cast<std::size_t>(field.size.y / inradius);
+        layer->init(name, rows, cols, inradius, centered);
         layers.push_back(layer);
     }
 

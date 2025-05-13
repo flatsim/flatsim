@@ -8,7 +8,6 @@
 #include <entropy/noisegen.hpp>
 
 #include <any>
-#include <random>
 #include <type_traits>
 #include <vector>
 
@@ -33,8 +32,6 @@ namespace mvs {
         std::vector<uint8_t> data_img;
         size_t rows, cols;
         uint freq = 0;
-
-        std::mt19937 rnd;
 
       public:
         Layer() = default;
