@@ -32,11 +32,13 @@ namespace mvs {
             gd.data = 0.0f;
         }
 
-        auto corners = grid.corners();
+        auto corners = grid.corners(datum);
         for (auto &p : corners) {
             enu_corners_.push_back({float(p.enu.x), float(p.enu.y), 0.0f});
+            wgs_corners_.push_back({float(p.wgs.lat), float(p.wgs.lon)});
         }
         enu_corners_.push_back(enu_corners_[0]);
+        wgs_corners_.push_back(wgs_corners_[0]);
     }
 
     void Layer::add_noise() {
@@ -100,6 +102,10 @@ namespace mvs {
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static(name + "/border",
                         rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+
+        auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
+        rec->log_static(name + "/border",
+                        rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
         // float g_w = float(grid.cols()) * inradius;
         // float g_h = float(grid.rows()) * inradius;
