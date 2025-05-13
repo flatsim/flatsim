@@ -19,6 +19,7 @@ namespace mvs {
         world_datum = datum;
     }
 
+    // ROBOT
     void Simulator::add_robot(Robo robot_info) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
@@ -33,4 +34,9 @@ namespace mvs {
             robots[robot_idx]->set_linear(throttle);
         }
     }
+
+    // WORLD
+    //
+    void Simulator::add_layer(Layz layz) { world->add_layer(layz); }
+
 } // namespace mvs

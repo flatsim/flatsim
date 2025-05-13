@@ -12,6 +12,7 @@
 #include "rerun.hpp"
 
 #include "multiverse/robot.hpp"
+#include "multiverse/types.hpp"
 #include "multiverse/world/layer.hpp"
 
 namespace mvs {
@@ -40,7 +41,6 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        Layer grid;
         std::vector<std::shared_ptr<Layer>> layers;
 
       public:
@@ -50,9 +50,8 @@ namespace mvs {
         void init(concord::Datum datum, concord::Size world_size, float grid_size);
         void tick(float dt);
         void visualize();
-        void add_layer(std::string name, concord::Bound field, float inradius, bool centered = true);
-        void add_layer(std::string name, concord::Bound field, float row, float col, bool centered = true);
-        concord::Point at(uint x, uint y) const { return grid.at(x, y); }
+        void add_layer(Layz layz);
+        concord::Point at(std::string name, uint x, uint y) const;
 
         std::shared_ptr<muli::World> get_world() const { return world; }
         const WorldSettings &get_settings() const { return settings; }

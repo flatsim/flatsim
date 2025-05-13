@@ -5,6 +5,7 @@
 #include "rerun.hpp"
 
 namespace mvs {
+    // ROBOT
     struct Controllz {
         std::vector<float> steerings_max;
         std::vector<float> throttles_max;
@@ -22,4 +23,14 @@ namespace mvs {
     };
 
     enum class OperationMode { IDLE, TRANSPORT, WORK };
+
+    // WORLD
+    struct Layz {
+        std::string name;
+        concord::Bound field;
+        float resolution;
+        bool centered;
+        bool noise;
+    };
+
 } // namespace mvs

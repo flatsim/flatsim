@@ -35,6 +35,8 @@ namespace mvs {
         uint freq = 0;
 
         std::mt19937 rnd;
+        std::vector<std::array<float, 3>> enu_corners_;
+        std::vector<rerun::LatLon> wgs_corners_;
 
       public:
         Layer() = default;
@@ -42,9 +44,10 @@ namespace mvs {
 
         void init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered = true);
         void tick(float dt);
-        void visualize();
+        void add_noise();
         void to_image(std::vector<uint8_t> &image);
         std::vector<uint8_t> to_image();
+        void visualize();
 
         concord::Point at(uint x, uint y) const { return grid.at(x, y).first; }
         GridData data_at(uint x, uint y) const { return grid.at(x, y).second; }

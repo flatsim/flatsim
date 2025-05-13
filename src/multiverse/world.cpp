@@ -35,21 +35,30 @@ namespace mvs {
             wgs_corners_.push_back({lat, lon});
         }
 
-        int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
-        int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
-        grid = Layer(rec, settings.get_datum());
-        grid.init("grid", g_width, g_height, settings.get_grid_size());
+        // int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
+        // int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
+        // grid = Layer(rec, settings.get_datum());
+        // grid.init("grid", g_width, g_height, settings.get_grid_size());
     }
 
     void World::tick(float dt) {
         world->Step(dt);
-        grid.tick(dt);
+        // grid.tick(dt);
         for (auto &layer : layers) {
             layer->tick(dt);
         }
         visualize();
     }
-    //
+
+    concord::Point World::at(std::string name, uint x, uint y) const {
+        for (auto &layer : layers) {
+            if (layer->name == name) {
+                return layer->at(x, y);
+            }
+        }
+        return {0, 0};
+    }
+
     void World::visualize() {
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
@@ -57,30 +66,24 @@ namespace mvs {
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
-        rec->log_static("grid", rerun::Boxes3D::from_centers_and_sizes(
-                                    grid.getGrid().flatten_points(),
-                                    {{float(grid.getGrid().inradius()), float(grid.getGrid().inradius()), 0.0f}})
-                                    .with_colors(rerun::Color(110, 90, 60))
-                                    .with_radii({{0.005f}}));
+        // rec->log_static("grid", rerun::Boxes3D::from_centers_and_sizes(
+        //                             grid.getGrid().flatten_points(),
+        //                             {{float(grid.getGrid().inradius()), float(grid.getGrid().inradius()), 0.0f}})
+        //                             .with_colors(rerun::Color(110, 90, 60))
+        //                             .with_radii({{0.005f}}));
     }
 
-    void World::add_layer(std::string name, concord::Bound field, float inradius, bool centered) {
-        auto layer = std::make_shared<Layer>(rec, settings.get_datum());
-        auto rows = static_cast<std::size_t>(field.size.x / inradius);
-        auto cols = static_cast<std::size_t>(field.size.y / inradius);
-        layer->init(name, rows, cols, inradius);
-        layers.push_back(layer);
-    }
+    // void World::add_layer(std::string name, concord::Bound field, float inradius, bool centered) {
+    void World::add_layer(Layz layz) {
+        auto name = layz.name;
+        auto field = layz.field;
+        auto inradius = layz.resolution;
+        auto centered = layz.centered;
 
-    void World::add_layer(std::string name, concord::Bound field, float row, float col, bool centered) {
         auto layer = std::make_shared<Layer>(rec, settings.get_datum());
-        auto inradius_x = field.size.x / col;
-        auto inradius_y = field.size.y / row;
-        auto inradius = std::min(inradius_x, inradius_y);
         auto rows = static_cast<std::size_t>(field.size.x / inradius);
         auto cols = static_cast<std::size_t>(field.size.y / inradius);
         layer->init(name, rows, cols, inradius, centered);
         layers.push_back(layer);
     }
-
 } // namespace mvs

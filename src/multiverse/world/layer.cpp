@@ -12,6 +12,11 @@ namespace mvs {
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
     void Layer::init(std::string name, std::size_t rows, std::size_t cols, double inradius, bool centered) {
+        spdlog::info("Initializing layer {}", name);
+        spdlog::info("Centered: {}", centered);
+        spdlog::info("Inradius: {}", inradius);
+        spdlog::info("Rows: {}", rows);
+        spdlog::info("Cols: {}", cols);
         this->name = name;
         this->inradius = inradius;
         this->rows = rows;
@@ -24,7 +29,17 @@ namespace mvs {
             gd.color.g = 70;
             gd.color.b = 50;
             gd.color.a = 255;
+            gd.data = 0.0f;
         }
+
+        auto corners = grid.corners();
+        for (auto &p : corners) {
+            enu_corners_.push_back({float(p.enu.x), float(p.enu.y), 0.0f});
+        }
+        enu_corners_.push_back(enu_corners_[0]);
+    }
+
+    void Layer::add_noise() {
         noise.SetNoiseType(entropy::NoiseGen::NoiseType_OpenSimplex2);
         noise.SetSeed(int(rnd()));
         for (std::size_t r = 0; r < grid.rows(); ++r) {
@@ -79,15 +94,20 @@ namespace mvs {
 
     void Layer::visualize() {
         to_image(image);
-        rec->log_static(name, rerun::Image::from_rgba32(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
+        rec->log_static(name + "/image",
+                        rerun::Image::from_rgba32(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
 
-        float g_w = float(grid.cols()) * inradius;
-        float g_h = float(grid.rows()) * inradius;
-        rerun::components::ImageBuffer buf(image);
-        const rerun::Position3D vertex_positions[4] = {{-g_w / 2, -g_h / 2, -0.1f},
-                                                       {g_w / 2, -g_h / 2, -0.1f},
-                                                       {g_w / 2, g_h / 2, -0.1f},
-                                                       {-g_w / 2, g_h / 2, -0.1f}};
+        auto border__ = rerun::components::LineStrip3D(enu_corners_);
+        rec->log_static(name + "/border",
+                        rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+
+        // float g_w = float(grid.cols()) * inradius;
+        // float g_h = float(grid.rows()) * inradius;
+        // rerun::components::ImageBuffer buf(image);
+        // const rerun::Position3D vertex_positions[4] = {{-g_w / 2, -g_h / 2, -0.1f},
+        //                                                {g_w / 2, -g_h / 2, -0.1f},
+        //                                                {g_w / 2, g_h / 2, -0.1f},
+        //                                                {-g_w / 2, g_h / 2, -0.1f}};
         // rec->log_static(this->name + "/texture", rerun::Mesh3D(vertex_positions)
         //                                              .with_vertex_normals({{0.0, 0.0, 0.0}})
         //                                              .with_albedo_texture_buffer(buf)

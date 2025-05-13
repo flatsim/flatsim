@@ -56,6 +56,17 @@ int main() {
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size, grid_size);
 
+    for (int i = 0; i < 1; ++i) {
+        mvs::Layz layz;
+        layz.name = "grid" + std::to_string(i);
+        layz.field = concord::Bound(concord::Pose(0, 0, 0), concord::Size(50.0f, 50.0f, 0.0f));
+        layz.resolution = 1.0f;
+        layz.centered = true;
+        layz.noise = false;
+
+        sim->add_layer(layz);
+    }
+
     for (int i = 0; i < 3; ++i) {
         mvs::Robo robot_info;
         robot_info.RCI = 3;
@@ -63,8 +74,8 @@ int main() {
         robot_info.uuid = "robot" + std::to_string(i);
 
         concord::Pose robot_pose;
-        robot_pose.point.enu.x = sim->get_world().at((10 * i) + 10, 10).enu.x;
-        robot_pose.point.enu.y = sim->get_world().at((10 * i) + 10, 10).enu.y;
+        robot_pose.point.enu.x = 3 * i;
+        robot_pose.point.enu.y = 3 * i;
         robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f;
 
