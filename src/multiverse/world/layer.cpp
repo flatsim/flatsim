@@ -19,7 +19,7 @@ namespace mvs {
         this->rows = rows;
         this->cols = cols;
 
-        grid = concord::Grid<GridData>(rows, cols, info.resolution, datum, info.centered, info.bound.pose);
+        grid = concord::Grid<GridData>(rows, cols, info.resolution, datum, true, info.bound.pose);
         image.resize(grid.rows() * grid.cols() * 4, 0);
         for (auto &[p, gd] : grid) {
             gd.color.r = float(info.color.r);

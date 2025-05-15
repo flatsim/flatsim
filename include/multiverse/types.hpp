@@ -36,7 +36,6 @@ namespace mvs {
         concord::Bound bound;
         concord::Polygon field;
         float resolution;
-        bool centered = false;
     };
 
 } // namespace mvs

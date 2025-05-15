@@ -77,7 +77,6 @@ int main() {
     layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
     layz.bound = polygon.get_obb(world_datum);
     layz.resolution = 1.0f;
-    layz.centered = false;
     layz.field = polygon;
     sim->add_layer(layz);
 
