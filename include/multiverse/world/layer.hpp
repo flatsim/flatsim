@@ -7,6 +7,8 @@
 #include "spdlog/spdlog.h"
 #include <entropy/noisegen.hpp>
 
+#include "multiverse/types.hpp"
+
 #include <any>
 #include <random>
 #include <type_traits>
@@ -21,17 +23,13 @@ namespace mvs {
 
     class Layer {
       public:
-        std::string name;
-        std::string uuid;
-        float resolution;
+        LayerInfo info;
 
       private:
-        concord::Bound field;
         concord::Grid<GridData> grid;
         std::shared_ptr<rerun::RecordingStream> rec;
         entropy::NoiseGen noise;
         concord::Datum datum;
-        pigment::RGB color;
         std::vector<uint8_t> image;
         std::vector<uint8_t> data_img;
         size_t rows, cols;
@@ -40,14 +38,15 @@ namespace mvs {
 
         std::mt19937 rnd;
         std::vector<std::array<float, 3>> enu_corners_;
+        std::vector<std::array<float, 3>> polygon_corners_;
         std::vector<rerun::LatLon> wgs_corners_;
+        std::vector<rerun::LatLon> polygon_corners_wgs_;
 
       public:
         Layer() = default;
         Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum);
 
-        void init(std::string name, std::string uuid, pigment::RGB color, concord::Bound field, std::size_t rows,
-                  std::size_t cols, double resolution, bool centered = true);
+        void init(LayerInfo info);
         void tick(float dt);
         void add_noise();
         void to_image(std::vector<uint8_t> &image);

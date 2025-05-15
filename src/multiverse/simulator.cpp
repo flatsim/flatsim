@@ -19,7 +19,7 @@ namespace mvs {
     }
 
     // ROBOT
-    void Simulator::add_robot(Robo robot_info) {
+    void Simulator::add_robot(RobotInfo robot_info) {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
             r->init(world_datum, robot_info);
@@ -35,12 +35,9 @@ namespace mvs {
     }
 
     // WORLD
-    void Simulator::add_layer(Layz layz, bool noise) {
-        auto field = layz.field;
+    void Simulator::add_layer(LayerInfo layz, bool noise) {
         auto layer = std::make_shared<Layer>(rec, world_datum);
-        auto rows = static_cast<std::size_t>(field.size.x / layz.resolution);
-        auto cols = static_cast<std::size_t>(field.size.y / layz.resolution);
-        layer->init(layz.name, layz.uuid, layz.color, layz.field, rows, cols, layz.resolution, layz.centered);
+        layer->init(layz);
         world->layers.push_back(layer);
         if (noise) {
             layer->add_noise();

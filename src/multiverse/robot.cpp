@@ -27,7 +27,7 @@ namespace mvs {
         visualize();
     }
 
-    void Robot::init(concord::Datum datum, Robo robo) {
+    void Robot::init(concord::Datum datum, RobotInfo robo) {
         spdlog::info("Initializing robot {}...", name);
         this->datum = datum;
         this->color = robo.color;

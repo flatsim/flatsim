@@ -53,7 +53,7 @@ namespace mvs {
         const concord::Pose &get_position() const { return pose; }
 
         void tick(float dt);
-        void init(concord::Datum datum, Robo robo);
+        void init(concord::Datum datum, RobotInfo robo);
         void reset_controls();
 
         void set_angular(float angular);

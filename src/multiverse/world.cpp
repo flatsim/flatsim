@@ -45,7 +45,7 @@ namespace mvs {
 
     concord::Point World::at(std::string name, uint x, uint y) const {
         for (auto &layer : layers) {
-            if (layer->name == name) {
+            if (layer->info.name == name) {
                 return layer->at(x, y);
             }
         }

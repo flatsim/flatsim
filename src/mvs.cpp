@@ -71,20 +71,18 @@ int main() {
     concord::Polygon polygon;
     polygon.from_wgs(coordinates, world_datum);
 
-    for (int i = 0; i < 1; ++i) {
-        mvs::Layz layz;
-        layz.name = "grid" + std::to_string(i);
-        layz.uuid = "grid" + std::to_string(i);
-        layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-        layz.field = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
-        layz.resolution = 1.0f;
-        layz.centered = false;
-
-        sim->add_layer(layz);
-    }
+    mvs::LayerInfo layz;
+    layz.name = "grid";
+    layz.uuid = "grid";
+    layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
+    layz.bound = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
+    layz.resolution = 1.0f;
+    layz.centered = false;
+    layz.field = polygon;
+    sim->add_layer(layz);
 
     for (int i = 0; i < 3; ++i) {
-        mvs::Robo robot_info;
+        mvs::RobotInfo robot_info;
         robot_info.RCI = 3;
         robot_info.name = "robot" + std::to_string(i);
         robot_info.uuid = "robot" + std::to_string(i);
