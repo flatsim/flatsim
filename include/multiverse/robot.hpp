@@ -22,10 +22,6 @@
 namespace mvs {
     class Robot {
       private:
-        uint RCI;
-        uint32_t group;
-        std::string name;
-        std::string uuid;
         bool pulsining = false;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
@@ -36,21 +32,14 @@ namespace mvs {
         std::vector<float> steerings_diff, throttles_diff;
 
         muli::CollisionFilter filter;
-        concord::Pose pose;
-        concord::Size size;
-        pigment::RGB color;
         concord::Pose spawn_position;
 
-        int wheel_nr;
-
       public:
+        RobotInfo info;
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
 
-        std::string get_name() const { return name; }
-        std::string get_uuid() const { return uuid; }
-        uint get_RCI() const { return RCI; }
-        const concord::Pose &get_position() const { return pose; }
+        const concord::Pose &get_position() const { return info.bound.pose; }
 
         void tick(float dt);
         void init(concord::Datum datum, RobotInfo robo);

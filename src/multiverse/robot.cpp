@@ -8,7 +8,7 @@ namespace mvs {
     }
 
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
-        : rec(rec), world(world), group(group) {
+        : rec(rec), world(world) {
         filter.bit = 1 << group;
         filter.mask = ~(1 << group);
     }
@@ -16,11 +16,11 @@ namespace mvs {
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
-            sensor->tick(dt, pose);
+            sensor->tick(dt, info.bound.pose);
         }
-        this->pose.point.enu.x = chassis->get_transform().position.x;
-        this->pose.point.enu.y = chassis->get_transform().position.y;
-        this->pose.point.wgs = this->pose.point.enu.toWGS(datum);
+        this->info.bound.pose.point.enu.x = chassis->get_transform().position.x;
+        this->info.bound.pose.point.enu.y = chassis->get_transform().position.y;
+        this->info.bound.pose.point.wgs = this->info.bound.pose.point.enu.toWGS(datum);
         chassis->tick(dt);
         chassis->update(steerings, throttles);
 
@@ -28,17 +28,13 @@ namespace mvs {
     }
 
     void Robot::init(concord::Datum datum, RobotInfo robo) {
-        spdlog::info("Initializing robot {}...", name);
+        spdlog::info("Initializing robot {}...", info.name);
         this->datum = datum;
-        this->color = robo.color;
-        this->name = robo.name;
-        this->uuid = robo.uuid;
-        this->size = robo.bound.size;
-        this->pose = robo.bound.pose;
+        this->info = robo;
         this->spawn_position = robo.bound.pose;
 
         chassis = std::make_unique<Chasis>(world, rec, filter);
-        chassis->init(robo.bound, color, name, robo.wheels, robo.karosserie);
+        chassis->init(robo.bound, info.color, info.name, robo.wheels, robo.karosserie);
 
         steerings.resize(robo.wheels.size(), 0.0f);
         steerings_max = robo.controlz.steerings_max;
@@ -89,28 +85,28 @@ namespace mvs {
     void Robot::visualize() {
         chassis->visualize();
 
-        auto x = this->pose.point.enu.x;
-        auto y = this->pose.point.enu.y;
+        auto x = this->info.bound.pose.point.enu.x;
+        auto y = this->info.bound.pose.point.enu.y;
 
         std::vector<rerun::Color> colors;
-        colors.push_back(rerun::Color(color.r, color.g, color.b));
+        colors.push_back(rerun::Color(info.color.r, info.color.g, info.color.b));
 
-        rec->log_static(this->name + "/pose", rerun::Points3D({{float(x), float(y), 0.1f}}).with_colors(colors));
+        rec->log_static(this->info.name + "/pose", rerun::Points3D({{float(x), float(y), 0.1f}}).with_colors(colors));
 
-        auto lat = float(this->pose.point.wgs.lat);
-        auto lon = float(this->pose.point.wgs.lon);
+        auto lat = float(this->info.bound.pose.point.wgs.lat);
+        auto lon = float(this->info.bound.pose.point.wgs.lon);
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
-        rec->log_static(this->name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+        rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
         Transform t = chassis->get_transform();
-        const float arrowHeight = size.y * -0.03f; // How far the tip extends beyond the chassis
-        const float arrowWidth = size.x * 0.5f;    // Width of arrow base
+        const float arrowHeight = info.bound.size.y * -0.03f; // How far the tip extends beyond the chassis
+        const float arrowWidth = info.bound.size.x * 0.5f;    // Width of arrow base
 
         std::array<Vec2, 3> arrow_head_offsets = {{
-            {Vec2(0, size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
-            {Vec2(-arrowWidth / 2, size.y * 0.3)}, // left corner of arrow
-            {Vec2(arrowWidth / 2, size.y * 0.3)}   // right corner of arrow
+            {Vec2(0, info.bound.size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
+            {Vec2(-arrowWidth / 2, info.bound.size.y * 0.3)}, // left corner of arrow
+            {Vec2(arrowWidth / 2, info.bound.size.y * 0.3)}   // right corner of arrow
         }};
 
         std::array<Vec2, 3> arrow_world_points;
@@ -126,19 +122,22 @@ namespace mvs {
                                                        {arrow_world_points[1].x, arrow_world_points[1].y, 0.1f},
                                                        {arrow_world_points[2].x, arrow_world_points[2].y, 0.1f}};
         const rerun::Color vertex_colors[3] = {
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
-            {static_cast<uint8_t>(color.r), static_cast<uint8_t>(color.g), static_cast<uint8_t>(color.b)},
+            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
+             static_cast<uint8_t>(info.color.b)},
+            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
+             static_cast<uint8_t>(info.color.b)},
+            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
+             static_cast<uint8_t>(info.color.b)},
         };
-        rec->log_static(this->name + "/heading", rerun::Mesh3D(vertex_positions)
-                                                     .with_vertex_normals({{0.0, 0.0, 1.0}})
-                                                     .with_vertex_colors(vertex_colors)
-                                                     .with_triangle_indices({{2, 1, 0}}));
-        visualize_pulse(std::max(size.x, size.y) * 3.0f);
+        rec->log_static(this->info.name + "/heading", rerun::Mesh3D(vertex_positions)
+                                                          .with_vertex_normals({{0.0, 0.0, 1.0}})
+                                                          .with_vertex_colors(vertex_colors)
+                                                          .with_triangle_indices({{2, 1, 0}}));
+        visualize_pulse(std::max(info.bound.size.x, info.bound.size.y) * 3.0f);
     }
 
     void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
-        concord::Point point(this->pose.point.enu.x, this->pose.point.enu.y, 0.0f, datum);
+        concord::Point point(this->info.bound.pose.point.enu.x, this->info.bound.pose.point.enu.y, 0.0f, datum);
         if (!pulsining) {
             return;
         }
@@ -157,10 +156,11 @@ namespace mvs {
         }
         poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
         rec->log_static(
-            this->name + "/pulse/enu",
+            this->info.name + "/pulse/enu",
             rerun::LineStrips3D({{poi}})
-                .with_colors({{rerun::Color(color.r, color.g, color.b)}})
-                .with_radii({{float(mapValue(pulse_enu_size, 0.0, std::max(size.x, size.y) * 3.0f, 0.03, 0.0005))}}));
+                .with_colors({{rerun::Color(info.color.r, info.color.g, info.color.b)}})
+                .with_radii({{float(mapValue(pulse_enu_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f,
+                                             0.03, 0.0005))}}));
 
         // visualize gps pulse
         std::vector<rerun::LatLon> locators;
@@ -176,11 +176,11 @@ namespace mvs {
         }
         locators.push_back(rerun::LatLon(pointss_gps[0].wgs.lat, pointss_gps[0].wgs.lon));
         auto linestr = rerun::components::GeoLineString::from_lat_lon(locators);
-        rec->log_static(
-            this->name + "/pulse/wgs",
-            rerun::GeoLineStrings(linestr)
-                .with_colors(rerun::Color(color.r, color.g, color.b))
-                .with_radii({{float(mapValue(pulse_gps_size, 0.0, std::max(size.x, size.y) * 3.0f * gps_mult,
-                                             0.03 * gps_mult, 0.0005 * gps_mult))}}));
+        rec->log_static(this->info.name + "/pulse/wgs",
+                        rerun::GeoLineStrings(linestr)
+                            .with_colors(rerun::Color(info.color.r, info.color.g, info.color.b))
+                            .with_radii({{float(mapValue(
+                                pulse_gps_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f * gps_mult,
+                                0.03 * gps_mult, 0.0005 * gps_mult))}}));
     }
 } // namespace mvs

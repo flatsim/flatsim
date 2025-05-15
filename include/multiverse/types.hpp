@@ -12,12 +12,15 @@ namespace mvs {
         std::vector<float> throttles_max;
         std::vector<float> steerings_diff;
     };
+
     struct RobotInfo {
         uint RCI;
+        uint group;
         std::string name;
         std::string uuid;
         pigment::RGB color;
         concord::Bound bound;
+        concord::Polygon outline;
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
         std::vector<concord::Bound> karosserie;

@@ -15,7 +15,7 @@ float rad2deg(float rad) { return rad * 180.0f / M_PI; }
 float deg2rad(float deg) { return deg * M_PI / 180.0f; }
 
 int main() {
-    bool joystk = false;
+    bool joystk = true;
     int selected_robot_idx = 0;
     int js_fd;
     unsigned char num_axes = 0, num_buttons = 0;
