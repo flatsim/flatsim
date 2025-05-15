@@ -54,26 +54,6 @@ namespace mvs {
         return {0, 0};
     }
 
-    // void World::add_layer(std::string name, concord::Bound field, float inradius, bool centered) {
-    void World::add_layer(Layz layz) {
-        auto field = layz.field;
-        auto layer = std::make_shared<Layer>(rec, settings.get_datum());
-        auto rows = static_cast<std::size_t>(field.size.x / layz.resolution);
-        auto cols = static_cast<std::size_t>(field.size.y / layz.resolution);
-        // spdlog::info("ROTATION: {}", layz.field.pose.angle.yaw);
-        layer->init(layz.name, layz.uuid, layz.color, layz.field, rows, cols, layz.resolution, layz.centered);
-        layers.push_back(layer);
-    }
-
-    std::shared_ptr<Layer> World::get_layer(std::string name) {
-        for (auto &layer : layers) {
-            if (layer->name == name) {
-                return layer;
-            }
-        }
-        return nullptr;
-    }
-
     void World::visualize() {
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
