@@ -13,11 +13,7 @@ buildit() {
         mkdir "$TOP_HEAD/build"
     fi
     cd "$TOP_HEAD/build"
-    if ! [ -z "$argc_arrow" ]; then
-        cmake -Wno-dev -Wno-unused-variable .. 
-    else
-        cmake -Wno-dev -Wno-unused-variable -DRERUN_DOWNLOAD_AND_BUILD_ARROW=OFF ..
-    fi
+    cmake -Wno-dev -Wno-unused-variable .. 
     cd "$CURR_DIR"
 }
 
@@ -27,7 +23,8 @@ buildit() {
 makeit() {
     CURR_DIR=$(pwd)
     cd "$TOP_HEAD/build"
-    make
+    only_name=$(basename "$TOP_HEAD")
+    make 2>&1 | tee >(grep "^$TOP_HEAD" | grep -E "error:" > "$TOP_HEAD/.quickfix")
     cd "$CURR_DIR"
 }
 

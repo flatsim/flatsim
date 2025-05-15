@@ -34,11 +34,6 @@ namespace mvs {
             float lon = wgs_C.lon;
             wgs_corners_.push_back({lat, lon});
         }
-
-        // int g_width = static_cast<int>(settings.get_world_size().x / settings.get_grid_size());
-        // int g_height = static_cast<int>(settings.get_world_size().y / settings.get_grid_size());
-        // grid = Layer(rec, settings.get_datum());
-        // grid.init("grid", g_width, g_height, settings.get_grid_size());
     }
 
     void World::tick(float dt) {
