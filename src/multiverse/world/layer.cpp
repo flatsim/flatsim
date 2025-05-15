@@ -11,8 +11,9 @@ namespace mvs {
     Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum)
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
-    void Layer::init(std::string name, std::string uuid, pigment::RGB color, std::size_t rows, std::size_t cols,
-                     double resolution, bool centered) {
+    void Layer::init(std::string name, std::string uuid, pigment::RGB color, concord::Bound field, std::size_t rows,
+                     std::size_t cols, double resolution, bool centered) {
+        this->field = field;
         this->name = name;
         this->uuid = uuid;
         this->color = color;
@@ -20,7 +21,7 @@ namespace mvs {
         this->rows = rows;
         this->cols = cols;
 
-        grid = concord::Grid<GridData>(rows, cols, resolution, datum, centered);
+        grid = concord::Grid<GridData>(rows, cols, resolution, datum, centered, field.pose);
         image.resize(grid.rows() * grid.cols() * 4, 0);
         for (auto &[p, gd] : grid) {
             gd.color.r = float(color.r);
@@ -56,8 +57,8 @@ namespace mvs {
             for (std::size_t c = 0; c < cols; ++c) {
                 auto &[pt, gd] = grid(r, c);
                 std::size_t base = (r * cols + c) * 4;
-                // image[base + 0] = gd.color.r;
-                image[base + 0] = floatToByte(gd.data);
+                image[base + 0] = gd.color.r;
+                // image[base + 0] = floatToByte(gd.data);
                 image[base + 1] = gd.color.g;
                 image[base + 2] = gd.color.b;
                 image[base + 3] = gd.color.a;

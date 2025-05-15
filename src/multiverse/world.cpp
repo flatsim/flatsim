@@ -74,7 +74,8 @@ namespace mvs {
         auto layer = std::make_shared<Layer>(rec, settings.get_datum());
         auto rows = static_cast<std::size_t>(field.size.x / layz.resolution);
         auto cols = static_cast<std::size_t>(field.size.y / layz.resolution);
-        layer->init(layz.name, layz.uuid, layz.color, rows, cols, layz.resolution, layz.centered);
+        // spdlog::info("ROTATION: {}", layz.field.pose.angle.yaw);
+        layer->init(layz.name, layz.uuid, layz.color, layz.field, rows, cols, layz.resolution, layz.centered);
         layers.push_back(layer);
     }
 } // namespace mvs

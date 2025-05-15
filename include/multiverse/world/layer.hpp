@@ -26,6 +26,7 @@ namespace mvs {
         float resolution;
 
       private:
+        concord::Bound field;
         concord::Grid<GridData> grid;
         std::shared_ptr<rerun::RecordingStream> rec;
         entropy::NoiseGen noise;
@@ -44,8 +45,8 @@ namespace mvs {
         Layer() = default;
         Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum);
 
-        void init(std::string name, std::string uuid, pigment::RGB color, std::size_t rows, std::size_t cols,
-                  double resolution, bool centered = true);
+        void init(std::string name, std::string uuid, pigment::RGB color, concord::Bound field, std::size_t rows,
+                  std::size_t cols, double resolution, bool centered = true);
         void tick(float dt);
         void add_noise();
         void to_image(std::vector<uint8_t> &image);
