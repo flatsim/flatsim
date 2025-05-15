@@ -106,23 +106,6 @@ namespace mvs {
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static(name + "/border",
                         rerun::GeoLineStrings(linestring).with_colors({{colorz}}).with_radii({{0.1f}}));
-
-        // float g_w = float(grid.cols()) * inradius;
-        // float g_h = float(grid.rows()) * inradius;
-        // rerun::components::ImageBuffer buf(image);
-        // const rerun::Position3D vertex_positions[4] = {{-g_w / 2, -g_h / 2, -0.1f},
-        //                                                {g_w / 2, -g_h / 2, -0.1f},
-        //                                                {g_w / 2, g_h / 2, -0.1f},
-        //                                                {-g_w / 2, g_h / 2, -0.1f}};
-        // rec->log_static(this->name + "/texture", rerun::Mesh3D(vertex_positions)
-        //                                              .with_vertex_normals({{0.0, 0.0, 0.0}})
-        //                                              .with_albedo_texture_buffer(buf)
-        //                                              .with_triangle_indices({{0, 1, 2}, {0, 2, 3}}));
-
-        // rec->log_static("grid", rerun::Boxes3D::from_centers_and_sizes(
-        //                             grid.flatten_points(), {{float(grid.inradius()), float(grid.inradius()), 0.0f}})
-        //                             .with_colors(rerun::Color(110, 90, 60))
-        //                             .with_radii({{0.005f}}));
     }
 
 } // namespace mvs

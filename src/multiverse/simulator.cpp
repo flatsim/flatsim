@@ -14,7 +14,6 @@ namespace mvs {
     }
     void Simulator::init(concord::Datum datum, concord::Size world_size) {
         world = std::make_shared<mvs::World>(rec);
-
         world->init(datum, world_size);
         world_datum = datum;
     }

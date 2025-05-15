@@ -15,30 +15,33 @@ float rad2deg(float rad) { return rad * 180.0f / M_PI; }
 float deg2rad(float deg) { return deg * M_PI / 180.0f; }
 
 int main() {
-    // 1) Open joystick device
-    const char *js_device = "/dev/input/js0";
-    int js_fd = open(js_device, O_RDONLY | O_NONBLOCK);
-    if (js_fd < 0) {
-        std::perror("Opening joystick failed");
-        return 1;
-    }
-
+    bool joystk = false;
     int selected_robot_idx = 0;
-
-    // 2) Query number of axes/buttons
+    int js_fd;
     unsigned char num_axes = 0, num_buttons = 0;
-    ioctl(js_fd, JSIOCGAXES, &num_axes);
-    ioctl(js_fd, JSIOCGBUTTONS, &num_buttons);
+    if (joystk) {
+        // 1) Open joystick device
+        const char *js_device = "/dev/input/js0";
+        js_fd = open(js_device, O_RDONLY | O_NONBLOCK);
+        if (js_fd < 0) {
+            std::perror("Opening joystick failed");
+            return 1;
+        }
 
-    // 3) Prepare state storage
-    std::vector<int> axis_states(num_axes, 0);
-    std::vector<char> button_states(num_buttons, 0);
+        // 2) Query number of axes/buttons
+        ioctl(js_fd, JSIOCGAXES, &num_axes);
+        ioctl(js_fd, JSIOCGBUTTONS, &num_buttons);
 
-    // 4) (Optional) Print joystick name
-    char js_name[128] = "Unknown";
-    if (ioctl(js_fd, JSIOCGNAME(sizeof(js_name)), js_name) >= 0) {
-        std::cout << "Joystick: " << js_name << "  Axes: " << int(num_axes) << "  Buttons: " << int(num_buttons)
-                  << std::endl;
+        // 3) Prepare state storage
+        std::vector<int> axis_states(num_axes, 0);
+        std::vector<char> button_states(num_buttons, 0);
+
+        // 4) (Optional) Print joystick name
+        char js_name[128] = "Unknown";
+        if (ioctl(js_fd, JSIOCGNAME(sizeof(js_name)), js_name) >= 0) {
+            std::cout << "Joystick: " << js_name << "  Axes: " << int(num_axes) << "  Buttons: " << int(num_buttons)
+                      << std::endl;
+        }
     }
 
     // 5) Connect to Rerun
@@ -49,19 +52,31 @@ int main() {
     }
 
     // 6) Set up your world and simulator
-    concord::Datum world_datum{51.987305, 5.663625, 53.801823};
-    concord::Size world_size{100.0f, 100.0f, 100.0f};
+    concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    concord::Size world_size{300.0f, 300.0f, 300.0f};
 
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size);
 
-    for (int i = 0; i < 5; ++i) {
+    std::vector<concord::WGS> coordinates;
+    coordinates.push_back(concord::WGS(5.660072928621929, 51.98765392402663, 0.0));
+    coordinates.push_back(concord::WGS(5.661754957062072, 51.98816428304869, 0.0));
+    coordinates.push_back(concord::WGS(5.660416700858434, 51.989850316694316, 0.0));
+    coordinates.push_back(concord::WGS(5.662166255987472, 51.990417354104295, 0.0));
+    coordinates.push_back(concord::WGS(5.660969191951295, 51.991078888673854, 0.0));
+    coordinates.push_back(concord::WGS(5.656874619070777, 51.989479848375254, 0.0));
+    coordinates.push_back(concord::WGS(5.657715633290422, 51.988156722216644, 0.0));
+    coordinates.push_back(concord::WGS(5.660072928621929, 51.98765392402663, 0.0));
+
+    concord::Polygon polygon;
+    polygon.from_wgs(coordinates, world_datum);
+
+    for (int i = 0; i < 1; ++i) {
         mvs::Layz layz;
         layz.name = "grid" + std::to_string(i);
         layz.uuid = "grid" + std::to_string(i);
         layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-        layz.field = concord::Bound(concord::Pose(rand() % 100, rand() % 100, deg2rad(rand() % 360)),
-                                    concord::Size(rand() % 100, rand() % 100, 0.0f));
+        layz.field = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
         layz.resolution = 1.0f;
         layz.centered = false;
 
@@ -78,7 +93,7 @@ int main() {
         robot_pose.point.enu.x = 3 * i;
         robot_pose.point.enu.y = 3 * i;
         robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
-        robot_pose.angle.yaw = 0.0f;
+        robot_pose.angle.yaw = 0.0f; // TODO: fix the rottion of the wheels when robot is rotated
 
         float width = 0.8f;
         float height = 1.95f;
@@ -124,38 +139,40 @@ int main() {
                 sim->set_controls(i, 0.0f, 0.0f);
             }
         }
-        js_event e;
-        ssize_t bytes = read(js_fd, &e, sizeof(e));
-        if (bytes == sizeof(e)) {
-            auto type = e.type & ~JS_EVENT_INIT;
-            if (type == JS_EVENT_AXIS && e.number < num_axes) {
-                int axis = int(e.number);
-                float value = e.value / 32767.0f;
-                if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                    if (axis == 0) {
-                        float steering = value;
-                        sim->get_robot(selected_robot_idx).set_angular(steering);
-                    }
+        if (joystk) {
+            js_event e;
+            ssize_t bytes = read(js_fd, &e, sizeof(e));
+            if (bytes == sizeof(e)) {
+                auto type = e.type & ~JS_EVENT_INIT;
+                if (type == JS_EVENT_AXIS && e.number < num_axes) {
+                    int axis = int(e.number);
+                    float value = e.value / 32767.0f;
+                    if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                        if (axis == 0) {
+                            float steering = value;
+                            sim->get_robot(selected_robot_idx).set_angular(steering);
+                        }
 
-                    if (axis == 1) {
-                        float throttle = value * 0.1f;
-                        throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
-                        sim->get_robot(selected_robot_idx).set_linear(throttle);
+                        if (axis == 1) {
+                            float throttle = value * 0.1f;
+                            throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
+                            sim->get_robot(selected_robot_idx).set_linear(throttle);
+                        }
                     }
-                }
-            } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
-                int button = int(e.number);
-                bool pressed = e.value != 0;
-                if (button < 4 && pressed) {
-                    selected_robot_idx = button;
-                    std::cout << "Selected robot #" << selected_robot_idx << std::endl;
-                }
-                if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                    if ((button == 4 || button == 5) && pressed) {
-                        sim->get_robot(selected_robot_idx).respawn();
+                } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
+                    int button = int(e.number);
+                    bool pressed = e.value != 0;
+                    if (button < 4 && pressed) {
+                        selected_robot_idx = button;
+                        std::cout << "Selected robot #" << selected_robot_idx << std::endl;
                     }
-                    if (button == 9 && pressed) {
-                        sim->get_robot(selected_robot_idx).pulse();
+                    if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                        if ((button == 4 || button == 5) && pressed) {
+                            sim->get_robot(selected_robot_idx).respawn();
+                        }
+                        if (button == 9 && pressed) {
+                            sim->get_robot(selected_robot_idx).pulse();
+                        }
                     }
                 }
             }
@@ -171,6 +188,8 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    close(js_fd);
+    if (joystk) {
+        close(js_fd);
+    }
     return 0;
 }
