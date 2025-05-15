@@ -38,9 +38,9 @@ namespace mvs {
         WorldSettings settings;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
-        std::vector<std::shared_ptr<Layer>> layers;
 
       public:
+        std::vector<std::shared_ptr<Layer>> layers;
         World(std::shared_ptr<rerun::RecordingStream> rec);
         ~World();
 
@@ -48,6 +48,7 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void add_layer(Layz layz);
+        std::shared_ptr<Layer> get_layer(std::string name);
         concord::Point at(std::string name, uint x, uint y) const;
 
         std::shared_ptr<muli::World> get_world() const { return world; }

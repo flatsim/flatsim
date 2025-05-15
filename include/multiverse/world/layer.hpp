@@ -36,6 +36,7 @@ namespace mvs {
         std::vector<uint8_t> data_img;
         size_t rows, cols;
         uint freq = 0;
+        bool has_noise = false;
 
         std::mt19937 rnd;
         std::vector<std::array<float, 3>> enu_corners_;

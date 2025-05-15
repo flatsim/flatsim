@@ -63,7 +63,6 @@ int main() {
         layz.field = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
         layz.resolution = 1.0f;
         layz.centered = false;
-        layz.noise = false;
 
         sim->add_layer(layz);
     }

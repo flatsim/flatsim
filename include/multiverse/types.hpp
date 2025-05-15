@@ -32,7 +32,6 @@ namespace mvs {
         pigment::RGB color;
         concord::Bound field;
         float resolution;
-        bool noise;
     };
 
 } // namespace mvs

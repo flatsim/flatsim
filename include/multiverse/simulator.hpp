@@ -36,6 +36,6 @@ namespace mvs {
         // WORLD
         concord::Datum get_datum() const { return world_datum; }
         World &get_world() { return *world; }
-        void add_layer(Layz layz);
+        void add_layer(Layz layz, bool noise = false);
     };
 } // namespace mvs

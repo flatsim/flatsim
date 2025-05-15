@@ -58,7 +58,9 @@ namespace mvs {
                 auto &[pt, gd] = grid(r, c);
                 std::size_t base = (r * cols + c) * 4;
                 image[base + 0] = gd.color.r;
-                // image[base + 0] = floatToByte(gd.data);
+                if (has_noise) {
+                    image[base + 0] = floatToByte(gd.data);
+                }
                 image[base + 1] = gd.color.g;
                 image[base + 2] = gd.color.b;
                 image[base + 3] = gd.color.a;
