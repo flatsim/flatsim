@@ -16,9 +16,9 @@ namespace mvs {
     World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     World::~World() { world.reset(); }
 
-    void World::init(concord::Datum datum, concord::Size world_size, float grid_size) {
+    void World::init(concord::Datum datum, concord::Size world_size) {
 
-        settings.init(datum, world_size, grid_size);
+        settings.init(datum, world_size);
         settings.apply_gravity = false;
         world = std::make_unique<muli::World>(settings);
         float width = settings.get_world_size().x;

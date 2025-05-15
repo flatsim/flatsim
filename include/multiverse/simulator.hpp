@@ -26,7 +26,7 @@ namespace mvs {
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
 
-        void init(concord::Datum datum, concord::Size world_size, float grid_size);
+        void init(concord::Datum datum, concord::Size world_size);
         void tick(float dt);
         // ROBOT
         void add_robot(Robo robot_info);
