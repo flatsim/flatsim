@@ -55,12 +55,13 @@ int main() {
     auto sim = std::make_shared<mvs::Simulator>(rec);
     sim->init(world_datum, world_size);
 
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 5; ++i) {
         mvs::Layz layz;
         layz.name = "grid" + std::to_string(i);
         layz.uuid = "grid" + std::to_string(i);
         layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-        layz.field = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
+        layz.field = concord::Bound(concord::Pose(rand() % 100, rand() % 100, deg2rad(rand() % 360)),
+                                    concord::Size(rand() % 100, rand() % 100, 0.0f));
         layz.resolution = 1.0f;
         layz.centered = false;
 

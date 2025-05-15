@@ -13,7 +13,7 @@ buildit() {
         mkdir "$TOP_HEAD/build"
     fi
     cd "$TOP_HEAD/build"
-    cmake -Wno-dev -Wno-unused-variable .. 
+    cmake -Wno-dev -Wno-unused-variable -DRERUN_DOWNLOAD_AND_BUILD_ARROW=OFF ..
     cd "$CURR_DIR"
 }
 

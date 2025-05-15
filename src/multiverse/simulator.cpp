@@ -36,10 +36,9 @@ namespace mvs {
     }
 
     // WORLD
-    //
     void Simulator::add_layer(Layz layz, bool noise) {
         auto field = layz.field;
-        auto layer = std::make_shared<Layer>(rec, world->get_settings().get_datum());
+        auto layer = std::make_shared<Layer>(rec, world_datum);
         auto rows = static_cast<std::size_t>(field.size.x / layz.resolution);
         auto cols = static_cast<std::size_t>(field.size.y / layz.resolution);
         layer->init(layz.name, layz.uuid, layz.color, layz.field, rows, cols, layz.resolution, layz.centered);
@@ -48,5 +47,4 @@ namespace mvs {
             layer->add_noise();
         }
     }
-
 } // namespace mvs

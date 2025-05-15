@@ -17,13 +17,11 @@ namespace mvs {
     World::~World() { world.reset(); }
 
     void World::init(concord::Datum datum, concord::Size world_size) {
-
         settings.init(datum, world_size);
         settings.apply_gravity = false;
         world = std::make_unique<muli::World>(settings);
         float width = settings.get_world_size().x;
         float height = settings.get_world_size().y;
-
         for (auto corner : utl::build_corners(width, height)) {
             float x = static_cast<float>(corner.x);
             float y = static_cast<float>(corner.y);
