@@ -35,6 +35,13 @@ namespace mvs {
         }
         enu_corners_.push_back(enu_corners_[0]);
         wgs_corners_.push_back(wgs_corners_[0]);
+
+        for (auto &p : info.field) {
+            polygon_corners_wgs_.push_back({float(p.wgs.lat), float(p.wgs.lon)});
+            polygon_corners_.push_back({float(p.enu.x), float(p.enu.y), 0.0f});
+        }
+        polygon_corners_wgs_.push_back(polygon_corners_wgs_[0]);
+        polygon_corners_.push_back(polygon_corners_[0]);
     }
 
     void Layer::add_noise() {
@@ -105,6 +112,14 @@ namespace mvs {
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static(info.name + "/border",
                         rerun::GeoLineStrings(linestring).with_colors({{colorz}}).with_radii({{0.1f}}));
+
+        auto polygon__ = rerun::components::LineStrip3D(polygon_corners_);
+        rec->log_static(info.name + "/polygon",
+                        rerun::LineStrips3D(polygon__).with_colors({{colorz}}).with_radii({{0.1f}}));
+
+        auto polystr = rerun::components::GeoLineString::from_lat_lon(polygon_corners_wgs_);
+        rec->log_static(info.name + "/polygon",
+                        rerun::GeoLineStrings(polystr).with_colors({{colorz}}).with_radii({{0.1f}}));
     }
 
 } // namespace mvs

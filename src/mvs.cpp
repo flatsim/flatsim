@@ -59,14 +59,14 @@ int main() {
     sim->init(world_datum, world_size);
 
     std::vector<concord::WGS> coordinates;
-    coordinates.push_back(concord::WGS(5.660072928621929, 51.98765392402663, 0.0));
-    coordinates.push_back(concord::WGS(5.661754957062072, 51.98816428304869, 0.0));
-    coordinates.push_back(concord::WGS(5.660416700858434, 51.989850316694316, 0.0));
-    coordinates.push_back(concord::WGS(5.662166255987472, 51.990417354104295, 0.0));
-    coordinates.push_back(concord::WGS(5.660969191951295, 51.991078888673854, 0.0));
-    coordinates.push_back(concord::WGS(5.656874619070777, 51.989479848375254, 0.0));
-    coordinates.push_back(concord::WGS(5.657715633290422, 51.988156722216644, 0.0));
-    coordinates.push_back(concord::WGS(5.660072928621929, 51.98765392402663, 0.0));
+    coordinates.push_back(concord::WGS(51.98765392402663, 5.660072928621929, 0.0));
+    coordinates.push_back(concord::WGS(51.98816428304869, 5.661754957062072, 0.0));
+    coordinates.push_back(concord::WGS(51.989850316694316, 5.660416700858434, 0.0));
+    coordinates.push_back(concord::WGS(51.990417354104295, 5.662166255987472, 0.0));
+    coordinates.push_back(concord::WGS(51.991078888673854, 5.660969191951295, 0.0));
+    coordinates.push_back(concord::WGS(51.989479848375254, 5.656874619070777, 0.0));
+    coordinates.push_back(concord::WGS(51.988156722216644, 5.657715633290422, 0.0));
+    coordinates.push_back(concord::WGS(51.98765392402663, 5.660072928621929, 0.0));
 
     concord::Polygon polygon;
     polygon.from_wgs(coordinates, world_datum);
@@ -75,7 +75,7 @@ int main() {
     layz.name = "grid";
     layz.uuid = "grid";
     layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-    layz.bound = concord::Bound(concord::Pose(20, 20, deg2rad(45)), concord::Size(50.0f, 50.0f, 0.0f));
+    layz.bound = polygon.get_obb(world_datum);
     layz.resolution = 1.0f;
     layz.centered = false;
     layz.field = polygon;
