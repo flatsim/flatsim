@@ -12,6 +12,9 @@ namespace mvs {
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
     void Layer::init(LayerInfo info) {
+        info.name = info.name == "unnamed" ? "unnamed" : info.name;
+        info.uuid = info.uuid == "none" ? "unnamed" : info.uuid;
+
         this->info = info;
         auto field = info.bound;
         auto rows = static_cast<std::size_t>(field.size.x / info.resolution);

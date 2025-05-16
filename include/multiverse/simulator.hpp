@@ -31,10 +31,10 @@ namespace mvs {
         // ROBOT
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
-        Robot &get_robot(uint i) { return *robots[i]; }
-        int num_robots() const { return robots.size(); }
+        Robot &get_robot(uint i);
+        int num_robots() const;
         // WORLD
-        concord::Datum get_datum() const { return world_datum; }
+        concord::Datum get_datum() const;
         World &get_world() { return *world; }
         void add_layer(LayerInfo layz, bool noise = false);
     };

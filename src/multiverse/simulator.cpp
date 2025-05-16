@@ -20,6 +20,12 @@ namespace mvs {
 
     // ROBOT
     void Simulator::add_robot(RobotInfo robot_info) {
+        for (auto &robot : robots) {
+            if (robot->info.uuid == robot_info.uuid) {
+                spdlog::warn("Robot with uuid {} already exists, skipping", robot_info.uuid);
+                return;
+            }
+        }
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, world->get_world(), robots.size());
             r->init(world_datum, robot_info);
@@ -34,8 +40,17 @@ namespace mvs {
         }
     }
 
+    Robot &Simulator::get_robot(uint i) { return *robots[i]; }
+    int Simulator::num_robots() const { return robots.size(); }
+
     // WORLD
     void Simulator::add_layer(LayerInfo layz, bool noise) {
+        for (auto &layer : world->layers) {
+            if (layer->info.uuid == layz.uuid) {
+                spdlog::warn("Layer with uuid {} already exists, skipping", layz.uuid);
+                return;
+            }
+        }
         auto layer = std::make_shared<Layer>(rec, world_datum);
         layer->init(layz);
         world->layers.push_back(layer);
@@ -44,4 +59,5 @@ namespace mvs {
         }
         layer->color_field();
     }
+    concord::Datum Simulator::get_datum() const { return world_datum; }
 } // namespace mvs

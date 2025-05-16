@@ -16,8 +16,8 @@ namespace mvs {
     struct RobotInfo {
         uint RCI;
         uint group;
-        std::string name;
-        std::string uuid;
+        std::string name = "unnamed";
+        std::string uuid = "none";
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon outline;
@@ -30,8 +30,8 @@ namespace mvs {
 
     // WORLD
     struct LayerInfo {
-        std::string name;
-        std::string uuid;
+        std::string name = "unnamed";
+        std::string uuid = "none";
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon field;
