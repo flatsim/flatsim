@@ -71,14 +71,14 @@ int main() {
     concord::Polygon polygon;
     polygon.from_wgs(coordinates, world_datum);
 
-    mvs::LayerInfo layz;
-    layz.name = "grid";
-    layz.uuid = "grid";
-    layz.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-    layz.bound = polygon.get_obb(world_datum);
-    layz.resolution = 0.2f;
-    layz.field = polygon;
-    sim->add_layer(layz);
+    mvs::LayerInfo layer_info;
+    layer_info.name = "grid";
+    layer_info.uuid = "grid";
+    layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
+    layer_info.bound = polygon.get_obb(world_datum);
+    layer_info.resolution = 0.2f;
+    layer_info.field = polygon;
+    sim->add_layer(layer_info, true);
 
     for (int i = 0; i < 3; ++i) {
         mvs::RobotInfo robot_info;

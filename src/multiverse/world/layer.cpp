@@ -46,6 +46,7 @@ namespace mvs {
 
     void Layer::add_noise(bool in_polygon_only) {
         noise.SetNoiseType(entropy::NoiseGen::NoiseType_OpenSimplex2);
+        noise.SetFrequency(0.002);
         noise.SetSeed(int(rnd()));
         for (std::size_t r = 0; r < grid.rows(); ++r) {
             for (std::size_t c = 0; c < grid.cols(); ++c) {
@@ -68,6 +69,7 @@ namespace mvs {
             std::size_t r = idx / grid.cols();
             std::size_t c = idx % grid.cols();
             grid(r, c).second.color.b = 255;
+            grid(r, c).second.color.g = floatToByte(grid(r, c).second.data);
         }
     }
 
@@ -80,9 +82,6 @@ namespace mvs {
                 auto &[pt, gd] = grid(r, c);
                 std::size_t base = (r * cols + c) * 4;
                 image[base + 0] = gd.color.r;
-                if (has_noise) {
-                    image[base + 0] = floatToByte(gd.data);
-                }
                 image[base + 1] = gd.color.g;
                 image[base + 2] = gd.color.b;
                 image[base + 3] = gd.color.a;
