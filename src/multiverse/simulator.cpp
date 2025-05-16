@@ -71,6 +71,7 @@ namespace mvs {
             layer->add_noise();
         }
         layer->color_field();
+        world->adjust_word();
     }
     concord::Datum Simulator::get_datum() const {
         if (!world_datum.is_set()) {
