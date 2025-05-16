@@ -8,6 +8,7 @@
 #include <entropy/noisegen.hpp>
 
 #include "multiverse/types.hpp"
+#include "multiverse/utils.hpp"
 
 #include <any>
 #include <random>

@@ -1,13 +1,6 @@
 #include "multiverse/world/layer.hpp"
 
 namespace mvs {
-
-    inline uint8_t floatToByte(float v) {
-        v = std::clamp(v, 0.0f, 1.0f);
-        float scaled = v * 255.0f;
-        return static_cast<uint8_t>(std::round(scaled));
-    }
-
     Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum)
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
@@ -25,9 +18,9 @@ namespace mvs {
         grid = concord::Grid<GridData>(rows, cols, info.resolution, datum, true, info.bound.pose);
         image.resize(grid.rows() * grid.cols() * 4, 0);
         for (auto &[p, gd] : grid) {
-            gd.color.r = float(info.color.r);
-            gd.color.g = float(info.color.g);
-            gd.color.b = float(info.color.b);
+            gd.color.r = 50;
+            gd.color.g = 50;
+            gd.color.b = 50;
             gd.data = 0.0f;
         }
 
@@ -64,6 +57,7 @@ namespace mvs {
                 }
             }
         }
+        has_noise = true;
     }
 
     void Layer::color_field() {
@@ -71,8 +65,13 @@ namespace mvs {
         for (auto idx : indices) {
             std::size_t r = idx / grid.cols();
             std::size_t c = idx % grid.cols();
-            grid(r, c).second.color.b = 255;
-            grid(r, c).second.color.g = floatToByte(grid(r, c).second.data);
+            grid(r, c).second.color.r = float(info.color.r);
+            grid(r, c).second.color.g = float(info.color.g);
+            grid(r, c).second.color.b = float(info.color.b);
+            if (has_noise) {
+                auto val = utils::float_to_byte(grid(r, c).second.data);
+                grid(r, c).second.color.r = utils::mapper(val, 0.0f, 255.0f, 100.0f, 155.0f);
+            }
         }
     }
 

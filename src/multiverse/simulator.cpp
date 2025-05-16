@@ -40,7 +40,20 @@ namespace mvs {
         }
     }
 
-    Robot &Simulator::get_robot(uint i) { return *robots[i]; }
+    Robot &Simulator::get_robot(uint i) {
+        if (i >= robots.size()) {
+            throw std::runtime_error("Robot index out of range");
+        }
+        return *robots[i];
+    }
+    Robot &Simulator::get_robot(std::string uuid) {
+        for (auto &robot : robots) {
+            if (robot->info.uuid == uuid) {
+                return *robot;
+            }
+        }
+        throw std::runtime_error("Robot with uuid " + uuid + " not found");
+    };
     int Simulator::num_robots() const { return robots.size(); }
 
     // WORLD
@@ -59,5 +72,19 @@ namespace mvs {
         }
         layer->color_field();
     }
-    concord::Datum Simulator::get_datum() const { return world_datum; }
+    concord::Datum Simulator::get_datum() const {
+        if (!world_datum.is_set()) {
+            throw std::runtime_error("Datum not set");
+        }
+        return world_datum;
+    }
+    Layer &Simulator::get_layer(uint i) { return *world->layers[i]; }
+    Layer &Simulator::get_layer(std::string uuid) {
+        for (auto &layer : world->layers) {
+            if (layer->info.uuid == uuid) {
+                return *layer;
+            }
+        }
+        throw std::runtime_error("Layer with uuid " + uuid + " not found");
+    };
 } // namespace mvs
