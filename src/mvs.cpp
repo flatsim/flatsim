@@ -76,7 +76,7 @@ int main() {
     layer_info.uuid = "grid";
     layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
     layer_info.bound = polygon.get_obb(world_datum);
-    layer_info.resolution = 0.2f;
+    layer_info.resolution = 0.1f;
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
 
