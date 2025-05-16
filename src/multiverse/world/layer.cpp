@@ -44,13 +44,30 @@ namespace mvs {
         polygon_corners_.push_back(polygon_corners_[0]);
     }
 
-    void Layer::add_noise() {
+    void Layer::add_noise(bool in_polygon_only) {
         noise.SetNoiseType(entropy::NoiseGen::NoiseType_OpenSimplex2);
         noise.SetSeed(int(rnd()));
         for (std::size_t r = 0; r < grid.rows(); ++r) {
             for (std::size_t c = 0; c < grid.cols(); ++c) {
-                grid(r, c).second.data = noise.GetNoise(float(r), float(c)) / 2;
+                auto &[pt, gd] = grid(r, c);
+                if (in_polygon_only) {
+                    if (pt.enu.x > enu_corners_[0][0] && pt.enu.x < enu_corners_[enu_corners_.size() - 1][0] &&
+                        pt.enu.y > enu_corners_[0][1] && pt.enu.y < enu_corners_[enu_corners_.size() - 1][1]) {
+                        gd.data = noise.GetNoise(float(r), float(c)) / 2;
+                    }
+                } else {
+                    gd.data = noise.GetNoise(float(r), float(c)) / 2;
+                }
             }
+        }
+    }
+
+    void Layer::color_field() {
+        auto indices = grid.indices_within(info.field);
+        for (auto idx : indices) {
+            std::size_t r = idx / grid.cols();
+            std::size_t c = idx % grid.cols();
+            grid(r, c).second.color.b = 255;
         }
     }
 

@@ -48,7 +48,8 @@ namespace mvs {
 
         void init(LayerInfo info);
         void tick(float dt);
-        void add_noise();
+        void add_noise(bool in_polygon_only = false);
+        void color_field();
         void to_image(std::vector<uint8_t> &image);
         std::vector<uint8_t> to_image();
         void visualize();

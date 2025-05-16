@@ -42,5 +42,6 @@ namespace mvs {
         if (noise) {
             layer->add_noise();
         }
+        layer->color_field();
     }
 } // namespace mvs
