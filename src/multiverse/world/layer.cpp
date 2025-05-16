@@ -42,7 +42,9 @@ namespace mvs {
 
     void Layer::add_noise(bool in_polygon_only) {
         noise.SetNoiseType(entropy::NoiseGen::NoiseType_OpenSimplex2);
-        noise.SetFrequency(0.002);
+        auto sz = std::max(info.bound.size.x, info.bound.size.y);
+        spdlog::info("Frequency: {}", sz / 400000.0f);
+        noise.SetFrequency(sz / 400000.0f);
         noise.SetSeed(int(rnd()));
         for (std::size_t r = 0; r < grid.rows(); ++r) {
             for (std::size_t c = 0; c < grid.cols(); ++c) {
