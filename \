@@ -17,6 +17,8 @@ namespace mvs {
 
         wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
         wheel->SetCollisionFilter(filter);
+        wheel->SetLinearDamping(linearDamping);
+        wheel->SetAngularDamping(angularDamping);
         force = _force;
         friction = _friction;
         maxImpulse = _maxImpulse;
@@ -55,8 +57,12 @@ namespace mvs {
     }
 
     void Wheel::update(float steering, float throttle, MotorJoint *joint) {
-        if (steering == 0.0f) {
-            joint->SetAngularOffset(steering);
+        constexpr float MAX_STEER_DEG = 45.0f;
+        steering = std::clamp(steering, -MAX_STEER_DEG, MAX_STEER_DEG);
+        float angle = DegToRad(steering);
+
+        if (angle == 0.0f) {
+            joint->SetAngularOffset(angle);
         } else {
             joint->SetAngularOffset(0.0f);
             Vec2 f2 = forward * (throttle * force);

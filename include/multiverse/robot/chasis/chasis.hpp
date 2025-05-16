@@ -16,7 +16,7 @@ namespace mvs {
     inline constexpr bool rotateCam = false;
     inline constexpr bool drawAxis = false;
     inline constexpr float linearDamping = 0.2f;
-    inline constexpr float angularDamping = 2.0f;
+    inline constexpr float angularDamping = 0.2f;
     inline constexpr float force = 30.0f;
     inline constexpr float torque = 10.0f;
     inline constexpr float friction = 0.4f;
@@ -50,6 +50,7 @@ namespace mvs {
         void visualize();
         void teleport(concord::Pose);
         void update(std::vector<float> steering, std::vector<float> throttle);
+        void wheel_damping(float linearDamping, float angularDamping);
         muli::Transform get_transform() const;
     };
 } // namespace mvs

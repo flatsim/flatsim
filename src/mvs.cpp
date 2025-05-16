@@ -87,13 +87,13 @@ int main() {
         robot_info.uuid = "robot" + std::to_string(i);
 
         concord::Pose robot_pose;
-        robot_pose.point.enu.x = 3 * i;
-        robot_pose.point.enu.y = 3 * i;
+        robot_pose.point.enu.x = 10 * i;
+        robot_pose.point.enu.y = 10 * i;
         robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
         robot_pose.angle.yaw = 0.0f; // TODO: fix the rottion of the wheels when robot is rotated
 
-        float width = 0.8f;
-        float height = 1.95f;
+        float width = 2.8f;
+        float height = 7.68f;
         concord::Size chassis_size{width, height, 0.0f};
         robot_info.bound = concord::Bound(robot_pose, chassis_size);
 
@@ -108,7 +108,7 @@ int main() {
         robot_info.wheels = wheels;
 
         std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
-        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f};
+        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 5.0f, 5.0f};
         std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 

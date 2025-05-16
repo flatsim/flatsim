@@ -38,13 +38,14 @@ namespace mvs {
 
         for (uint i = 0; i < wheels_s.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name + std::to_string(i), bound, wheels_s[i], linearDamping, angularDamping, force,
-                       friction, maxImpulse, brake, drag);
+            wheel.init(color, name + std::to_string(i), bound, wheels_s[i], force, friction, maxImpulse, brake, drag);
             wheelz.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
             jointz.emplace_back(joint);
         }
+
+        wheel_damping(linearDamping, angularDamping);
         //
         auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
         auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
@@ -109,6 +110,13 @@ namespace mvs {
             jointz[i]->SetAngularOffset(steering[i]);
             Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
             wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);
+        }
+    }
+
+    void Chasis::wheel_damping(float linearDamping, float angularDamping) {
+        for (uint i = 0; i < wheelz.size(); ++i) {
+            wheelz[i].wheel->SetLinearDamping(linearDamping);
+            wheelz[i].wheel->SetAngularDamping(angularDamping);
         }
     }
 
