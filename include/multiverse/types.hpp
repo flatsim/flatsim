@@ -18,6 +18,7 @@ namespace mvs {
         uint group;
         std::string name = "unnamed";
         std::string uuid = "none";
+        std::string type = "none";
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon outline;
@@ -26,8 +27,7 @@ namespace mvs {
         std::vector<concord::Bound> karosserie;
     };
 
-    enum class OperationMode { IDLE, TRANSPORT, WORK };
-
+    enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
     // WORLD
     struct LayerInfo {
         std::string name = "unnamed";

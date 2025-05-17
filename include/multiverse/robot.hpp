@@ -36,6 +36,8 @@ namespace mvs {
 
       public:
         RobotInfo info;
+        OP mode = OP::IDLE;
+
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
 
