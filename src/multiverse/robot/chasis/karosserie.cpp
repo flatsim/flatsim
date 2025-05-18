@@ -83,7 +83,7 @@ namespace mvs {
             this->parent_name + "/chasis/karosserie/" + name,
             rerun::Boxes3D::from_centers_and_sizes({{k_x, k_y, 0.1f}}, {{k_w, k_h, 0.0f}})
                 .with_radii({{0.02f}})
-                // .with_fill_mode(rerun::FillMode::Solid)
+                .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
                 .with_colors(colors_a));
     }
