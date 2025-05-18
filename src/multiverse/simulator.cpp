@@ -19,9 +19,8 @@ namespace mvs {
                         pigment::RGB colorz = robott->info.color;
                         if (karosserie.working) {
                             concord::Polygon brush;
-                            brush.from_vector(karosserie.get_corners());
+                            brush = brush.from_vector(karosserie.get_corners());
                             layer->paint(colorz, brush);
-                            spdlog::info("Robot {} is working on karosserie {}", robott->info.name, karosserie.name);
                         }
                     }
                 }
