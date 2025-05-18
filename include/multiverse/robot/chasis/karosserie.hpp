@@ -15,10 +15,11 @@ namespace mvs {
         muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
-        pigment::RGB color;
 
       public:
         std::string name;
+        concord::Pose pose;
+        pigment::RGB color;
         bool working = false;
 
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
@@ -33,6 +34,6 @@ namespace mvs {
         void visualize();
 
         void toggle_work() { working = !working; }
-        std::vector<concord::Point> get_corners() { return bound.get_corners(); }
+        std::vector<concord::Point> get_corners() { return pose.get_corners(bound.size); }
     };
 } // namespace mvs

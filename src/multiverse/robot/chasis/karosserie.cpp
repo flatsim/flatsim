@@ -27,6 +27,10 @@ namespace mvs {
         karosseriePosition.y = t.position.y + rotatedOffset.y;
         karosserie->SetTransform(muli::Transform{karosseriePosition, t.rotation});
 
+        pose.point.enu.x = karosseriePosition.x;
+        pose.point.enu.y = karosseriePosition.y;
+        pose.angle.yaw = t.rotation.GetAngle();
+
         visualize();
     }
 

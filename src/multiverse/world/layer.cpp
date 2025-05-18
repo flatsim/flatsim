@@ -78,7 +78,6 @@ namespace mvs {
 
     void Layer::paint(pigment::RGB color, concord::Polygon brush) {
         auto indices = grid.indices_within(brush);
-        spdlog::info("Painting {} indices", indices.size());
         for (auto idx : indices) {
             std::size_t r = idx / grid.cols();
             std::size_t c = idx % grid.cols();
@@ -109,7 +108,7 @@ namespace mvs {
 
     void Layer::tick(float dt) {
         freq++;
-        if (freq % 1000 == 0) {
+        if (freq % 10 == 0) {
             visualize();
             freq = 0;
         }

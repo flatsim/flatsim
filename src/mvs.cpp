@@ -78,19 +78,17 @@ int main() {
     layer_info.can_accept = {"pea"};
     layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
     layer_info.bound = polygon.get_obb(world_datum);
-    layer_info.resolution = 0.1f;
+    layer_info.resolution = 0.2f;
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 4; ++i) {
         mvs::RobotInfo robot_info;
         robot_info.RCI = 3;
         robot_info.name = "robot" + std::to_string(i);
         robot_info.uuid = "robot" + std::to_string(i);
         robot_info.type = "harvester";
-        if (i == 1) {
-            robot_info.works_on = {"pea"};
-        }
+        robot_info.works_on = {"pea"};
 
         concord::Pose robot_pose;
         robot_pose.point.enu.x = 10 * i;
@@ -190,7 +188,7 @@ int main() {
         sim->tick(dt.count());
 
         // --- small sleep to cap CPU usage ---
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
     }
 
     if (joystk) {
