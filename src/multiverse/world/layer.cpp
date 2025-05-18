@@ -76,6 +76,15 @@ namespace mvs {
         }
     }
 
+    void Layer::paint(pigment::RGB color, concord::Polygon brush) {
+        auto indices = grid.indices_within(brush);
+        for (auto idx : indices) {
+            std::size_t r = idx / grid.cols();
+            std::size_t c = idx % grid.cols();
+            grid(r, c).second.color = color;
+        }
+    }
+
     void Layer::to_image(std::vector<uint8_t> &image) {
         const std::size_t rows = grid.rows();
         const std::size_t cols = grid.cols();

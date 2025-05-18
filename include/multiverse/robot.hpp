@@ -41,8 +41,6 @@ namespace mvs {
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
 
-        const concord::Pose &get_position() const { return info.bound.pose; }
-
         void tick(float dt);
         void init(concord::Datum datum, RobotInfo robo);
         void reset_controls();
@@ -53,8 +51,10 @@ namespace mvs {
         void teleport(concord::Pose pose);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
 
+        const concord::Pose &get_position() const { return info.bound.pose; }
         void pulse() { pulsining = true; }
         void toggle_work(std::string karosserie_name) { chassis->toggle_work(karosserie_name); }
+        std::vector<Karosserie> *get_karosseies() { return &chassis->karosseriez; }
 
       private:
         concord::Datum datum;

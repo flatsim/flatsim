@@ -103,7 +103,7 @@ namespace mvs {
     void Chasis::toggle_work(std::string karosserie_name) {
         for (uint i = 0; i < karosseriez.size(); ++i) {
             if (karosseriez[i].name == karosserie_name) {
-                karosseriez[i].working = true;
+                karosseriez[i].toggle_work();
             }
         }
     }

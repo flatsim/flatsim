@@ -31,5 +31,8 @@ namespace mvs {
         muli::Transform shift(concord::Bound parent, concord::Bound child);
         void teleport(concord::Pose pose);
         void visualize();
+
+        void toggle_work() { working = !working; }
+        std::vector<concord::Point> get_corners() { return bound.get_corners(); }
     };
 } // namespace mvs

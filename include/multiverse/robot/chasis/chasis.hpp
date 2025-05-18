@@ -7,6 +7,7 @@
 #include "pigment/types_basic.hpp"
 
 #include <rerun.hpp>
+#include <spdlog/spdlog.h>
 
 namespace mvs {
     using namespace muli;
@@ -30,11 +31,11 @@ namespace mvs {
         std::shared_ptr<muli::World> world;
         std::vector<Wheel> wheelz;
         std::vector<muli::MotorJoint *> jointz;
-        std::vector<Karosserie> karosseriez;
         muli::CollisionFilter filter;
 
       public:
         std::shared_ptr<muli::RigidBody> bodyz;
+        std::vector<Karosserie> karosseriez;
         RigidBody *body;
         std::string name;
         pigment::RGB color;

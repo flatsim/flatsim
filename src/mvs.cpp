@@ -169,7 +169,10 @@ int main() {
                         std::cout << "Selected robot #" << selected_robot_idx << std::endl;
                     }
                     if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                        if ((button == 4 || button == 5) && pressed) {
+                        if ((button == 5) && pressed) {
+                            sim->get_robot(selected_robot_idx).toggle_work("front");
+                        }
+                        if ((button == 4) && pressed) {
                             sim->get_robot(selected_robot_idx).respawn();
                         }
                         if (button == 9 && pressed) {

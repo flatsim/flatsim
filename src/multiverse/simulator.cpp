@@ -15,7 +15,15 @@ namespace mvs {
                         return std::find(layer->info.can_accept.begin(), layer->info.can_accept.end(), sa) !=
                                layer->info.can_accept.end();
                     })) {
-                    // spdlog::info("Robot {} is working on layer {}", robott->info.name, layer->info.name);
+                    for (auto &karosserie : *robott->get_karosseies()) {
+                        pigment::RGB colorz = robott->info.color;
+                        if (karosserie.working) {
+                            concord::Polygon brush;
+                            brush.from_vector(karosserie.get_corners());
+                            layer->paint(colorz, brush);
+                            spdlog::info("Robot {} is working on karosserie {}", robott->info.name, karosserie.name);
+                        }
+                    }
                 }
             }
         }
@@ -45,6 +53,12 @@ namespace mvs {
         if (robot_idx < robots.size()) {
             robots[robot_idx]->set_angular(steering);
             robots[robot_idx]->set_linear(throttle);
+        }
+    }
+
+    void Simulator::toggle_work(uint robot_idx, std::string karosserie_name) {
+        if (robot_idx < robots.size()) {
+            robots[robot_idx]->toggle_work(karosserie_name);
         }
     }
 

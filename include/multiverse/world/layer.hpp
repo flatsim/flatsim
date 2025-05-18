@@ -50,6 +50,7 @@ namespace mvs {
         void init(LayerInfo info);
         void tick(float dt);
         void add_noise(bool in_polygon_only = false);
+        void paint(pigment::RGB color, concord::Polygon brush);
         void color_field();
         void to_image(std::vector<uint8_t> &image);
         void visualize();

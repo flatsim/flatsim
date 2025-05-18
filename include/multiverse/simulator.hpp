@@ -33,6 +33,7 @@ namespace mvs {
         // ROBOT
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
+        void toggle_work(uint robot_idx, std::string karosserie_name);
         Robot &get_robot(uint i);
         Robot &get_robot(std::string uuid);
         int num_robots() const;
