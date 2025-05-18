@@ -7,13 +7,15 @@ namespace mvs {
                  CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Wheel::init(const pigment::RGB &color, std::string name, concord::Bound parent, concord::Bound bound,
-                     float _force, float _friction, float _maxImpulse, float _brake, float _drag) {
+    void Wheel::init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
+                     concord::Bound bound, float _force, float _friction, float _maxImpulse, float _brake,
+                     float _drag) {
         this->bound = bound;
         this->color = color;
         this->name = name;
+        this->parent_name = parent_name;
 
-        auto wheelTf = shift(parent, bound);
+        auto wheelTf = shift(parent_bound, bound);
 
         wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
         wheel->SetCollisionFilter(filter);
@@ -52,6 +54,8 @@ namespace mvs {
             float dragForceMagnitude = -drag * vf;
             wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
         }
+
+        visualize();
     }
 
     void Wheel::update(float steering, float throttle, MotorJoint *joint) {
@@ -111,7 +115,7 @@ namespace mvs {
         colors.push_back(rerun::Color(c.r, c.g, c.b));
 
         rec->log_static(
-            this->name + "/wheel",
+            this->parent_name + "/chasis/wheel/" + this->name,
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)

@@ -44,7 +44,7 @@ namespace mvs {
         Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
 
         void init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                  std::vector<concord::Bound> wheels, std::vector<concord::Bound> karosseries);
+                  std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries);
 
         void tick(float dt);
         void visualize();
@@ -52,5 +52,6 @@ namespace mvs {
         void update(std::vector<float> steering, std::vector<float> throttle);
         void wheel_damping(float linearDamping, float angularDamping);
         muli::Transform get_transform() const;
+        void toggle_work(std::string karosserie_name);
     };
 } // namespace mvs

@@ -46,15 +46,15 @@ namespace mvs {
         void tick(float dt);
         void init(concord::Datum datum, RobotInfo robo);
         void reset_controls();
-
         void set_angular(float angular);
         void set_linear(float linear);
-
+        void respawn();
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
-        void pulse() { pulsining = true; }
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
-        void respawn();
+
+        void pulse() { pulsining = true; }
+        void toggle_work(std::string karosserie_name) { chassis->toggle_work(karosserie_name); }
 
       private:
         concord::Datum datum;

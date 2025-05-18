@@ -14,22 +14,22 @@ namespace mvs {
         muli::RigidBody *karosserie;
         muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::string name;
+        std::string parent_name;
         pigment::RGB color;
 
       public:
-        Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        std::string name;
+        bool working = false;
 
-        void init(concord::Bound parent, concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color,
-                  std::string name);
+        Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
+                  concord::Bound bound, muli::CollisionFilter filter);
         void tick(float dt, muli::Transform t);
 
         muli::Transform get_transform() const;
         muli::RigidBody *get_body() const;
-
         muli::Transform shift(concord::Bound parent, concord::Bound child);
         void teleport(concord::Pose pose);
-
         void visualize();
     };
 } // namespace mvs

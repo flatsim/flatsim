@@ -10,6 +10,14 @@ namespace mvs {
         world->tick(dt);
         for (auto &robott : robots) {
             robott->tick(dt);
+            for (auto layer : world->layers) {
+                if (std::any_of(robott->info.works_on.begin(), robott->info.works_on.end(), [&](auto const &sa) {
+                        return std::find(layer->info.can_accept.begin(), layer->info.can_accept.end(), sa) !=
+                               layer->info.can_accept.end();
+                    })) {
+                    // spdlog::info("Robot {} is working on layer {}", robott->info.name, layer->info.name);
+                }
+            }
         }
     }
     void Simulator::init(concord::Datum datum, concord::Size world_size) {

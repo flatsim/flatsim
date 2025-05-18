@@ -15,6 +15,7 @@ namespace mvs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::string name;
+        std::string parent_name;
         pigment::RGB color;
         concord::Bound bound;
         muli::CollisionFilter filter;
@@ -27,8 +28,9 @@ namespace mvs {
 
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
-        void init(const pigment::RGB &color, std::string name, concord::Bound parent, concord::Bound bound,
-                  float _force, float _friction, float _maxImpulse, float _brake, float _drag);
+        void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound bound,
+                  concord::Bound parent_bound, float _force, float _friction, float _maxImpulse, float _brake,
+                  float _drag);
 
         muli::Transform shift(concord::Bound parent, concord::Bound child);
         // void set(concord::Bound chasus_boud, concord::Bound bound);

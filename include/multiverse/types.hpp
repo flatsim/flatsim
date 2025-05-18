@@ -4,8 +4,9 @@
 #include "concord/types_polygon.hpp"
 #include "pigment/types_basic.hpp"
 #include "rerun.hpp"
-
+#include <unordered_map>
 namespace mvs {
+
     // ROBOT
     struct RobotControll {
         std::vector<float> steerings_max;
@@ -19,12 +20,13 @@ namespace mvs {
         std::string name = "unnamed";
         std::string uuid = "none";
         std::string type = "none";
+        std::vector<std::string> works_on;
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon outline;
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
-        std::vector<concord::Bound> karosserie;
+        std::unordered_map<std::string, concord::Bound> karosseriez;
     };
 
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
@@ -32,6 +34,8 @@ namespace mvs {
     struct LayerInfo {
         std::string name = "unnamed";
         std::string uuid = "none";
+        std::string type = "none";
+        std::vector<std::string> can_accept;
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon field;

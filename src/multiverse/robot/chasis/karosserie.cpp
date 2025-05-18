@@ -4,13 +4,14 @@ namespace mvs {
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Karosserie::init(concord::Bound parent, concord::Bound bound, muli::CollisionFilter filter, pigment::RGB color,
-                          std::string name) {
+    void Karosserie::init(const pigment::RGB &color, std::string parent_name, std::string name,
+                          concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter) {
         this->name = name;
+        this->parent_name = parent_name;
         this->color = color;
         this->bound = bound;
 
-        auto karosseriePosition = shift(parent, bound);
+        auto karosseriePosition = shift(parent_bound, bound);
         karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
         karosserie->SetCollisionFilter(filter);
     }
@@ -25,6 +26,8 @@ namespace mvs {
         karosseriePosition.x = t.position.x + rotatedOffset.x;
         karosseriePosition.y = t.position.y + rotatedOffset.y;
         karosserie->SetTransform(muli::Transform{karosseriePosition, t.rotation});
+
+        visualize();
     }
 
     muli::Transform Karosserie::shift(concord::Bound parent, concord::Bound child) {
@@ -73,7 +76,7 @@ namespace mvs {
         std::vector<rerun::Color> colors_a;
         colors_a.push_back(rerun::Color(color.r, color.g, color.b));
         rec->log_static(
-            this->name + "/karosserie",
+            this->parent_name + "/chasis/karosserie/" + name,
             rerun::Boxes3D::from_centers_and_sizes({{k_x, k_y, 0.1f}}, {{k_w, k_h, 0.0f}})
                 .with_radii({{0.02f}})
                 // .with_fill_mode(rerun::FillMode::Solid)

@@ -74,6 +74,8 @@ int main() {
     mvs::LayerInfo layer_info;
     layer_info.name = "grid";
     layer_info.uuid = "grid";
+    layer_info.type = "field";
+    layer_info.can_accept = {"pea"};
     layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
     layer_info.bound = polygon.get_obb(world_datum);
     layer_info.resolution = 0.1f;
@@ -85,6 +87,10 @@ int main() {
         robot_info.RCI = 3;
         robot_info.name = "robot" + std::to_string(i);
         robot_info.uuid = "robot" + std::to_string(i);
+        robot_info.type = "harvester";
+        if (i == 1) {
+            robot_info.works_on = {"pea"};
+        }
 
         concord::Pose robot_pose;
         robot_pose.point.enu.x = 10 * i;
@@ -112,12 +118,11 @@ int main() {
         std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 
-        std::vector<concord::Bound> karosseries;
-        concord::Size k_size{width * 1.26f, height * 0.23f, 0.0f};
-        karosseries.push_back(concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size));
+        concord::Size k_size;
+        k_size = concord::Size(width * 1.26f, height * 0.23f, 0.0f);
+        robot_info.karosseriez["front"] = concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size);
         k_size = concord::Size(width * 0.9, height * 0.15f, 0.0f);
-        karosseries.push_back(concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size));
-        robot_info.karosserie = karosseries;
+        robot_info.karosseriez["back"] = concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size);
 
         pigment::RGB robot_color = pigment::RGB(255, 200, 0);
         robot_info.color = robot_color;

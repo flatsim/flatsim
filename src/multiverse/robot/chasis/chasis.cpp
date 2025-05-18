@@ -11,8 +11,7 @@ namespace mvs {
         : world(world), rec(rec), filter(filter) {}
 
     void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                      std::vector<concord::Bound> wheels_s, std::vector<concord::Bound> karosseries) {
-
+                      std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries) {
         this->bound = bound;
         this->color = color;
         this->name = name;
@@ -36,9 +35,9 @@ namespace mvs {
         float dr = 0.1f;
         float jm = body->GetMass();
 
-        for (uint i = 0; i < wheels_s.size(); ++i) {
+        for (uint i = 0; i < wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name + std::to_string(i), bound, wheels_s[i], force, friction, maxImpulse, brake, drag);
+            wheel.init(color, name, std::to_string(i), bound, wheels[i], force, friction, maxImpulse, brake, drag);
             wheelz.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
@@ -46,26 +45,14 @@ namespace mvs {
         }
 
         wheel_damping(linearDamping, angularDamping);
-        //
+
         auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
         auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
 
-        for (uint i = 0; i < karosseries.size(); ++i) {
+        for (auto const &[k_name, k_bound] : karosseries) {
             Karosserie karosserie(rec, world);
-            karosserie.init(bound, karosseries[i], filter, color, name + std::to_string(i));
+            karosserie.init(color, name, k_name, bound, k_bound, filter);
             karosseriez.push_back(karosserie);
-            auto left_hook =
-                Vec2(karosseries[i].pose.point.enu.x - karosseries[i].size.x / 2, karosseries[i].pose.point.enu.y);
-            auto right_hook =
-                Vec2(karosseries[i].pose.point.enu.x + karosseries[i].size.x / 2, karosseries[i].pose.point.enu.y);
-
-            auto dist_left = distance(main_left_hook.x, main_left_hook.y, left_hook.x, left_hook.y);
-            auto dist_right = distance(main_right_hook.x, main_right_hook.y, right_hook.x, right_hook.y);
-
-            // world->CreateLimitedDistanceJoint(body, karosseriez[i].get_body(), main_left_hook, left_hook, dist_left);
-            // world->CreateLimitedAngleJoint(body, karosseriez[i].get_body(), 0.1f, 0.1f);
-            // world->CreateLimitedDistanceJoint(body, karosseriez[i].get_body(), main_right_hook, right_hook,
-            // dist_right); world->CreateLimitedAngleJoint(body, karosseriez[i].get_body(), 0.1f, 0.1f);
         }
     }
 
@@ -96,13 +83,6 @@ namespace mvs {
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
-
-        for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].visualize();
-        }
-        for (uint i = 0; i < karosseriez.size(); ++i) {
-            karosseriez[i].visualize();
-        }
     }
 
     void Chasis::update(std::vector<float> steering, std::vector<float> throttle) {
@@ -117,6 +97,14 @@ namespace mvs {
         for (uint i = 0; i < wheelz.size(); ++i) {
             wheelz[i].wheel->SetLinearDamping(linearDamping);
             wheelz[i].wheel->SetAngularDamping(angularDamping);
+        }
+    }
+
+    void Chasis::toggle_work(std::string karosserie_name) {
+        for (uint i = 0; i < karosseriez.size(); ++i) {
+            if (karosseriez[i].name == karosserie_name) {
+                karosseriez[i].working = true;
+            }
         }
     }
 
