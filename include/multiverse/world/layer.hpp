@@ -52,7 +52,6 @@ namespace mvs {
         void add_noise(bool in_polygon_only = false);
         void color_field();
         void to_image(std::vector<uint8_t> &image);
-        std::vector<uint8_t> to_image();
         void visualize();
 
         concord::Point at(uint x, uint y) const { return grid.at(x, y).first; }

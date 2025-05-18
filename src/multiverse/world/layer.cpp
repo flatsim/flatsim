@@ -79,35 +79,22 @@ namespace mvs {
     void Layer::to_image(std::vector<uint8_t> &image) {
         const std::size_t rows = grid.rows();
         const std::size_t cols = grid.cols();
+        // Make room for RGBA pixels
         image.resize(rows * cols * 4);
         for (std::size_t r = 0; r < rows; ++r) {
             for (std::size_t c = 0; c < cols; ++c) {
                 auto &[pt, gd] = grid(r, c);
-                std::size_t base = (r * cols + c) * 4;
+                // Compute rotated position
+                std::size_t rotated_r = rows - 1 - r;
+                std::size_t rotated_c = cols - 1 - c;
+                // Index into the flat RGBA buffer
+                std::size_t base = (rotated_r * cols + rotated_c) * 4;
                 image[base + 0] = gd.color.r;
                 image[base + 1] = gd.color.g;
                 image[base + 2] = gd.color.b;
                 image[base + 3] = gd.color.a;
             }
         }
-    }
-
-    std::vector<uint8_t> Layer::to_image() {
-        const std::size_t rows = grid.rows();
-        const std::size_t cols = grid.cols();
-        std::vector<uint8_t> image(rows * cols * 4);
-        for (std::size_t r = 0; r < rows; ++r) {
-            for (std::size_t c = 0; c < cols; ++c) {
-                auto &[pt, gd] = grid(r, c);
-
-                std::size_t base = (r * cols + c) * 4;
-                image[base + 0] = gd.color.r;
-                image[base + 1] = gd.color.g;
-                image[base + 2] = gd.color.b;
-                image[base + 3] = gd.color.a;
-            }
-        }
-        return image;
     }
 
     void Layer::tick(float dt) {
