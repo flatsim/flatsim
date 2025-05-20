@@ -36,6 +36,9 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose pose);
+        void teleport2(concord::Pose pose);
         void update(float steering, float throttle, MotorJoint *joint);
+
+        concord::Bound get_bound() const { return bound; }
     };
 } // namespace mvs

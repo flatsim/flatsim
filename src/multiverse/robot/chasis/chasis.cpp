@@ -121,7 +121,12 @@ namespace mvs {
         body->SetSleeping(true);
 
         for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].teleport(pose);
+            auto nw = utils::teleport(wheelz[i].get_bound().pose, pose);
+            wheelz[i].teleport2(nw);
+        }
+        for (uint i = 0; i < karosseriez.size(); ++i) {
+            auto nw = utils::teleport(karosseriez[i].get_bound().pose, pose);
+            karosseriez[i].teleport(nw);
         }
     }
 

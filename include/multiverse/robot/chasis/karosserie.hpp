@@ -26,7 +26,6 @@ namespace mvs {
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
                   concord::Bound bound, muli::CollisionFilter filter);
-        void tick(float dt, muli::Transform t);
         void tick(float dt, concord::Pose trans_pose);
 
         muli::Transform get_transform() const;
@@ -36,5 +35,6 @@ namespace mvs {
 
         void toggle_work() { working = !working; }
         std::vector<concord::Point> get_corners() { return pose.get_corners(bound.size); }
+        concord::Bound get_bound() const { return bound; }
     };
 } // namespace mvs

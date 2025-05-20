@@ -90,6 +90,11 @@ namespace mvs {
         wheel->SetSleeping(true);
     }
 
+    void Wheel::teleport2(concord::Pose trans_pose) {
+        wheel->SetTransform(utils::pose_to_transform(trans_pose));
+        wheel->SetSleeping(true);
+    }
+
     void Wheel::visualize() {
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;

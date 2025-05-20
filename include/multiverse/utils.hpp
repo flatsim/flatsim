@@ -48,6 +48,26 @@ namespace mvs {
             return result;
         }
 
+        inline concord::Pose teleport(concord::Pose from_origin, concord::Pose trans_pose) {
+            concord::Pose t;
+            t.point.enu.x = trans_pose.point.enu.x;
+            t.point.enu.y = trans_pose.point.enu.y;
+            t.angle.yaw = trans_pose.angle.yaw;
+
+            concord::Pose rotated_offset;
+            rotated_offset.point.enu.x =
+                from_origin.point.enu.x * std::cos(t.angle.yaw) - from_origin.point.enu.y * std::sin(t.angle.yaw);
+            rotated_offset.point.enu.y =
+                from_origin.point.enu.x * std::sin(t.angle.yaw) + from_origin.point.enu.y * std::cos(t.angle.yaw);
+
+            concord::Pose new_pose;
+            new_pose.point.enu.x = trans_pose.point.enu.x + rotated_offset.point.enu.x;
+            new_pose.point.enu.y = trans_pose.point.enu.y + rotated_offset.point.enu.y;
+            new_pose.angle.yaw = t.angle.yaw;
+
+            return new_pose;
+        }
+
         inline muli::Transform pose_to_transform(const concord::Pose &pose) {
             muli::Rotation rot(pose.angle.yaw);
             muli::Vec2 pos;
