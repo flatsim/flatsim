@@ -80,11 +80,11 @@ int main() {
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
 
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 1.0f), "oxbo" + std::to_string(0),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(1),
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 2.0f), "oxbo" + std::to_string(1),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 0.0f), "oxbo" + std::to_string(2),
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 3.0f), "oxbo" + std::to_string(2),
                                        pigment::RGB(255, 200, 0)));
     sim->add_robot(
         mvs::tractor(concord::Pose(10 * 3, 10 * 3, 0.0f), "tractor" + std::to_string(3), pigment::RGB(232, 21, 232)));

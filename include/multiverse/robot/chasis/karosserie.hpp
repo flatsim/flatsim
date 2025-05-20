@@ -3,6 +3,7 @@
 #include "concord/types_basic.hpp"
 #include "muli/collision_filter.h"
 #include "muli/world.h"
+#include "multiverse/utils.hpp"
 #include "pigment/types_basic.hpp"
 #include "rerun.hpp"
 
@@ -29,7 +30,6 @@ namespace mvs {
 
         muli::Transform get_transform() const;
         muli::RigidBody *get_body() const;
-        muli::Transform shift(concord::Bound parent, concord::Bound child);
         void teleport(concord::Pose pose);
         void visualize();
 

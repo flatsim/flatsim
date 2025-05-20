@@ -2,6 +2,7 @@
 
 #include "concord/types_basic.hpp"
 #include "muli/world.h"
+#include "multiverse/utils.hpp"
 #include "pigment/types_basic.hpp"
 #include <rerun.hpp>
 
@@ -31,9 +32,6 @@ namespace mvs {
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound bound,
                   concord::Bound parent_bound, float _force, float _friction, float _maxImpulse, float _brake,
                   float _drag);
-
-        muli::Transform shift(concord::Bound parent, concord::Bound child);
-        // void set(concord::Bound chasus_boud, concord::Bound bound);
 
         void tick(float dt);
         void visualize();

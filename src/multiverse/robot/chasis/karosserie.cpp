@@ -11,7 +11,8 @@ namespace mvs {
         this->color = color;
         this->bound = bound;
 
-        auto karosseriePosition = shift(parent_bound, bound);
+        auto shifted = utils::shift(parent_bound.pose, bound.pose);
+        auto karosseriePosition = utils::pose_to_transform(shifted);
         karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
         karosserie->SetCollisionFilter(filter);
     }
@@ -32,37 +33,6 @@ namespace mvs {
         pose.angle.yaw = t.rotation.GetAngle();
 
         visualize();
-    }
-
-    muli::Transform Karosserie::shift(concord::Bound parent, concord::Bound child) {
-        muli::Rotation p_rotation(parent.pose.angle.yaw);
-        muli::Vec2 rotatedOffset;
-        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
-        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
-        // Add the rotated offset to the car's position
-        muli::Vec2 wheelPosition;
-        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
-        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
-        concord::Pose wheel_pose;
-        wheel_pose.point.enu.x = wheelPosition.x;
-        wheel_pose.point.enu.y = wheelPosition.y;
-        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
-        muli::Rotation rotation(wheel_pose.angle.yaw);
-        muli::Transform wheelTf{wheelPosition, rotation};
-        return wheelTf;
-    }
-
-    concord::Pose Karosserie::shift(concord::Pose parent, concord::Pose child) {
-        concord::Euler ang = parent.angle;
-        auto off_x = bound.pose.point.enu.x * std::cos(ang.yaw) - bound.pose.point.enu.y * std::sin(ang.yaw);
-        auto off_y = bound.pose.point.enu.x * std::sin(ang.yaw) + bound.pose.point.enu.y * std::cos(ang.yaw);
-
-        concord::Pose pk_pos;
-        pk_pos.point.enu.x = parent.point.enu.x + off_x;
-        pk_pos.point.enu.y = parent.point.enu.y + off_y;
-        pk_pos.angle.yaw = parent.angle.yaw;
-
-        return pk_pos;
     }
 
     void Karosserie::teleport(concord::Pose pose) {

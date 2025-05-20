@@ -5,6 +5,7 @@
 #include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
 #include "multiverse/types.hpp"
+#include "multiverse/utils.hpp"
 #include "pigment/types_basic.hpp"
 
 #include <rerun.hpp>

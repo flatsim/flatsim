@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concord/types_basic.hpp"
+#include "muli/muli.h"
 #include <algorithm>
 #include <cmath>
 
@@ -45,6 +46,14 @@ namespace mvs {
             result.angle.yaw = normalize_angle(parent.angle.yaw + child.angle.yaw);
 
             return result;
+        }
+
+        inline muli::Transform pose_to_transform(const concord::Pose &pose) {
+            muli::Rotation rot(pose.angle.yaw);
+            muli::Vec2 pos;
+            pos.x = pose.point.enu.x;
+            pos.y = pose.point.enu.y;
+            return muli::Transform{pos, rot};
         }
 
     } // namespace utils

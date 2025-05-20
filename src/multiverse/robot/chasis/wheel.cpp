@@ -15,7 +15,8 @@ namespace mvs {
         this->name = name;
         this->parent_name = parent_name;
 
-        auto wheelTf = shift(parent_bound, bound);
+        auto shifted = utils::shift(parent_bound.pose, bound.pose);
+        auto wheelTf = utils::pose_to_transform(shifted);
 
         wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
         wheel->SetCollisionFilter(filter);
@@ -66,24 +67,6 @@ namespace mvs {
             Vec2 f2 = forward * (throttle * force);
             wheel->ApplyForce(wheel->GetPosition(), f2, true);
         }
-    }
-
-    muli::Transform Wheel::shift(concord::Bound parent, concord::Bound child) {
-        muli::Rotation p_rotation(parent.pose.angle.yaw);
-        Vec2 rotatedOffset;
-        rotatedOffset.x = bound.pose.point.enu.x * p_rotation.c - bound.pose.point.enu.y * p_rotation.s;
-        rotatedOffset.y = bound.pose.point.enu.x * p_rotation.s + bound.pose.point.enu.y * p_rotation.c;
-        // Add the rotated offset to the car's position
-        Vec2 wheelPosition;
-        wheelPosition.x = parent.pose.point.enu.x + rotatedOffset.x;
-        wheelPosition.y = parent.pose.point.enu.y + rotatedOffset.y;
-        concord::Pose wheel_pose;
-        wheel_pose.point.enu.x = wheelPosition.x;
-        wheel_pose.point.enu.y = wheelPosition.y;
-        wheel_pose.angle.yaw = 0.0f; // TODO: fix thi
-        muli::Rotation rotation(wheel_pose.angle.yaw);
-        muli::Transform wheelTf{wheelPosition, rotation};
-        return wheelTf;
     }
 
     void Wheel::teleport(concord::Pose pose) {
