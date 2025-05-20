@@ -7,12 +7,10 @@
 #include <unistd.h>
 #include <vector>
 
+#include "multiverse/machines.hpp"
 #include "multiverse/simulator.hpp"
 #include "multiverse/types.hpp"
 #include "rerun/recording_stream.hpp"
-
-float rad2deg(float rad) { return rad * 180.0f / M_PI; }
-float deg2rad(float deg) { return deg * M_PI / 180.0f; }
 
 int main() {
     bool joystk = true;
@@ -82,51 +80,10 @@ int main() {
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
 
-    for (int i = 0; i < 4; ++i) {
-        mvs::RobotInfo robot_info;
-        robot_info.RCI = 3;
-        robot_info.name = "robot" + std::to_string(i);
-        robot_info.uuid = "robot" + std::to_string(i);
-        robot_info.type = "harvester";
-        robot_info.works_on = {"pea"};
-
-        concord::Pose robot_pose;
-        robot_pose.point.enu.x = 10 * i;
-        robot_pose.point.enu.y = 10 * i;
-        robot_pose.point.wgs = robot_pose.point.enu.toWGS(world_datum);
-        robot_pose.angle.yaw = 0.0f; // TODO: fix the rottion of the wheels when robot is rotated
-
-        float width = 2.8f;
-        float height = 7.68f;
-        concord::Size chassis_size{width, height, 0.0f};
-        robot_info.bound = concord::Bound(robot_pose, chassis_size);
-
-        std::vector<concord::Bound> wheels;
-        concord::Size w_size{width * 0.25, height * 0.2f, 0.0f};
-        wheels.push_back(concord::Bound(concord::Pose(width / 2, (height / 2) * 0.6, 0.0f), w_size));
-        wheels.push_back(concord::Bound(concord::Pose(-width / 2, (height / 2) * 0.6, 0.0f), w_size));
-        wheels.push_back(concord::Bound(concord::Pose(width / 2, 0.1, 0.0f), w_size));
-        wheels.push_back(concord::Bound(concord::Pose(-width / 2, 0.1, 0.0f), w_size));
-        wheels.push_back(concord::Bound(concord::Pose(width / 2, (-height / 2) * 0.7, 0.0f), w_size));
-        wheels.push_back(concord::Bound(concord::Pose(-width / 2, (-height / 2) * 0.7, 0.0f), w_size));
-        robot_info.wheels = wheels;
-
-        std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
-        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 5.0f, 5.0f};
-        std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
-        robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
-
-        concord::Size k_size;
-        k_size = concord::Size(width * 1.26f, height * 0.23f, 0.0f);
-        robot_info.karosseriez["front"] = concord::Bound(concord::Pose(0, (height / 2) + k_size.y / 2, 0.0f), k_size);
-        k_size = concord::Size(width * 0.9, height * 0.15f, 0.0f);
-        robot_info.karosseriez["back"] = concord::Bound(concord::Pose(0, -height / 2 - k_size.y / 2, 0.0f), k_size);
-
-        pigment::RGB robot_color = pigment::RGB(255, 200, 0);
-        robot_info.color = robot_color;
-
-        sim->add_robot(robot_info);
-    }
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "robot" + std::to_string(0)));
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "robot" + std::to_string(1)));
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 0.0f), "robot" + std::to_string(2)));
+    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 3, 10 * 3, 0.0f), "robot" + std::to_string(3)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";

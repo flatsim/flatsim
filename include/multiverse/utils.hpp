@@ -2,6 +2,9 @@
 
 namespace mvs {
     namespace utils {
+        inline float rad2deg(float rad) { return rad * 180.0f / M_PI; }
+        inline float deg2rad(float deg) { return deg * M_PI / 180.0f; }
+
         inline float mapper(float x, float in_min, float in_max, float out_min, float out_max) {
             return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
         }

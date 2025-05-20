@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
+set(project_name multiverse)
+project(${project_name} VERSION 0.1.1 LANGUAGES CXX)
 
-project(multiverse VERSION 0.1.1 LANGUAGES CXX)
-
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
 cmake_policy(SET CMP0074 NEW)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_STANDARD 20)
@@ -20,73 +17,47 @@ set(params
     -Wno-unused-but-set-variable
 )
 
+# --------------------------------------------------------------------------------------------------
+set(ext_deps)
+
 set(MULI_BUILD_DEMO OFF)
-fetchcontent_declare(
-    muli
-    GIT_REPOSITORY https://github.com/Sopiro/Muli
-    # GIT_TAG 25f6762e37de50f66251d16f6cfb8b7eae8be6ba
-)
+fetchcontent_declare( muli GIT_REPOSITORY https://github.com/Sopiro/Muli )
 FetchContent_MakeAvailable(muli)
 include_directories(${muli_SOURCE_DIR}/include)
+list(APPEND ext_deps muli)
 
-FetchContent_Declare(
-  concord
-  GIT_REPOSITORY https://github.com/smolfetch/concord.git
-  GIT_TAG        main
-)
+FetchContent_Declare(concord GIT_REPOSITORY https://github.com/smolfetch/concord.git GIT_TAG main)
 FetchContent_MakeAvailable(concord)
+list(APPEND ext_deps concord::concord)
 
-FetchContent_Declare(
-  pigment
-  GIT_REPOSITORY https://github.com/smolfetch/pigment.git
-  GIT_TAG        main
-)
+FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git GIT_TAG main)
+FetchContent_MakeAvailable(farmtrax)
+list(APPEND ext_deps farmtrax::farmtrax)
+
+FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/smolfetch/pigment.git GIT_TAG main)
 FetchContent_MakeAvailable(pigment)
+list(APPEND ext_deps pigment::pigment)
 
-FetchContent_Declare(
-  entropy
-  GIT_REPOSITORY https://github.com/smolfetch/entropy.git
-  GIT_TAG        main
-)
+FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/smolfetch/entropy.git GIT_TAG main)
 FetchContent_MakeAvailable(entropy)
+list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(
-    rerun_sdk 
-    URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
-)
+FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
 FetchContent_MakeAvailable(rerun_sdk)
+list(APPEND ext_deps rerun_sdk)
 
-
-add_library(multiverse INTERFACE)
-
-target_include_directories(multiverse INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-include(FetchContent)
-FetchContent_Declare(
-      spdlog
-      GIT_REPOSITORY https://github.com/gabime/spdlog.git
-      GIT_TAG v1.15.0
-)
+FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
 FetchContent_MakeAvailable(spdlog)
+list(APPEND ext_deps spdlog::spdlog)
 
-
-target_link_libraries(multiverse INTERFACE muli)
-target_link_libraries(multiverse INTERFACE concord::concord)
-target_link_libraries(multiverse INTERFACE pigment::pigment)
-target_link_libraries(multiverse INTERFACE entropy::entropy)
-target_link_libraries(multiverse INTERFACE rerun_sdk)
-target_link_libraries(multiverse INTERFACE spdlog::spdlog)
-
-
+# --------------------------------------------------------------------------------------------------
 install(
     DIRECTORY include/
     DESTINATION include
 )
 include_directories(include)
 
+# --------------------------------------------------------------------------------------------------
 set(int_deps
     src/multiverse/robot/chasis/karosserie.cpp
     src/multiverse/robot/chasis/chasis.cpp
@@ -98,22 +69,11 @@ set(int_deps
     src/multiverse/simulator.cpp
 )
 
-set(ext_deps
-  muli
-  concord::concord
-  pigment::pigment
-  entropy::entropy
-  rerun_sdk
-  spdlog::spdlog
-)
-
 set(exe
   src/mvs.cpp
 )
 
 set(exec_names)
-
-
 foreach(src_file IN LISTS exe)
   get_filename_component(exec_name "${src_file}" NAME_WE)
   add_executable(${exec_name} "${src_file}")
