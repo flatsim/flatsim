@@ -1,5 +1,6 @@
 #include "multiverse/robot.hpp"
 #include "pigment/types_hsv.hpp"
+#include <cmath>
 
 namespace mvs {
 
@@ -34,7 +35,7 @@ namespace mvs {
         this->spawn_position = robo.bound.pose;
 
         chassis = std::make_unique<Chasis>(world, rec, filter);
-        chassis->init(robo.bound, info.color, info.name, robo.wheels, robo.karosseriez);
+        chassis->init(robo.bound, info.color, info.name, robo.wheels, robo.karosseriez, robo.controlz);
 
         steerings.resize(robo.wheels.size(), 0.0f);
         steerings_max = robo.controlz.steerings_max;

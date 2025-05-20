@@ -11,7 +11,8 @@ namespace mvs {
         : world(world), rec(rec), filter(filter) {}
 
     void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                      std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries) {
+                      std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries,
+                      mvs::RobotControll &controlz) {
         this->bound = bound;
         this->color = color;
         this->name = name;
@@ -42,6 +43,10 @@ namespace mvs {
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
             jointz.emplace_back(joint);
+
+            float mm = std::abs(controlz.steerings_max[i] + controlz.steerings_diff[i]);
+            auto anglejoing = world->CreateLimitedAngleJoint(body, wheel.wheel, -mm, mm);
+            anglejointz.emplace_back(anglejoing);
         }
 
         wheel_damping(linearDamping, angularDamping);

@@ -4,6 +4,7 @@
 #include "muli/world.h"
 #include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
+#include "multiverse/types.hpp"
 #include "pigment/types_basic.hpp"
 
 #include <rerun.hpp>
@@ -31,6 +32,7 @@ namespace mvs {
         std::shared_ptr<muli::World> world;
         std::vector<Wheel> wheelz;
         std::vector<muli::MotorJoint *> jointz;
+        std::vector<muli::AngleJoint *> anglejointz;
         muli::CollisionFilter filter;
 
       public:
@@ -45,7 +47,8 @@ namespace mvs {
         Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
 
         void init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                  std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries);
+                  std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries,
+                  mvs::RobotControll &controlz);
 
         void tick(float dt);
         void visualize();
