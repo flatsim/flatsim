@@ -19,6 +19,7 @@ namespace mvs {
         std::string parent_name;
         pigment::RGB color;
         concord::Bound bound;
+        concord::Pose pose;
         muli::CollisionFilter filter;
 
         RigidBody *wheel;
@@ -36,7 +37,6 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose pose);
-        void teleport2(concord::Pose pose);
         void update(float steering, float throttle, MotorJoint *joint);
 
         concord::Bound get_bound() const { return bound; }

@@ -48,7 +48,7 @@ namespace mvs {
             return result;
         }
 
-        inline concord::Pose teleport(concord::Pose from_origin, concord::Pose trans_pose) {
+        inline concord::Pose move(concord::Pose from_origin, concord::Pose trans_pose) {
             concord::Pose t;
             t.point.enu.x = trans_pose.point.enu.x;
             t.point.enu.y = trans_pose.point.enu.y;

@@ -15,8 +15,8 @@ namespace mvs {
         this->name = name;
         this->parent_name = parent_name;
 
-        auto shifted = utils::shift(parent_bound.pose, bound.pose);
-        auto wheelTf = utils::pose_to_transform(shifted);
+        pose = utils::shift(parent_bound.pose, bound.pose);
+        auto wheelTf = utils::pose_to_transform(pose);
 
         wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
         wheel->SetCollisionFilter(filter);
@@ -70,27 +70,6 @@ namespace mvs {
     }
 
     void Wheel::teleport(concord::Pose trans_pose) {
-        concord::Pose t;
-        t.point.enu.x = trans_pose.point.enu.x;
-        t.point.enu.y = trans_pose.point.enu.y;
-        t.angle.yaw = trans_pose.angle.yaw;
-
-        concord::Pose rotated_offset;
-        rotated_offset.point.enu.x =
-            bound.pose.point.enu.x * std::cos(t.angle.yaw) - bound.pose.point.enu.y * std::sin(t.angle.yaw);
-        rotated_offset.point.enu.y =
-            bound.pose.point.enu.x * std::sin(t.angle.yaw) + bound.pose.point.enu.y * std::cos(t.angle.yaw);
-
-        concord::Pose new_pose;
-        new_pose.point.enu.x = trans_pose.point.enu.x + rotated_offset.point.enu.x;
-        new_pose.point.enu.y = trans_pose.point.enu.y + rotated_offset.point.enu.y;
-        new_pose.angle.yaw = t.angle.yaw;
-
-        wheel->SetTransform(utils::pose_to_transform(new_pose));
-        wheel->SetSleeping(true);
-    }
-
-    void Wheel::teleport2(concord::Pose trans_pose) {
         wheel->SetTransform(utils::pose_to_transform(trans_pose));
         wheel->SetSleeping(true);
     }
