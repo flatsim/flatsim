@@ -52,6 +52,19 @@ namespace mvs {
         return wheelTf;
     }
 
+    concord::Pose Karosserie::shift(concord::Pose parent, concord::Pose child) {
+        concord::Euler ang = parent.angle;
+        auto off_x = bound.pose.point.enu.x * std::cos(ang.yaw) - bound.pose.point.enu.y * std::sin(ang.yaw);
+        auto off_y = bound.pose.point.enu.x * std::sin(ang.yaw) + bound.pose.point.enu.y * std::cos(ang.yaw);
+
+        concord::Pose pk_pos;
+        pk_pos.point.enu.x = parent.point.enu.x + off_x;
+        pk_pos.point.enu.y = parent.point.enu.y + off_y;
+        pk_pos.angle.yaw = parent.angle.yaw;
+
+        return pk_pos;
+    }
+
     void Karosserie::teleport(concord::Pose pose) {
         muli::Transform t;
         t.position.x = pose.point.enu.x;

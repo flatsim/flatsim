@@ -27,6 +27,7 @@ namespace mvs {
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chasis> chassis;
+        std::vector<std::shared_ptr<Robot>> slaves;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
         std::vector<float> steerings_diff, throttles_diff;

@@ -10,7 +10,6 @@ namespace mvs {
     class Karosserie {
       private:
         std::shared_ptr<muli::World> world;
-        concord::Bound bound;
         muli::RigidBody *karosserie;
         muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
@@ -18,6 +17,7 @@ namespace mvs {
 
       public:
         std::string name;
+        concord::Bound bound;
         concord::Pose pose;
         pigment::RGB color;
         bool working = false;
