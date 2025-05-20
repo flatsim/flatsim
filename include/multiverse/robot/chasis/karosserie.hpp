@@ -27,6 +27,7 @@ namespace mvs {
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
                   concord::Bound bound, muli::CollisionFilter filter);
         void tick(float dt, muli::Transform t);
+        void tick(float dt, concord::Pose trans_pose);
 
         muli::Transform get_transform() const;
         muli::RigidBody *get_body() const;

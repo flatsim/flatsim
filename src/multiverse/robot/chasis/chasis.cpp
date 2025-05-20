@@ -60,11 +60,12 @@ namespace mvs {
     }
 
     void Chasis::tick(float dt) {
+        pose = utils::transform_to_pose(body->GetTransform());
         for (uint i = 0; i < wheelz.size(); ++i) {
             wheelz[i].tick(dt);
         }
         for (uint i = 0; i < karosseriez.size(); ++i) {
-            karosseriez[i].tick(dt, body->GetTransform());
+            karosseriez[i].tick(dt, pose);
         }
     }
 

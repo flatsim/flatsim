@@ -56,5 +56,13 @@ namespace mvs {
             return muli::Transform{pos, rot};
         }
 
+        inline concord::Pose transform_to_pose(const muli::Transform &transform) {
+            concord::Pose pose;
+            pose.point.enu.x = transform.position.x;
+            pose.point.enu.y = transform.position.y;
+            pose.angle.yaw = transform.rotation.GetAngle();
+            return pose;
+        }
+
     } // namespace utils
 } // namespace mvs

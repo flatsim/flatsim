@@ -69,19 +69,24 @@ namespace mvs {
         }
     }
 
-    void Wheel::teleport(concord::Pose pose) {
-        Transform t;
-        t.position.x = pose.point.enu.x;
-        t.position.y = pose.point.enu.y;
-        t.rotation = pose.angle.yaw;
-        Vec2 rotatedOffset;
-        rotatedOffset.x = bound.pose.point.enu.x * t.rotation.c - bound.pose.point.enu.y * t.rotation.s;
-        rotatedOffset.y = bound.pose.point.enu.x * t.rotation.s + bound.pose.point.enu.y * t.rotation.c;
-        // Add the rotated offset to the car's position
-        Vec2 wheelPosition;
-        wheelPosition.x = pose.point.enu.x + rotatedOffset.x;
-        wheelPosition.y = pose.point.enu.y + rotatedOffset.y;
-        wheel->SetTransform(muli::Transform{wheelPosition, t.rotation});
+    void Wheel::teleport(concord::Pose trans_pose) {
+        concord::Pose t;
+        t.point.enu.x = trans_pose.point.enu.x;
+        t.point.enu.y = trans_pose.point.enu.y;
+        t.angle.yaw = trans_pose.angle.yaw;
+
+        concord::Pose rotated_offset;
+        rotated_offset.point.enu.x =
+            bound.pose.point.enu.x * std::cos(t.angle.yaw) - bound.pose.point.enu.y * std::sin(t.angle.yaw);
+        rotated_offset.point.enu.y =
+            bound.pose.point.enu.x * std::sin(t.angle.yaw) + bound.pose.point.enu.y * std::cos(t.angle.yaw);
+
+        concord::Pose new_pose;
+        new_pose.point.enu.x = trans_pose.point.enu.x + rotated_offset.point.enu.x;
+        new_pose.point.enu.y = trans_pose.point.enu.y + rotated_offset.point.enu.y;
+        new_pose.angle.yaw = t.angle.yaw;
+
+        wheel->SetTransform(utils::pose_to_transform(new_pose));
         wheel->SetSleeping(true);
     }
 

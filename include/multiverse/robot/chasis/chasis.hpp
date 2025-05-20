@@ -43,6 +43,7 @@ namespace mvs {
         std::string name;
         pigment::RGB color;
         concord::Bound bound;
+        concord::Pose pose;
         uint32_t group;
 
         Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
