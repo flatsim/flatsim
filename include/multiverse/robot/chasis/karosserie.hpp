@@ -26,7 +26,7 @@ namespace mvs {
 
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
-                  concord::Bound bound, muli::CollisionFilter filter);
+                  concord::Bound bound, muli::CollisionFilter filter, bool has_physics = true);
         void tick(float dt, concord::Pose trans_pose);
 
         muli::Transform get_transform() const;

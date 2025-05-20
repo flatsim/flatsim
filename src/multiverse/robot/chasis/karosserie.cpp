@@ -5,11 +5,13 @@ namespace mvs {
         : rec(rec), world(world) {}
 
     void Karosserie::init(const pigment::RGB &color, std::string parent_name, std::string name,
-                          concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter) {
+                          concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
+                          bool has_physics) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
         this->bound = bound;
+        this->has_physics = has_physics;
 
         pose = utils::shift(parent_bound.pose, bound.pose);
         auto karosseriePosition = utils::pose_to_transform(pose);

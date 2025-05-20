@@ -40,7 +40,7 @@ namespace mvs {
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 
         concord::Size k_size;
-        KarosserieElement kaross;
+        KarosserieInfo kaross;
         kaross.name = "front";
         k_size = concord::Size(width * 1.26f, height * 0.23f, 0.0f);
         kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
@@ -102,7 +102,7 @@ namespace mvs {
 
         // karosserie
         concord::Size k_size = concord::Size(width * 0.50f, height * 0.05f, 0.0f);
-        KarosserieElement kaross;
+        KarosserieInfo kaross;
         kaross.name = "front";
         kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
         kaross.color = color;

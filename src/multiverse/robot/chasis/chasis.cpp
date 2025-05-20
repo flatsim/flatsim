@@ -54,7 +54,7 @@ namespace mvs {
 
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
-            karosserie.init(color, name, k.name, bound, k.bound, filter);
+            karosserie.init(color, name, k.name, bound, k.bound, filter, k.has_physics);
             karosseriez.push_back(karosserie);
         }
     }

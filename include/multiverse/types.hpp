@@ -15,7 +15,7 @@ namespace mvs {
         std::vector<bool> left_side;
     };
 
-    struct KarosserieElement {
+    struct KarosserieInfo {
         std::string name;
         concord::Bound bound;
         pigment::RGB color;
@@ -37,7 +37,7 @@ namespace mvs {
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
         std::unordered_map<std::string, concord::Pose> hooks;
-        std::vector<KarosserieElement> karos;
+        std::vector<KarosserieInfo> karos;
     };
 
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
