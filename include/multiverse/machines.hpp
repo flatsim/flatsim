@@ -39,14 +39,23 @@ namespace mvs {
         std::vector<bool> left_side = {true, false, true, false, true, false};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff};
 
-        // karosserie pieces
         concord::Size k_size;
+        KarosserieElement kaross;
+        kaross.name = "front";
         k_size = concord::Size(width * 1.26f, height * 0.23f, 0.0f);
-        robot_info.karosseriez["front"] =
-            concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
+        kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
+        kaross.color = color;
+        kaross.controllable = true;
+        kaross.has_physics = false;
+        robot_info.karos.push_back(kaross);
+
+        kaross.name = "back";
         k_size = concord::Size(width * 0.9f, height * 0.15f, 0.0f);
-        robot_info.karosseriez["back"] =
-            concord::Bound(concord::Pose(0.0f, -(height / 2) - k_size.y / 2, 0.0f), k_size);
+        kaross.bound = concord::Bound(concord::Pose(0.0f, -(height / 2) - k_size.y / 2, 0.0f), k_size);
+        kaross.color = color;
+        kaross.controllable = false;
+        kaross.has_physics = true;
+        robot_info.karos.push_back(kaross);
 
         // color
         pigment::RGB robot_color = color;
@@ -93,8 +102,13 @@ namespace mvs {
 
         // karosserie
         concord::Size k_size = concord::Size(width * 0.50f, height * 0.05f, 0.0f);
-        robot_info.karosseriez["front"] =
-            concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
+        KarosserieElement kaross;
+        kaross.name = "front";
+        kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
+        kaross.color = color;
+        kaross.controllable = true;
+        kaross.has_physics = false;
+        robot_info.karos.push_back(kaross);
 
         // color
         pigment::RGB robot_color = color;

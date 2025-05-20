@@ -22,6 +22,7 @@ namespace mvs {
         concord::Pose pose;
         pigment::RGB color;
         bool working = false;
+        bool has_physics = true;
 
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,

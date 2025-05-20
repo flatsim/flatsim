@@ -13,13 +13,19 @@ namespace mvs {
 
         pose = utils::shift(parent_bound.pose, bound.pose);
         auto karosseriePosition = utils::pose_to_transform(pose);
-        karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
-        karosserie->SetCollisionFilter(filter);
+
+        if (has_physics) {
+            karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
+            karosserie->SetCollisionFilter(filter);
+        }
     }
 
     void Karosserie::tick(float dt, concord::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
-        karosserie->SetTransform(utils::pose_to_transform(new_pose));
+
+        if (has_physics) {
+            karosserie->SetTransform(utils::pose_to_transform(new_pose));
+        }
 
         pose.point.enu.x = new_pose.point.enu.x;
         pose.point.enu.y = new_pose.point.enu.y;
@@ -29,8 +35,11 @@ namespace mvs {
     }
 
     void Karosserie::teleport(concord::Pose trans_pose) {
-        karosserie->SetTransform(utils::pose_to_transform(trans_pose));
-        karosserie->SetSleeping(true);
+        pose = trans_pose;
+        if (has_physics) {
+            karosserie->SetTransform(utils::pose_to_transform(trans_pose));
+            karosserie->SetSleeping(true);
+        }
     }
 
     muli::Transform Karosserie::get_transform() const { return karosserie->GetTransform(); }

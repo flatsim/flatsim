@@ -15,6 +15,14 @@ namespace mvs {
         std::vector<bool> left_side;
     };
 
+    struct KarosserieElement {
+        std::string name;
+        concord::Bound bound;
+        pigment::RGB color;
+        bool controllable = false;
+        bool has_physics = true;
+    };
+
     struct RobotInfo {
         uint RCI;
         uint group;
@@ -29,7 +37,7 @@ namespace mvs {
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
         std::unordered_map<std::string, concord::Pose> hooks;
-        std::unordered_map<std::string, concord::Bound> karosseriez;
+        std::vector<KarosserieElement> karos;
     };
 
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };

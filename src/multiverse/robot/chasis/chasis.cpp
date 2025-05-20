@@ -52,9 +52,9 @@ namespace mvs {
         auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
         auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
 
-        for (auto const &[k_name, k_bound] : robo.karosseriez) {
+        for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
-            karosserie.init(color, name, k_name, bound, k_bound, filter);
+            karosserie.init(color, name, k.name, bound, k.bound, filter);
             karosseriez.push_back(karosserie);
         }
     }
