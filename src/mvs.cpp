@@ -87,7 +87,7 @@ int main() {
     sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 0.0f), "oxbo" + std::to_string(2),
                                        pigment::RGB(255, 200, 0)));
     sim->add_robot(
-        mvs::tractor(concord::Pose(10 * 4, 10 * 4, 0.0f), "tractor" + std::to_string(3), pigment::RGB(232, 21, 232)));
+        mvs::tractor(concord::Pose(10 * 3, 10 * 3, 0.0f), "tractor" + std::to_string(3), pigment::RGB(232, 21, 232)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";

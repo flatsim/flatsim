@@ -46,9 +46,7 @@ namespace mvs {
 
         Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
 
-        void init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                  std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries,
-                  mvs::RobotControll &controlz);
+        void init(mvs::RobotInfo &robo);
 
         void tick(float dt);
         void visualize();

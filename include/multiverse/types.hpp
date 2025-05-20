@@ -12,11 +12,13 @@ namespace mvs {
         std::vector<float> steerings_max;
         std::vector<float> throttles_max;
         std::vector<float> steerings_diff;
+        std::vector<bool> left_side;
     };
 
     struct RobotInfo {
         uint RCI;
         uint group;
+        bool slave = false;
         std::string name = "unnamed";
         std::string uuid = "none";
         std::string type = "none";
@@ -26,6 +28,7 @@ namespace mvs {
         concord::Polygon outline;
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
+        std::unordered_map<std::string, concord::Pose> hooks;
         std::unordered_map<std::string, concord::Bound> karosseriez;
     };
 

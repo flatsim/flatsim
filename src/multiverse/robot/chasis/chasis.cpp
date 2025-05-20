@@ -10,12 +10,10 @@ namespace mvs {
                    muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Chasis::init(concord::Bound &bound, const pigment::RGB &color, std::string name,
-                      std::vector<concord::Bound> wheels, std::unordered_map<std::string, concord::Bound> karosseries,
-                      mvs::RobotControll &controlz) {
-        this->bound = bound;
-        this->color = color;
-        this->name = name;
+    void Chasis::init(mvs::RobotInfo &robo) {
+        this->bound = robo.bound;
+        this->color = robo.color;
+        this->name = robo.name;
 
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
@@ -36,15 +34,15 @@ namespace mvs {
         float dr = 0.1f;
         float jm = body->GetMass();
 
-        for (uint i = 0; i < wheels.size(); ++i) {
+        for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name, std::to_string(i), bound, wheels[i], force, friction, maxImpulse, brake, drag);
+            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], force, friction, maxImpulse, brake, drag);
             wheelz.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
             jointz.emplace_back(joint);
 
-            float mm = std::abs(controlz.steerings_max[i] + controlz.steerings_diff[i]);
+            float mm = std::abs(robo.controlz.steerings_max[i] + robo.controlz.steerings_diff[i]);
             auto anglejoing = world->CreateLimitedAngleJoint(body, wheel.wheel, -mm, mm);
             anglejointz.emplace_back(anglejoing);
         }
@@ -54,7 +52,7 @@ namespace mvs {
         auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
         auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
 
-        for (auto const &[k_name, k_bound] : karosseries) {
+        for (auto const &[k_name, k_bound] : robo.karosseriez) {
             Karosserie karosserie(rec, world);
             karosserie.init(color, name, k_name, bound, k_bound, filter);
             karosseriez.push_back(karosserie);
