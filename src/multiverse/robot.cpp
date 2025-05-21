@@ -100,40 +100,6 @@ namespace mvs {
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
-        Transform t = chassis->get_transform();
-        const float arrowHeight = info.bound.size.y * -0.03f; // How far the tip extends beyond the chassis
-        const float arrowWidth = info.bound.size.x * 0.5f;    // Width of arrow base
-
-        std::array<Vec2, 3> arrow_head_offsets = {{
-            {Vec2(0, info.bound.size.y / 2 + arrowHeight)},   // tip of arrow (forward of the chassis)
-            {Vec2(-arrowWidth / 2, info.bound.size.y * 0.3)}, // left corner of arrow
-            {Vec2(arrowWidth / 2, info.bound.size.y * 0.3)}   // right corner of arrow
-        }};
-
-        std::array<Vec2, 3> arrow_world_points;
-        for (int i = 0; i < 3; ++i) {
-            Vec2 localOffset = arrow_head_offsets[i];
-            Vec2 rotatedOffset;
-            rotatedOffset.x = localOffset.x * t.rotation.c - localOffset.y * t.rotation.s;
-            rotatedOffset.y = localOffset.x * t.rotation.s + localOffset.y * t.rotation.c;
-            arrow_world_points[i].x = t.position.x + rotatedOffset.x;
-            arrow_world_points[i].y = t.position.y + rotatedOffset.y;
-        }
-        const rerun::Position3D vertex_positions[3] = {{arrow_world_points[0].x, arrow_world_points[0].y, 0.1f},
-                                                       {arrow_world_points[1].x, arrow_world_points[1].y, 0.1f},
-                                                       {arrow_world_points[2].x, arrow_world_points[2].y, 0.1f}};
-        const rerun::Color vertex_colors[3] = {
-            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
-             static_cast<uint8_t>(info.color.b)},
-            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
-             static_cast<uint8_t>(info.color.b)},
-            {static_cast<uint8_t>(info.color.r), static_cast<uint8_t>(info.color.g),
-             static_cast<uint8_t>(info.color.b)},
-        };
-        rec->log_static(this->info.name + "/heading", rerun::Mesh3D(vertex_positions)
-                                                          .with_vertex_normals({{0.0, 0.0, 1.0}})
-                                                          .with_vertex_colors(vertex_colors)
-                                                          .with_triangle_indices({{2, 1, 0}}));
         visualize_pulse(std::max(info.bound.size.x, info.bound.size.y) * 3.0f);
     }
 

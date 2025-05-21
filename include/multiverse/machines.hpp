@@ -110,6 +110,11 @@ namespace mvs {
         kaross.has_physics = false;
         robot_info.karos.push_back(kaross);
 
+        // hitch
+        concord::Bound hitch_bound =
+            concord::Bound(concord::Pose(0, -(height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
+        robot_info.hitches["back"] = hitch_bound;
+
         // color
         pigment::RGB robot_color = color;
         robot_info.color = robot_color;
