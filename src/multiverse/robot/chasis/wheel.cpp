@@ -83,14 +83,8 @@ namespace mvs {
         auto y = wheel->GetPosition().y;
         auto th = wheel->GetRotation().GetAngle();
 
-        auto new_throttle = utils::mapper(throttle_val, -throttle_max, throttle_max, -1.0f, 1.0f);
-
-        pigment::HSV h = pigment::HSV::fromRGB(color);
-        h.adjustBrightness(std::abs(new_throttle));
-        auto c = h.toRGB();
-
         std::vector<rerun::Color> colors;
-        colors.push_back(rerun::Color(c.r, c.g, c.b));
+        colors.push_back(rerun::Color(color.r, color.g, color.b));
 
         rec->log_static(
             this->parent_name + "/chasis/wheel/" + this->name,
