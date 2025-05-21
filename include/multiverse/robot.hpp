@@ -31,7 +31,7 @@ namespace mvs {
         std::vector<std::shared_ptr<Robot>> slaves;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
-        std::vector<float> steerings_diff, throttles_diff;
+        std::vector<float> steerings_diff;
 
         muli::CollisionFilter filter;
         concord::Pose spawn_position;

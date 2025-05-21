@@ -115,7 +115,7 @@ int main() {
                         }
 
                         if (axis == 1) {
-                            float throttle = value * 0.1f;
+                            float throttle = value;
                             throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
                             sim->get_robot(selected_robot_idx).set_linear(throttle);
                         }

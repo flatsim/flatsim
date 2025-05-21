@@ -41,7 +41,6 @@ namespace mvs {
         steerings_max = robo.controlz.steerings_max;
         steerings_diff = robo.controlz.steerings_diff;
         throttles.resize(robo.wheels.size(), 0.0f);
-        throttles_diff.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controlz.throttles_max;
     }
 
@@ -60,16 +59,13 @@ namespace mvs {
         for (size_t i = 0; i < steerings.size(); ++i) {
             float o1 = steerings_max[i] - sign * steerings_diff[i];
             float o2 = -steerings_max[i] + sign * steerings_diff[i];
-            throttles_diff[i] += sign * steerings[i];
-            steerings[i] = mapValue(angular, in_min, in_max, o1, o2);
+            steerings[i] = utils::mapper(angular, in_min, in_max, o1, o2);
         }
     }
 
     void Robot::set_linear(float linear) {
         constexpr float in_min = -1.0f, in_max = 1.0f;
         for (uint i = 0; i < throttles.size(); ++i) {
-            float o1 = throttles_max[i] + throttles_diff[i];
-            float o2 = -throttles_max[i] + throttles_diff[i];
             auto lin_val = linear;
             if (steerings[i] > 0.0f && info.controlz.left_side[i]) {
                 auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
@@ -78,7 +74,7 @@ namespace mvs {
                 auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
                 lin_val = linear * proportion;
             }
-            throttles[i] = mapValue(lin_val, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
+            throttles[i] = utils::mapper(lin_val, in_min, in_max, throttles_max[i], -throttles_max[i]);
         }
     }
 

@@ -36,7 +36,8 @@ namespace mvs {
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], force, friction, maxImpulse, brake, drag);
+            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], force, friction, maxImpulse, brake, drag,
+                       robo.controlz.throttles_max[i], robo.controlz.steerings_max[i]);
             wheelz.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);

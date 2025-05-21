@@ -30,12 +30,13 @@ namespace mvs {
         float friction, maxImpulse;
 
         float throttle_val = 0.0f, steering_val = 0.0f;
+        float steering_max, throttle_max;
 
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound bound,
                   concord::Bound parent_bound, float _force, float _friction, float _maxImpulse, float _brake,
-                  float _drag);
+                  float _drag, float throttle_max, float steering_max);
 
         void tick(float dt);
         void visualize();

@@ -8,12 +8,14 @@ namespace mvs {
         : world(world), rec(rec), filter(filter) {}
 
     void Wheel::init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
-                     concord::Bound bound, float _force, float _friction, float _maxImpulse, float _brake,
-                     float _drag) {
+                     concord::Bound bound, float _force, float _friction, float _maxImpulse, float _brake, float _drag,
+                     float throttle_max, float steering_max) {
         this->bound = bound;
         this->color = color;
         this->name = name;
         this->parent_name = parent_name;
+        this->steering_max = steering_max;
+        this->throttle_max = throttle_max;
 
         pose = utils::shift(parent_bound.pose, bound.pose);
         auto wheelTf = utils::pose_to_transform(pose);
@@ -81,8 +83,10 @@ namespace mvs {
         auto y = wheel->GetPosition().y;
         auto th = wheel->GetRotation().GetAngle();
 
+        auto new_throttle = utils::mapper(throttle_val, -throttle_max, throttle_max, -1.0f, 1.0f);
+
         pigment::HSV h = pigment::HSV::fromRGB(color);
-        h.adjustBrightness(std::abs(throttle_val));
+        h.adjustBrightness(std::abs(new_throttle));
         auto c = h.toRGB();
 
         std::vector<rerun::Color> colors;
