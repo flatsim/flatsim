@@ -57,6 +57,12 @@ namespace mvs {
             karosserie.init(color, name, k.name, bound, k.bound, filter, k.has_physics);
             karosseriez.push_back(karosserie);
         }
+
+        for (auto const &h : robo.hitches) {
+            Hitch hitch(rec, world);
+            hitch.init(color, name, h.first, bound, h.second, filter);
+            hitchz.push_back(hitch);
+        }
     }
 
     void Chasis::tick(float dt) {
@@ -66,6 +72,9 @@ namespace mvs {
         }
         for (uint i = 0; i < karosseriez.size(); ++i) {
             karosseriez[i].tick(dt, pose);
+        }
+        for (uint i = 0; i < hitchz.size(); ++i) {
+            hitchz[i].tick(dt, pose);
         }
     }
 

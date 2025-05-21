@@ -2,6 +2,7 @@
 
 #include "concord/types_basic.hpp"
 #include "muli/world.h"
+#include "multiverse/robot/chasis/hitch.hpp"
 #include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
 #include "multiverse/types.hpp"
@@ -39,6 +40,7 @@ namespace mvs {
       public:
         std::shared_ptr<muli::RigidBody> bodyz;
         std::vector<Karosserie> karosseriez;
+        std::vector<Hitch> hitchz;
         RigidBody *body;
         std::string name;
         pigment::RGB color;

@@ -36,7 +36,7 @@ namespace mvs {
         concord::Polygon outline;
         std::vector<concord::Bound> wheels;
         RobotControll controlz;
-        std::unordered_map<std::string, concord::Pose> hooks;
+        std::unordered_map<std::string, concord::Bound> hitches;
         std::vector<KarosserieInfo> karos;
     };
 

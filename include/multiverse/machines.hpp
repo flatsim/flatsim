@@ -54,7 +54,7 @@ namespace mvs {
         kaross.bound = concord::Bound(concord::Pose(0.0f, -(height / 2) - k_size.y / 2, 0.0f), k_size);
         kaross.color = color;
         kaross.controllable = false;
-        kaross.has_physics = true;
+        kaross.has_physics = false;
         robot_info.karos.push_back(kaross);
 
         // color

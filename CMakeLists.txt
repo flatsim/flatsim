@@ -60,8 +60,9 @@ include_directories(include)
 # --------------------------------------------------------------------------------------------------
 set(int_deps
     src/multiverse/robot/chasis/karosserie.cpp
-    src/multiverse/robot/chasis/chasis.cpp
     src/multiverse/robot/chasis/wheel.cpp
+    src/multiverse/robot/chasis/hitch.cpp
+    src/multiverse/robot/chasis/chasis.cpp
     src/multiverse/robot/sensor.cpp
     src/multiverse/robot.cpp
     src/multiverse/world/layer.cpp
