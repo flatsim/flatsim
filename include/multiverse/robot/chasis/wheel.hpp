@@ -5,6 +5,7 @@
 #include "multiverse/utils.hpp"
 #include "pigment/types_basic.hpp"
 #include <rerun.hpp>
+#include <spdlog/spdlog.h>
 
 namespace mvs {
     using namespace muli;
@@ -27,6 +28,8 @@ namespace mvs {
         float force, torque;
         float brake, drag;
         float friction, maxImpulse;
+
+        float throttle_val = 0.0f, steering_val = 0.0f;
 
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);

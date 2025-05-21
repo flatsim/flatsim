@@ -68,6 +68,13 @@ namespace mvs {
             return new_pose;
         }
 
+        inline float ackermann_scale(float angleRad, float trackWidth) {
+            if (std::fabs(angleRad) < 1e-6f)
+                return 1.0f;
+            float R = trackWidth / std::tan(angleRad);
+            return (R - (trackWidth * 0.5f)) / R;
+        }
+
         inline muli::Transform pose_to_transform(const concord::Pose &pose) {
             muli::Rotation rot(pose.angle.yaw);
             muli::Vec2 pos;

@@ -100,6 +100,8 @@ namespace mvs {
 
     void Chasis::update(std::vector<float> steering, std::vector<float> throttle) {
         for (uint i = 0; i < wheelz.size(); ++i) {
+            wheelz[i].steering_val = steering[i];
+            wheelz[i].throttle_val = throttle[i];
             jointz[i]->SetAngularOffset(steering[i]);
             Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
             wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);

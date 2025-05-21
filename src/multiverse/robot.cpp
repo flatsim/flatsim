@@ -70,7 +70,15 @@ namespace mvs {
         for (uint i = 0; i < throttles.size(); ++i) {
             float o1 = throttles_max[i] + throttles_diff[i];
             float o2 = -throttles_max[i] + throttles_diff[i];
-            throttles[i] = mapValue(linear, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
+            auto lin_val = linear;
+            if (steerings[i] > 0.0f && info.controlz.left_side[i]) {
+                auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
+                lin_val = linear * proportion;
+            } else if (steerings[i] < 0.0f && !info.controlz.left_side[i]) {
+                auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
+                lin_val = linear * proportion;
+            }
+            throttles[i] = mapValue(lin_val, -1.0f, 1.0f, throttles_max[i], -throttles_max[i]);
         }
     }
 

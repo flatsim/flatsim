@@ -60,6 +60,8 @@ namespace mvs {
     }
 
     void Wheel::update(float steering, float throttle, MotorJoint *joint) {
+        throttle_val = throttle;
+        steering_val = steering;
         if (steering == 0.0f) {
             joint->SetAngularOffset(steering);
         } else {
@@ -80,7 +82,7 @@ namespace mvs {
         auto th = wheel->GetRotation().GetAngle();
 
         pigment::HSV h = pigment::HSV::fromRGB(color);
-        h.adjustBrightness(0.7f);
+        h.adjustBrightness(std::abs(throttle_val));
         auto c = h.toRGB();
 
         std::vector<rerun::Color> colors;

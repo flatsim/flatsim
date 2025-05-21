@@ -12,6 +12,7 @@
 #include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/types.hpp"
+#include "multiverse/utils.hpp"
 #include "multiverse/world.hpp"
 #include "pigment/types_basic.hpp"
 #include "spdlog/spdlog.h"
