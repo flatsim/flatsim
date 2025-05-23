@@ -33,8 +33,8 @@ namespace mvs {
         robot_info.wheels = wheels;
 
         // control limits
-        std::vector<float> steerings_max = {-deg2rad(14), -deg2rad(14), 0.0f, 0.0f, deg2rad(25), deg2rad(25)};
-        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 2.0f};
+        std::vector<float> steerings_max = {deg2rad(14), deg2rad(14), 0.0f, 0.0f, -deg2rad(25), -deg2rad(25)};
+        std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f};
         std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
         std::vector<bool> left_side = {false, true, false, true, false, true};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
@@ -95,7 +95,7 @@ namespace mvs {
 
         // control limits
         std::vector<float> steerings_max = {deg2rad(35), deg2rad(35), 0.0f, 0.0f};
-        std::vector<float> throttles_max = {0.0f, 0.0f, 1.0f, 1.0f};
+        std::vector<float> throttles_max = {0.0f, 0.0f, 0.2f, 0.2f};
         std::vector<float> steerings_diff = {-deg2rad(4), deg2rad(4), 0.0f, 0.0f};
         std::vector<bool> left_side = {false, true, false, true};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
@@ -113,7 +113,7 @@ namespace mvs {
         // hitch
         concord::Bound hitch_bound =
             concord::Bound(concord::Pose(0, -(height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
-        robot_info.hitches["back"] = hitch_bound;
+        robot_info.hitches["hook"] = hitch_bound;
 
         // color
         pigment::RGB robot_color = color;
@@ -121,4 +121,47 @@ namespace mvs {
 
         return robot_info;
     }
+
+    inline mvs::RobotInfo biner(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
+                                std::string uuid = "") {
+        // extract dimensions
+        const float width = 1.5f;
+        const float height = 2.6f;
+
+        mvs::RobotInfo robot_info;
+        robot_info.RCI = 3;
+        robot_info.name = name;
+        robot_info.uuid = uuid.empty() ? name : uuid;
+        robot_info.type = "tractor";
+        robot_info.works_on = {"food"};
+
+        // overall bound
+        robot_info.bound = concord::Bound(pose, concord::Size(width, height, 0.0f));
+
+        // wheels: back
+        std::vector<concord::Bound> wheels;
+        concord::Size back_w_size{width * 0.22f, height * 0.30f, 0.0f};
+        wheels.push_back(concord::Bound(concord::Pose(width / 2, -(height / 2) * 0.6f, 0.0f), back_w_size));
+        wheels.push_back(concord::Bound(concord::Pose(-width / 2, -(height / 2) * 0.6f, 0.0f), back_w_size));
+        robot_info.wheels = wheels;
+
+        // control limits
+        std::vector<float> steerings_max = {0.0f, 0.0f};
+        std::vector<float> throttles_max = {0.0f, 0.0f};
+        std::vector<float> steerings_diff = {0.0f, 0.0f};
+        std::vector<bool> left_side = {false, true};
+        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
+
+        // hitch
+        concord::Bound hitch_bound =
+            concord::Bound(concord::Pose(0, (height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
+        robot_info.hitches["hook"] = hitch_bound;
+
+        // color
+        pigment::RGB robot_color = color;
+        robot_info.color = robot_color;
+
+        return robot_info;
+    }
+
 } // namespace mvs

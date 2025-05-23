@@ -30,10 +30,6 @@ FetchContent_Declare(concord GIT_REPOSITORY https://github.com/smolfetch/concord
 FetchContent_MakeAvailable(concord)
 list(APPEND ext_deps concord::concord)
 
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git GIT_TAG main)
-FetchContent_MakeAvailable(farmtrax)
-list(APPEND ext_deps farmtrax::farmtrax)
-
 FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/smolfetch/pigment.git GIT_TAG main)
 FetchContent_MakeAvailable(pigment)
 list(APPEND ext_deps pigment::pigment)
@@ -41,6 +37,18 @@ list(APPEND ext_deps pigment::pigment)
 FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/smolfetch/entropy.git GIT_TAG main)
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
+
+FetchContent_Declare(geoson GIT_REPOSITORY https://github.com/smolfetch/geoson.git GIT_TAG main)
+FetchContent_MakeAvailable(geoson)
+list(APPEND ext_deps geoson::geoson)
+
+FetchContent_Declare(geotiv GIT_REPOSITORY https://github.com/smolfetch/geotiv.git GIT_TAG main)
+FetchContent_MakeAvailable(geotiv)
+list(APPEND ext_deps geotiv::geotiv)
+
+FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git GIT_TAG main)
+FetchContent_MakeAvailable(farmtrax)
+list(APPEND ext_deps farmtrax::farmtrax)
 
 FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
 FetchContent_MakeAvailable(rerun_sdk)

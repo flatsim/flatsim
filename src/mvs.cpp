@@ -86,8 +86,6 @@ int main() {
                                        pigment::RGB(255, 200, 0)));
     sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 0.0f), "oxbo" + std::to_string(2),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(
-        mvs::tractor(concord::Pose(10 * 3, 10 * 3, 0.0f), "tractor" + std::to_string(3), pigment::RGB(232, 21, 232)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
@@ -135,6 +133,9 @@ int main() {
                             sim->get_robot(selected_robot_idx).respawn();
                         }
                         if (button == 9 && pressed) {
+                            sim->get_robot(selected_robot_idx).pulse();
+                        }
+                        if (button == 10 && pressed) {
                             sim->get_robot(selected_robot_idx).pulse();
                         }
                     }
