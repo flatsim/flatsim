@@ -54,6 +54,7 @@ namespace mvs {
         void color_field();
         void to_image(std::vector<uint8_t> &image);
         void visualize();
+        concord::Grid<uint8_t> get_grid_data();
 
         concord::Point at(uint x, uint y) const { return grid.at(x, y).first; }
         GridData data_at(uint x, uint y) const { return grid.at(x, y).second; }

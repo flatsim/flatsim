@@ -114,6 +114,32 @@ namespace mvs {
         }
     }
 
+    concord::Grid<uint8_t> Layer::get_grid_data() {
+        // Use the same size, resolution, datum and pose as the original grid:
+        const auto rows = grid.rows();
+        const auto cols = grid.cols();
+        const auto res = info.resolution;  // meters per pixel
+        const auto pose = info.bound.pose; // ENU shift & rotation
+
+        // Construct a new Grid<uint8_t> with the same geo‐layout:
+        concord::Grid<uint8_t> out(rows, cols, // dimensions
+                                   res,        // cell size
+                                   datum,      // reference datum
+                                   /*centered=*/true, pose);
+
+        // Copy over each cell’s “data” value, converting to byte:
+        for (size_t r = 0; r < rows; ++r) {
+            for (size_t c = 0; c < cols; ++c) {
+                // grid(r,c).second.data is your float
+                float val = grid(r, c).second.data;
+                uint8_t b = utils::float_to_byte(val);
+                out(r, c).second = b;
+            }
+        }
+
+        return out;
+    }
+
     void Layer::visualize() {
         rerun::Color colorz(this->info.color.r, this->info.color.g, this->info.color.b);
         to_image(image);

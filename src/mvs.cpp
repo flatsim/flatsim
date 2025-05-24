@@ -12,6 +12,8 @@
 #include "multiverse/types.hpp"
 #include "rerun/recording_stream.hpp"
 
+#include "geotiv/writter.hpp"
+
 int main() {
     bool joystk = true;
     int selected_robot_idx = 0;
@@ -79,6 +81,21 @@ int main() {
     layer_info.resolution = 0.2f;
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
+
+    geotiv::RasterCollection rc;
+    rc.crs = concord::CRS::WGS;
+    rc.datum = world_datum;
+    rc.heading = concord::Euler{0.0, 0.0, 0.0};
+    rc.resolution = layer_info.resolution;
+
+    geotiv::Layer layer;
+    layer.grid = sim->get_layer(0).get_grid_data();
+    layer.samplesPerPixel = 1; // single channel
+    layer.planarConfig = 1;    // chunky
+    rc.layers.push_back(layer);
+
+    // std::filesystem::path outPath = "output.tif";
+    // geotiv::WriteRasterCollection(rc, outPath);
 
     sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
                                        pigment::RGB(255, 200, 0)));
