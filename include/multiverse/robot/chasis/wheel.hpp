@@ -1,11 +1,8 @@
 #pragma once
 
-#include "concord/types_basic.hpp"
 #include "muli/world.h"
+#include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
-#include "pigment/types_basic.hpp"
-#include <rerun.hpp>
-#include <spdlog/spdlog.h>
 
 namespace mvs {
     using namespace muli;

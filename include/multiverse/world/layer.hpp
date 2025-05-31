@@ -1,12 +1,5 @@
 #pragma once
 
-#include "concord/types_basic.hpp"
-#include "concord/types_grid.hpp"
-#include "pigment/types_basic.hpp"
-#include "rerun.hpp"
-#include "spdlog/spdlog.h"
-#include <entropy/noisegen.hpp>
-
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
 

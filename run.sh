@@ -2,9 +2,9 @@
 
 
 # @cmd build cmake
-# @alias b
-# # @flag      --arrow        Enable gui support
-buildit() {
+# @alias c
+# # @flag      --arrow            Download and build arrow
+compileit() {
     CURR_DIR=$(pwd)
     if [[ ! -d "$TOP_HEAD/build" ]] then
         mkdir "$TOP_HEAD/build";
@@ -18,9 +18,9 @@ buildit() {
 }
 
 
-# @cmd make project
-# @alias m
-makeit() {
+# @cmd build project
+# @alias b
+buildit() {
     CURR_DIR=$(pwd)
     cd "$TOP_HEAD/build"
     only_name=$(basename "$TOP_HEAD")
@@ -29,8 +29,16 @@ makeit() {
 }
 
 
-# @cmd mark as releaser
+# @cmd run project
 # @alias r
+runit() {
+    CURR_DIR=$(pwd)
+    $TOP_HEAD/build/./main
+    cd "$CURR_DIR"
+}
+
+
+# @cmd mark as releaser
 # @arg type![patch|minor|major] Release type
 release() {
     CURRENT_VERSION=$(grep -E '^project\(.*VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt \
@@ -51,9 +59,19 @@ release() {
             ;;
     esac
     version="$MAJOR.$MINOR.$PATCH"
+        # Get the latest tag to create a range for changelog generation
+    LATEST_TAG=$(git tag --list --sort=-version:refname | head -n 1)
+    if [ -n "$LATEST_TAG" ]; then
+        # Get changelog content for release notes (changes since last tag)
+        changelog=$(git cliff $LATEST_TAG..HEAD --strip all)
+        # Generate changelog and prepend to existing file (changes since last tag)
+        git cliff --tag $version $LATEST_TAG..HEAD --prepend CHANGELOG.md
+    else
+        # First release - get all changes
+        changelog=$(git cliff --unreleased --strip all)
+        git cliff --tag $version --unreleased --prepend CHANGELOG.md
+    fi
     sed -i -E "s/(project\(.*VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1$version/" CMakeLists.txt
-    git cliff --tag $version > CHANGELOG.md
-    changelog=$(git cliff --unreleased --strip all)
     git add -A && git commit -m "chore(release): prepare for $version"
     echo "$changelog"
     git tag -a $version -m "$version" -m "$changelog"

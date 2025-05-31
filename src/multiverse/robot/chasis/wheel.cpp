@@ -1,5 +1,4 @@
 #include "multiverse/robot/chasis/wheel.hpp"
-#include "pigment/types_hsv.hpp"
 
 namespace mvs {
 

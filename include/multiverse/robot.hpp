@@ -6,18 +6,12 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "concord/types_basic.hpp"
-#include "concord/types_circle.hpp"
-#include "concord/types_polygon.hpp"
 #include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
 #include "multiverse/world.hpp"
-#include "pigment/types_basic.hpp"
-#include "spdlog/spdlog.h"
 
-#include <rerun.hpp>
 #include <vector>
 
 namespace mvs {

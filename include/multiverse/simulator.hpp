@@ -4,11 +4,8 @@
 #include "multiverse/types.hpp"
 #include "multiverse/world.hpp"
 
-#include "pigment/types_basic.hpp"
-
 #include "muli/world.h"
 #include <optional>
-#include <rerun.hpp>
 
 namespace mvs {
     class Simulator {

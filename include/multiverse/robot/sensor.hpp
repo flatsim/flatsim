@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "concord/types_basic.hpp"
+#include "multiverse/types.hpp"
+#include "multiverse/utils.hpp"
 
 namespace mvs {
     class Sensor {

@@ -12,10 +12,10 @@
 #include "multiverse/types.hpp"
 #include "rerun/recording_stream.hpp"
 
-#include "geotiv/writter.hpp"
+#include "geotiv/geotiv.hpp"
 
 int main() {
-    bool joystk = true;
+    bool joystk = false;
     int selected_robot_idx = 0;
     int js_fd;
     unsigned char num_axes = 0, num_buttons = 0;
@@ -94,8 +94,8 @@ int main() {
     layer.planarConfig = 1;    // chunky
     rc.layers.push_back(layer);
 
-    // std::filesystem::path outPath = "output.tif";
-    // geotiv::WriteRasterCollection(rc, outPath);
+    std::filesystem::path outPath = "output.tif";
+    geotiv::WriteRasterCollection(rc, outPath);
 
     sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
                                        pigment::RGB(255, 200, 0)));

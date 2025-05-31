@@ -1,19 +1,14 @@
 #pragma once
 
-#include "concord/types_basic.hpp"
-#include "concord/types_grid.hpp"
-#include "concord/types_rectangle.hpp"
-#include "concord/types_square.hpp"
 #include "muli/math.h"
 #include "muli/polygon.h"
 #include "muli/rigidbody.h"
 #include "muli/settings.h"
 #include "muli/world.h"
-#include "pigment/types_basic.hpp"
-#include "rerun.hpp"
 
 #include "multiverse/robot.hpp"
 #include "multiverse/types.hpp"
+#include "multiverse/utils.hpp"
 #include "multiverse/world/layer.hpp"
 
 namespace mvs {

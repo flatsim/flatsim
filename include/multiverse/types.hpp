@@ -1,8 +1,8 @@
 #pragma once
 
-#include "concord/types_basic.hpp"
-#include "concord/types_polygon.hpp"
-#include "pigment/types_basic.hpp"
+#include "concord/concord.hpp"
+#include "entropy/entropy.hpp"
+#include "pigment/pigment.hpp"
 #include "rerun.hpp"
 #include <unordered_map>
 namespace mvs {

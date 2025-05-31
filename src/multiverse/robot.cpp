@@ -1,6 +1,4 @@
 #include "multiverse/robot.hpp"
-#include "pigment/types_hsv.hpp"
-#include <cmath>
 
 namespace mvs {
 
