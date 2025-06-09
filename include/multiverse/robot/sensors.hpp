@@ -2,6 +2,8 @@
 
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/robot/sensors/gps_sensor.hpp"
+#include "multiverse/robot/sensors/imu_sensor.hpp"
+#include "multiverse/robot/sensors/lidar_sensor.hpp"
 
 // This header includes all available sensors for easy access
 // Add new sensor includes here as you create them
