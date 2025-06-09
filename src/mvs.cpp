@@ -15,11 +15,11 @@
 #include "geotiv/geotiv.hpp"
 
 int main(int argc, char *argv[]) {
-    bool joystk = true;
+    bool joystk = false;
 
     if (argc > 1) {
-        if (std::strcmp(argv[1], "--no-joystick") == 0) {
-            joystk = false;
+        if (std::strcmp(argv[1], "--joystick") == 0) {
+            joystk = true;
         }
     }
 
