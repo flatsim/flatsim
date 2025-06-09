@@ -5,9 +5,8 @@
 #include "multiverse/utils.hpp"
 
 namespace mvs {
-    using namespace muli;
+    // Remove duplicate function - use utils::deg2rad instead
     // --- Utility functions ---
-    inline float DegToRad(float deg) { return deg * static_cast<float>(M_PI) / 180.0f; }
 
     class Wheel {
       public:
@@ -20,8 +19,8 @@ namespace mvs {
         concord::Pose pose;
         muli::CollisionFilter filter;
 
-        RigidBody *wheel;
-        Vec2 forward, normal;
+        muli::RigidBody *wheel;
+        muli::Vec2 forward, normal;
         float force, torque;
         float brake, drag;
         float friction, maxImpulse;
@@ -30,7 +29,7 @@ namespace mvs {
         float steering_max, throttle_max;
 
         Wheel() = default;
-        Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
+        Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
         void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound bound,
                   concord::Bound parent_bound, float _force, float _friction, float _maxImpulse, float _brake,
                   float _drag, float throttle_max, float steering_max);
@@ -38,7 +37,7 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose pose);
-        void update(float steering, float throttle, MotorJoint *joint);
+        void update(float steering, float throttle, muli::MotorJoint *joint);
 
         concord::Bound get_bound() const { return bound; }
     };

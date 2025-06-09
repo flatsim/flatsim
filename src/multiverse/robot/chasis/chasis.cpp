@@ -18,7 +18,7 @@ namespace mvs {
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
                                 //
-        Transform t;
+        muli::Transform t;
         t.position.x = bound.pose.point.enu.x;
         t.position.y = bound.pose.point.enu.y;
         t.rotation = bound.pose.angle.yaw;
@@ -26,8 +26,8 @@ namespace mvs {
         body = world->CreateBox(w, h, t);
         body->SetCollisionFilter(filter);
 
-        body->SetLinearDamping(linearDamping);
-        body->SetAngularDamping(angularDamping);
+        body->SetLinearDamping(mvs::constants::linearDamping);
+        body->SetAngularDamping(mvs::constants::angularDamping);
 
         float mf = -1;
         float fr = -1;
@@ -36,11 +36,11 @@ namespace mvs {
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], force, friction, maxImpulse, brake, drag,
+            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], mvs::constants::force, mvs::constants::friction, mvs::constants::maxImpulse, mvs::constants::brake, mvs::constants::drag,
                        robo.controlz.throttles_max[i], robo.controlz.steerings_max[i]);
             wheelz.push_back(wheel);
 
-            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, torque, fr, dr, jm);
+            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, mvs::constants::torque, fr, dr, jm);
             jointz.emplace_back(joint);
 
             float mm = std::abs(robo.controlz.steerings_max[i] + robo.controlz.steerings_diff[i]);
@@ -48,10 +48,10 @@ namespace mvs {
             anglejointz.emplace_back(anglejoing);
         }
 
-        wheel_damping(linearDamping, angularDamping);
+        wheel_damping(mvs::constants::linearDamping, mvs::constants::angularDamping);
 
-        auto main_left_hook = Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
-        auto main_right_hook = Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
+        auto main_left_hook = muli::Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
+        auto main_right_hook = muli::Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
 
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
@@ -104,7 +104,7 @@ namespace mvs {
             wheelz[i].steering_val = steering[i];
             wheelz[i].throttle_val = throttle[i];
             jointz[i]->SetAngularOffset(steering[i]);
-            Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
+            muli::Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
             wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);
         }
     }
@@ -125,7 +125,7 @@ namespace mvs {
     }
 
     void Chasis::teleport(concord::Pose pose) {
-        Transform t;
+        muli::Transform t;
         t.position.x = pose.point.enu.x;
         t.position.y = pose.point.enu.y;
         t.rotation = pose.angle.yaw;

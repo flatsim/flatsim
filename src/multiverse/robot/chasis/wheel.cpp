@@ -3,7 +3,7 @@
 namespace mvs {
 
     Wheel::Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                 CollisionFilter filter)
+                 muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
     void Wheel::init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
@@ -29,30 +29,30 @@ namespace mvs {
     }
 
     void Wheel::tick(float dt) {
-        const Vec2 up(0, 1);
-        const Vec2 right(1, 0);
+        const muli::Vec2 up(0, 1);
+        const muli::Vec2 right(1, 0);
 
         forward = Mul(wheel->GetRotation(), up);
         normal = Mul(wheel->GetRotation(), right);
 
-        Vec2 v = wheel->GetLinearVelocity();
+        muli::Vec2 v = wheel->GetLinearVelocity();
         float vf = Dot(v, forward);
         float vn = Dot(v, normal);
 
-        if (Abs(vn) > epsilon) {
-            Vec2 j = -wheel->GetMass() * friction * vn * normal;
-            if (Length(j) > maxImpulse) {
-                j = Normalize(j) * maxImpulse;
+        if (muli::Abs(vn) > muli::epsilon) {
+            muli::Vec2 j = -wheel->GetMass() * friction * vn * normal;
+            if (muli::Length(j) > maxImpulse) {
+                j = muli::Normalize(j) * maxImpulse;
             }
             wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
         }
 
         float av = wheel->GetAngularVelocity();
-        if (Abs(av) > epsilon) {
+        if (muli::Abs(av) > muli::epsilon) {
             wheel->ApplyAngularImpulse(0.1f * wheel->GetInertia() * -av, true);
         }
 
-        if (Abs(vf) > epsilon) {
+        if (muli::Abs(vf) > muli::epsilon) {
             float dragForceMagnitude = -drag * vf;
             wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
         }
@@ -60,14 +60,14 @@ namespace mvs {
         visualize();
     }
 
-    void Wheel::update(float steering, float throttle, MotorJoint *joint) {
+    void Wheel::update(float steering, float throttle, muli::MotorJoint *joint) {
         throttle_val = throttle;
         steering_val = steering;
         if (steering == 0.0f) {
             joint->SetAngularOffset(steering);
         } else {
             joint->SetAngularOffset(0.0f);
-            Vec2 f2 = forward * (throttle * force);
+            muli::Vec2 f2 = forward * (throttle * force);
             wheel->ApplyForce(wheel->GetPosition(), f2, true);
         }
     }

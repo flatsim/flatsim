@@ -1,6 +1,7 @@
 #pragma once
 
 #include "muli/world.h"
+#include "multiverse/constants.hpp"
 #include "multiverse/robot/chasis/hitch.hpp"
 #include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
@@ -11,20 +12,6 @@
 #include <spdlog/spdlog.h>
 
 namespace mvs {
-    using namespace muli;
-
-    // --- Global toggles & parameters ----------------
-    inline constexpr bool followCam = true;
-    inline constexpr bool rotateCam = false;
-    inline constexpr bool drawAxis = false;
-    inline constexpr float linearDamping = 0.2f;
-    inline constexpr float angularDamping = 0.2f;
-    inline constexpr float force = 30.0f;
-    inline constexpr float torque = 10.0f;
-    inline constexpr float friction = 0.4f;
-    inline constexpr float maxImpulse = 0.5f;
-    inline constexpr float brake = 10.0f;
-    inline constexpr float drag = 0.5f;
 
     class Chasis {
       private:
@@ -39,14 +26,14 @@ namespace mvs {
         std::shared_ptr<muli::RigidBody> bodyz;
         std::vector<Karosserie> karosseriez;
         std::vector<Hitch> hitchz;
-        RigidBody *body;
+        muli::RigidBody *body;
         std::string name;
         pigment::RGB color;
         concord::Bound bound;
         concord::Pose pose;
         uint32_t group;
 
-        Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, CollisionFilter filter);
+        Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
 
         void init(mvs::RobotInfo &robo);
 

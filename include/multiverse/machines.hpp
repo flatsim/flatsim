@@ -1,8 +1,9 @@
+#pragma once
+
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
 
 namespace mvs {
-    using namespace utils;
 
     inline mvs::RobotInfo oxbo_harvester(concord::Pose pose, std::string name,
                                          pigment::RGB color = pigment::RGB(255, 200, 0), std::string uuid = "") {
@@ -32,9 +33,9 @@ namespace mvs {
         robot_info.wheels = wheels;
 
         // control limits
-        std::vector<float> steerings_max = {deg2rad(14), deg2rad(14), 0.0f, 0.0f, -deg2rad(25), -deg2rad(25)};
+        std::vector<float> steerings_max = {utils::deg2rad(14), utils::deg2rad(14), 0.0f, 0.0f, -utils::deg2rad(25), -utils::deg2rad(25)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f};
-        std::vector<float> steerings_diff = {-deg2rad(2), deg2rad(2), 0.0f, 0.0f, deg2rad(4), -deg2rad(4)};
+        std::vector<float> steerings_diff = {-utils::deg2rad(2), utils::deg2rad(2), 0.0f, 0.0f, utils::deg2rad(4), -utils::deg2rad(4)};
         std::vector<bool> left_side = {false, true, false, true, false, true};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
 
@@ -93,9 +94,9 @@ namespace mvs {
         robot_info.wheels = wheels;
 
         // control limits
-        std::vector<float> steerings_max = {deg2rad(35), deg2rad(35), 0.0f, 0.0f};
+        std::vector<float> steerings_max = {utils::deg2rad(35), utils::deg2rad(35), 0.0f, 0.0f};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.2f, 0.2f};
-        std::vector<float> steerings_diff = {-deg2rad(4), deg2rad(4), 0.0f, 0.0f};
+        std::vector<float> steerings_diff = {-utils::deg2rad(4), utils::deg2rad(4), 0.0f, 0.0f};
         std::vector<bool> left_side = {false, true, false, true};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
 
