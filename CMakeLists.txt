@@ -132,6 +132,7 @@ set(int_deps
     src/multiverse/robot/chasis/chasis.cpp
     src/multiverse/robot/sensor.cpp
     src/multiverse/robot/sensors/gps_sensor.cpp
+    src/multiverse/robot/sensors/imu_sensor.cpp
     src/multiverse/robot.cpp
     src/multiverse/world/layer.cpp
     src/multiverse/world.cpp
