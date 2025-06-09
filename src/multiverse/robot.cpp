@@ -2,10 +2,6 @@
 
 namespace mvs {
 
-    double mapValue(double x, double in_min, double in_max, double out_min, double out_max) {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    }
-
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
         : rec(rec), world(world) {
         filter.bit = 1 << group;
@@ -128,7 +124,7 @@ namespace mvs {
             this->info.name + "/pulse/enu",
             rerun::LineStrips3D({{poi}})
                 .with_colors({{rerun::Color(info.color.r, info.color.g, info.color.b)}})
-                .with_radii({{float(mapValue(pulse_enu_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f,
+                .with_radii({{float(utils::mapper(pulse_enu_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f,
                                              0.03, 0.0005))}}));
 
         // visualize gps pulse
@@ -148,7 +144,7 @@ namespace mvs {
         rec->log_static(this->info.name + "/pulse/wgs",
                         rerun::GeoLineStrings(linestr)
                             .with_colors(rerun::Color(info.color.r, info.color.g, info.color.b))
-                            .with_radii({{float(mapValue(
+                            .with_radii({{float(utils::mapper(
                                 pulse_gps_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f * gps_mult,
                                 0.03 * gps_mult, 0.0005 * gps_mult))}}));
     }

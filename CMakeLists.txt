@@ -11,6 +11,11 @@ include(FetchContent)
 
 # Prevent duplicate dependencies 
 set(FETCHCONTENT_QUIET FALSE)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
+# Build configuration options
+option(MULTIVERSE_BUILD_TESTS "Build tests" OFF)
+option(MULTIVERSE_BUILD_EXAMPLES "Build examples" ON)
 
 set(params
     -Wno-unused-parameter
@@ -21,43 +26,93 @@ set(params
 )
 
 # --------------------------------------------------------------------------------------------------
+# External Dependencies
 set(ext_deps)
 
+# Muli Physics Engine
 set(MULI_BUILD_DEMO OFF)
-fetchcontent_declare( muli GIT_REPOSITORY https://github.com/Sopiro/Muli )
+FetchContent_Declare(muli 
+    GIT_REPOSITORY https://github.com/Sopiro/Muli
+    # Note: No GIT_TAG specified to use default branch
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(muli)
+if(NOT muli_POPULATED)
+    message(FATAL_ERROR "Failed to fetch muli dependency")
+endif()
 include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
-FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
+# Rerun Visualization SDK
+FetchContent_Declare(rerun_sdk 
+    URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
+)
 FetchContent_MakeAvailable(rerun_sdk)
+if(NOT rerun_sdk_POPULATED)
+    message(FATAL_ERROR "Failed to fetch rerun_sdk dependency")
+endif()
 list(APPEND ext_deps rerun_sdk)
 
-FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
+# Logging Library
+FetchContent_Declare(spdlog 
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git 
+    GIT_TAG v1.15.0
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(spdlog)
 list(APPEND ext_deps spdlog::spdlog)
 
-FetchContent_Declare(concord GIT_REPOSITORY https://github.com/smolfetch/concord.git GIT_TAG 1.2.0)
+# Concord Library
+FetchContent_Declare(concord 
+    GIT_REPOSITORY https://github.com/smolfetch/concord.git 
+    GIT_TAG 1.2.0
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(concord)
 list(APPEND ext_deps concord::concord)
 
-FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/smolfetch/pigment.git GIT_TAG main)
+# Pigment Library
+FetchContent_Declare(pigment 
+    GIT_REPOSITORY https://github.com/smolfetch/pigment.git 
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(pigment)
 list(APPEND ext_deps pigment::pigment)
 
-FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/smolfetch/entropy.git GIT_TAG develop)
+# Entropy Library
+FetchContent_Declare(entropy 
+    GIT_REPOSITORY https://github.com/smolfetch/entropy.git 
+    GIT_TAG develop
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(geoson GIT_REPOSITORY https://github.com/smolfetch/geoson.git GIT_TAG develop)
+# Geoson Library
+FetchContent_Declare(geoson 
+    GIT_REPOSITORY https://github.com/smolfetch/geoson.git 
+    GIT_TAG develop
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(geoson)
 list(APPEND ext_deps geoson::geoson)
 
-FetchContent_Declare(geotiv GIT_REPOSITORY https://github.com/smolfetch/geotiv.git GIT_TAG develop)
+# Geotiv Library
+FetchContent_Declare(geotiv 
+    GIT_REPOSITORY https://github.com/smolfetch/geotiv.git 
+    GIT_TAG develop
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(geotiv)
 list(APPEND ext_deps geotiv::geotiv)
 
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git GIT_TAG main)
+# Farmtrax Library
+FetchContent_Declare(farmtrax 
+    GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git 
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
@@ -100,9 +155,10 @@ foreach(src_file IN LISTS exe)
 endforeach()
 
 
+# Generate .execs file with all executable paths
+file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
+file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs" "")
 foreach(exec IN LISTS exec_names)
-  file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
-  file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
   get_filename_component(exec_name "${exec}" NAME)
   file(APPEND "${CMAKE_CURRENT_LIST_DIR}/.execs" "${CMAKE_CURRENT_LIST_DIR}/build/${exec_name}\n")
 endforeach()

@@ -33,7 +33,7 @@ buildit() {
 # @alias r
 runit() {
     CURR_DIR=$(pwd)
-    $TOP_HEAD/build/./main
+    $TOP_HEAD/build/./mvs
     cd "$CURR_DIR"
 }
 
