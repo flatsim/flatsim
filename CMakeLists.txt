@@ -142,6 +142,7 @@ set(int_deps
 
 set(exe
   src/mvs.cpp
+  examples/sensor_example.cpp
 )
 
 set(exec_names)

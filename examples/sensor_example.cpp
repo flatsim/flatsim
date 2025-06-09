@@ -107,10 +107,8 @@ void demonstrate_sensor_management() {
 
 // Note: This is an example file and would not typically be compiled
 // It demonstrates the sensor API usage
-#if 0
 int main() {
     demonstrate_gps_sensor();
     demonstrate_sensor_management();
     return 0;
 }
-#endif

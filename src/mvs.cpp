@@ -14,8 +14,15 @@
 
 #include "geotiv/geotiv.hpp"
 
-int main() {
-    bool joystk = false;
+int main(int argc, char *argv[]) {
+    bool joystk = true;
+
+    if (argc > 1) {
+        if (std::strcmp(argv[1], "--no-joystick") == 0) {
+            joystk = false;
+        }
+    }
+
     int selected_robot_idx = 0;
     int js_fd;
     unsigned char num_axes = 0, num_buttons = 0;
