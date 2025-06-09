@@ -11,7 +11,8 @@ namespace mvs {
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
-            sensor->tick(dt, info.bound.pose);
+            sensor->set_robot_pose(info.bound.pose);
+            sensor->update(dt);
         }
         this->info.bound.pose.point.enu.x = chassis->get_transform().position.x;
         this->info.bound.pose.point.enu.y = chassis->get_transform().position.y;
@@ -148,4 +149,19 @@ namespace mvs {
                                 pulse_gps_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f * gps_mult,
                                 0.03 * gps_mult, 0.0005 * gps_mult))}}));
     }
+
+    // Sensor management methods
+    void Robot::add_sensor(std::unique_ptr<Sensor> sensor) {
+        sensors.push_back(std::move(sensor));
+    }
+
+    Sensor* Robot::get_sensor(const std::string& type) const {
+        for (const auto& sensor : sensors) {
+            if (sensor->get_type() == type) {
+                return sensor.get();
+            }
+        }
+        return nullptr;
+    }
+
 } // namespace mvs

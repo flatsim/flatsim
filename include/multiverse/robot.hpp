@@ -8,6 +8,7 @@
 
 #include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
+#include "multiverse/robot/sensors/gps_sensor.hpp"
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
 #include "multiverse/world.hpp"
@@ -46,6 +47,20 @@ namespace mvs {
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
+        
+        // Sensor management
+        void add_sensor(std::unique_ptr<Sensor> sensor);
+        template<typename T>
+        T* get_sensor() const {
+            for (const auto& sensor : sensors) {
+                T* typed_sensor = dynamic_cast<T*>(sensor.get());
+                if (typed_sensor) {
+                    return typed_sensor;
+                }
+            }
+            return nullptr;
+        }
+        Sensor* get_sensor(const std::string& type) const;
 
         const concord::Pose &get_position() const { return info.bound.pose; }
         void pulse() { pulsining = true; }
