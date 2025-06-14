@@ -15,7 +15,7 @@
 #include "geotiv/geotiv.hpp"
 
 int main(int argc, char *argv[]) {
-    bool joystk = false;
+    bool joystk = true;
 
     if (argc > 1) {
         if (std::strcmp(argv[1], "--joystick") == 0) {
