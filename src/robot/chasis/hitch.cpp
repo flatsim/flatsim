@@ -17,8 +17,8 @@ namespace mvs {
     void Hitch::tick(float dt, concord::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
 
-        pose.point.enu.x = new_pose.point.enu.x;
-        pose.point.enu.y = new_pose.point.enu.y;
+        pose.point.x = new_pose.point.x;
+        pose.point.y = new_pose.point.y;
         pose.angle.yaw = new_pose.angle.yaw;
 
         visualize();
@@ -27,16 +27,19 @@ namespace mvs {
     void Hitch::teleport(concord::Pose trans_pose) { pose = trans_pose; }
 
     void Hitch::visualize() {
-        auto k_x = pose.point.enu.x;
-        auto k_y = pose.point.enu.y;
+        auto k_x = pose.point.x;
+        auto k_y = pose.point.y;
         auto k_th = pose.angle.yaw;
         auto k_w = float(bound.size.x);
         auto k_h = float(bound.size.y);
         std::vector<rerun::Color> colors_a;
         colors_a.push_back(rerun::Color(color.r, color.g, color.b));
+        std::vector<rerun::components::PoseTranslation3D> centers = {
+            rerun::components::PoseTranslation3D(float(k_x), float(k_y), 0.1f)};
+        std::vector<rerun::datatypes::Vec3D> sizes = {rerun::datatypes::Vec3D(float(k_w), float(k_h), 0.0f)};
         rec->log_static(
             this->parent_name + "/chasis/hitch/" + name,
-            rerun::Boxes3D::from_centers_and_sizes({{float(k_x), float(k_y), 0.1f}}, {{float(k_w), float(k_h), 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes(centers, sizes)
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})

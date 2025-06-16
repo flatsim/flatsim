@@ -33,9 +33,11 @@ namespace mvs {
         robot_info.wheels = wheels;
 
         // control limits
-        std::vector<float> steerings_max = {utils::deg2rad(14), utils::deg2rad(14), 0.0f, 0.0f, -utils::deg2rad(25), -utils::deg2rad(25)};
+        std::vector<float> steerings_max = {utils::deg2rad(6),   utils::deg2rad(6),  0.0f, 0.0f,
+                                            -utils::deg2rad(25), -utils::deg2rad(25)};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f};
-        std::vector<float> steerings_diff = {-utils::deg2rad(2), utils::deg2rad(2), 0.0f, 0.0f, utils::deg2rad(4), -utils::deg2rad(4)};
+        std::vector<float> steerings_diff = {-utils::deg2rad(2), utils::deg2rad(2), 0.0f, 0.0f,
+                                             utils::deg2rad(4),  -utils::deg2rad(4)};
         std::vector<bool> left_side = {false, true, false, true, false, true};
         robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
 

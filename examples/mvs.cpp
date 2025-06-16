@@ -15,7 +15,7 @@
 #include "geotiv/geotiv.hpp"
 
 int main(int argc, char *argv[]) {
-    bool joystk = true;
+    bool joystk = false;
 
     if (argc > 1) {
         if (std::strcmp(argv[1], "--joystick") == 0) {
@@ -76,7 +76,10 @@ int main(int argc, char *argv[]) {
     coordinates.push_back(concord::WGS(51.98765392402663, 5.660072928621929, 0.0));
 
     concord::Polygon polygon;
-    polygon.from_wgs(coordinates, world_datum);
+    for (const auto &wgs_coord : coordinates) {
+        auto enu_coord = wgs_coord.toENU(world_datum);
+        polygon.addPoint(concord::Point{enu_coord.x, enu_coord.y, enu_coord.z});
+    }
 
     mvs::LayerInfo layer_info;
     layer_info.name = "grid";
@@ -84,14 +87,12 @@ int main(int argc, char *argv[]) {
     layer_info.type = "field";
     layer_info.can_accept = {"pea"};
     layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-    layer_info.bound = polygon.get_obb(world_datum);
+    layer_info.bound = polygon.get_obb();
     layer_info.resolution = 0.2f;
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
 
     geotiv::RasterCollection rc;
-    rc.crs = concord::CRS::WGS;
-    rc.datum = world_datum;
     rc.heading = concord::Euler{0.0, 0.0, 0.0};
     rc.resolution = layer_info.resolution;
 

@@ -14,9 +14,9 @@ namespace mvs {
             sensor->set_robot_pose(info.bound.pose);
             sensor->update(dt);
         }
-        this->info.bound.pose.point.enu.x = chassis->get_transform().position.x;
-        this->info.bound.pose.point.enu.y = chassis->get_transform().position.y;
-        this->info.bound.pose.point.wgs = this->info.bound.pose.point.enu.toWGS(datum);
+        this->info.bound.pose.point.x = chassis->get_transform().position.x;
+        this->info.bound.pose.point.y = chassis->get_transform().position.y;
+        // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
         chassis->tick(dt);
         chassis->update(steerings, throttles);
 
@@ -85,16 +85,19 @@ namespace mvs {
     void Robot::visualize() {
         chassis->visualize();
 
-        auto x = this->info.bound.pose.point.enu.x;
-        auto y = this->info.bound.pose.point.enu.y;
+        auto x = this->info.bound.pose.point.x;
+        auto y = this->info.bound.pose.point.y;
 
         std::vector<rerun::Color> colors;
         colors.push_back(rerun::Color(info.color.r, info.color.g, info.color.b));
 
-        rec->log_static(this->info.name + "/pose", rerun::Points3D({{float(x), float(y), 0.1f}}).with_colors(colors));
+        std::vector<rerun::components::Position3D> positions = {
+            rerun::components::Position3D(float(x), float(y), 0.1f)};
+        rec->log_static(this->info.name + "/pose", rerun::Points3D(positions).with_colors(colors));
 
-        auto lat = float(this->info.bound.pose.point.wgs.lat);
-        auto lon = float(this->info.bound.pose.point.wgs.lon);
+        auto wgs_coords = this->info.bound.pose.point.toWGS(datum);
+        auto lat = float(wgs_coords.lat);
+        auto lon = float(wgs_coords.lon);
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
@@ -103,7 +106,7 @@ namespace mvs {
     }
 
     void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
-        concord::Point point(this->info.bound.pose.point.enu.x, this->info.bound.pose.point.enu.y, 0.0f, datum);
+        concord::Point point(this->info.bound.pose.point.x, this->info.bound.pose.point.y, 0.0f);
         if (!pulsining) {
             return;
         }
@@ -116,17 +119,17 @@ namespace mvs {
             pulse_enu_size = 0.0;
         }
         pulse_enu = concord::Circle(point, pulse_enu_size);
-        auto pointss = pulse_enu.as_polygon(50, datum);
+        auto pointss = pulse_enu.as_polygon(50);
         for (auto &point : pointss) {
-            poi.push_back({float(point.enu.x), float(point.enu.y), 0.0f});
+            poi.push_back({float(point.x), float(point.y), 0.0f});
         }
-        poi.push_back({float(pointss[0].enu.x), float(pointss[0].enu.y), 0.0f});
+        poi.push_back({float(pointss[0].x), float(pointss[0].y), 0.0f});
         rec->log_static(
             this->info.name + "/pulse/enu",
             rerun::LineStrips3D({{poi}})
                 .with_colors({{rerun::Color(info.color.r, info.color.g, info.color.b)}})
-                .with_radii({{float(utils::mapper(pulse_enu_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f,
-                                             0.03, 0.0005))}}));
+                .with_radii({{float(utils::mapper(
+                    pulse_enu_size, 0.0, std::max(info.bound.size.x, info.bound.size.y) * 3.0f, 0.03, 0.0005))}}));
 
         // visualize gps pulse
         std::vector<rerun::LatLon> locators;
@@ -136,11 +139,13 @@ namespace mvs {
             pulse_gps_size = 0.0;
         }
         pulse_gps = concord::Circle(point, pulse_gps_size);
-        auto pointss_gps = pulse_gps.as_polygon(50, datum);
+        auto pointss_gps = pulse_gps.as_polygon(50);
         for (auto &point : pointss_gps) {
-            locators.push_back(rerun::LatLon(point.wgs.lat, point.wgs.lon));
+            auto wgs_coords = point.toWGS(datum);
+            locators.push_back(rerun::LatLon(wgs_coords.lat, wgs_coords.lon));
         }
-        locators.push_back(rerun::LatLon(pointss_gps[0].wgs.lat, pointss_gps[0].wgs.lon));
+        auto first_wgs_coords = pointss_gps[0].toWGS(datum);
+        locators.push_back(rerun::LatLon(first_wgs_coords.lat, first_wgs_coords.lon));
         auto linestr = rerun::components::GeoLineString::from_lat_lon(locators);
         rec->log_static(this->info.name + "/pulse/wgs",
                         rerun::GeoLineStrings(linestr)
@@ -151,12 +156,10 @@ namespace mvs {
     }
 
     // Sensor management methods
-    void Robot::add_sensor(std::unique_ptr<Sensor> sensor) {
-        sensors.push_back(std::move(sensor));
-    }
+    void Robot::add_sensor(std::unique_ptr<Sensor> sensor) { sensors.push_back(std::move(sensor)); }
 
-    Sensor* Robot::get_sensor(const std::string& type) const {
-        for (const auto& sensor : sensors) {
+    Sensor *Robot::get_sensor(const std::string &type) const {
+        for (const auto &sensor : sensors) {
             if (sensor->get_type() == type) {
                 return sensor.get();
             }

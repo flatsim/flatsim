@@ -24,10 +24,10 @@ namespace mvs {
         float height = settings.get_world_size().y;
 
         world_bounds.from_pointvec({
-            concord::Point(width / 2.0f, -height / 2.0f, 0.0f, datum),
-            concord::Point(-width / 2.0f, -height / 2.0f, 0.0f, datum),
-            concord::Point(width / 2.0f, height / 2.0f, 0.0f, datum),
-            concord::Point(-width / 2.0f, height / 2.0f, 0.0f, datum),
+            concord::Point(width / 2.0f, -height / 2.0f, 0.0f),
+            concord::Point(-width / 2.0f, -height / 2.0f, 0.0f),
+            concord::Point(width / 2.0f, height / 2.0f, 0.0f),
+            concord::Point(-width / 2.0f, height / 2.0f, 0.0f),
         });
     }
 
@@ -54,7 +54,7 @@ namespace mvs {
         for (auto &layer : layers) {
             bounds.push_back(layer->info.bound);
         }
-        world_bounds = concord::Rectangle::outer_rectangle(bounds, settings.get_datum());
+        world_bounds = concord::Rectangle::outer_rectangle(bounds);
     }
 
     void World::visualize() {
@@ -62,12 +62,13 @@ namespace mvs {
         std::vector<rerun::LatLon> wgs_corners_;
 
         for (auto corner : world_bounds.get_corners()) {
-            float x = static_cast<float>(corner.enu.x);
-            float y = static_cast<float>(corner.enu.y);
-            float z = static_cast<float>(corner.enu.z);
+            float x = static_cast<float>(corner.x);
+            float y = static_cast<float>(corner.y);
+            float z = static_cast<float>(corner.z);
             enu_corners_.push_back({x, y, z});
-            float lat = static_cast<float>(corner.wgs.lat);
-            float lon = static_cast<float>(corner.wgs.lon);
+            auto wgs_coords = corner.toWGS(settings.get_datum());
+            float lat = static_cast<float>(wgs_coords.lat);
+            float lon = static_cast<float>(wgs_coords.lon);
             wgs_corners_.push_back({lat, lon});
         }
         enu_corners_.push_back(enu_corners_[0]);

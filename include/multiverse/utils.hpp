@@ -29,16 +29,16 @@ namespace mvs {
             double sy = std::sin(parent.angle.yaw);
 
             // Rotate the child's local XY offset into the parent's frame
-            double off_x = child.point.enu.x * cy - child.point.enu.y * sy;
-            double off_y = child.point.enu.x * sy + child.point.enu.y * cy;
+            double off_x = child.point.x * cy - child.point.y * sy;
+            double off_y = child.point.x * sy + child.point.y * cy;
 
             concord::Pose result;
 
             // Translate into the parent's world position
-            result.point.enu.x = parent.point.enu.x + off_x;
-            result.point.enu.y = parent.point.enu.y + off_y;
+            result.point.x = parent.point.x + off_x;
+            result.point.y = parent.point.y + off_y;
             // Carry through any vertical (z) offset without rotation
-            result.point.enu.z = parent.point.enu.z + child.point.enu.z;
+            result.point.z = parent.point.z + child.point.z;
 
             // Compose the Euler angles: parent ⊕ child
             result.angle.roll = normalize_angle(parent.angle.roll + child.angle.roll);
@@ -50,19 +50,19 @@ namespace mvs {
 
         inline concord::Pose move(concord::Pose from_origin, concord::Pose trans_pose) {
             concord::Pose t;
-            t.point.enu.x = trans_pose.point.enu.x;
-            t.point.enu.y = trans_pose.point.enu.y;
+            t.point.x = trans_pose.point.x;
+            t.point.y = trans_pose.point.y;
             t.angle.yaw = trans_pose.angle.yaw;
 
             concord::Pose rotated_offset;
-            rotated_offset.point.enu.x =
-                from_origin.point.enu.x * std::cos(t.angle.yaw) - from_origin.point.enu.y * std::sin(t.angle.yaw);
-            rotated_offset.point.enu.y =
-                from_origin.point.enu.x * std::sin(t.angle.yaw) + from_origin.point.enu.y * std::cos(t.angle.yaw);
+            rotated_offset.point.x =
+                from_origin.point.x * std::cos(t.angle.yaw) - from_origin.point.y * std::sin(t.angle.yaw);
+            rotated_offset.point.y =
+                from_origin.point.x * std::sin(t.angle.yaw) + from_origin.point.y * std::cos(t.angle.yaw);
 
             concord::Pose new_pose;
-            new_pose.point.enu.x = trans_pose.point.enu.x + rotated_offset.point.enu.x;
-            new_pose.point.enu.y = trans_pose.point.enu.y + rotated_offset.point.enu.y;
+            new_pose.point.x = trans_pose.point.x + rotated_offset.point.x;
+            new_pose.point.y = trans_pose.point.y + rotated_offset.point.y;
             new_pose.angle.yaw = t.angle.yaw;
 
             return new_pose;
@@ -78,15 +78,15 @@ namespace mvs {
         inline muli::Transform pose_to_transform(const concord::Pose &pose) {
             muli::Rotation rot(pose.angle.yaw);
             muli::Vec2 pos;
-            pos.x = pose.point.enu.x;
-            pos.y = pose.point.enu.y;
+            pos.x = pose.point.x;
+            pos.y = pose.point.y;
             return muli::Transform{pos, rot};
         }
 
         inline concord::Pose transform_to_pose(const muli::Transform &transform) {
             concord::Pose pose;
-            pose.point.enu.x = transform.position.x;
-            pose.point.enu.y = transform.position.y;
+            pose.point.x = transform.position.x;
+            pose.point.y = transform.position.y;
             pose.angle.yaw = transform.rotation.GetAngle();
             return pose;
         }

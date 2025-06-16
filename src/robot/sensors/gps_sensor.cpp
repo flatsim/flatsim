@@ -163,9 +163,9 @@ namespace mvs {
         // This should ideally use the world datum that's already available in the system
         
         // Extract ENU coordinates
-        double east = robot_pose.point.enu.x;
-        double north = robot_pose.point.enu.y;
-        double up = robot_pose.point.enu.z;
+        double east = robot_pose.point.x;
+        double north = robot_pose.point.y;
+        double up = robot_pose.point.z;
         
         // Simple conversion (this should use proper geodetic transformations)
         // Assuming a local origin around latitude 45°N for example
@@ -185,9 +185,9 @@ namespace mvs {
         if (last_update_time > last_time) {
             double dt = last_update_time - last_time;
             if (dt > 0) {
-                current_data.velocity_north = (north - last_pose.point.enu.y) / dt;
-                current_data.velocity_east = (east - last_pose.point.enu.x) / dt;
-                current_data.velocity_up = (up - last_pose.point.enu.z) / dt;
+                current_data.velocity_north = (north - last_pose.point.y) / dt;
+                current_data.velocity_east = (east - last_pose.point.x) / dt;
+                current_data.velocity_up = (up - last_pose.point.z) / dt;
             }
         }
         

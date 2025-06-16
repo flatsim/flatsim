@@ -41,9 +41,9 @@ void demonstrate_gps_sensor() {
     
     // Simulate robot pose
     concord::Pose robot_pose;
-    robot_pose.point.enu.x = 100.0;  // 100m east
-    robot_pose.point.enu.y = 200.0;  // 200m north
-    robot_pose.point.enu.z = 10.0;   // 10m up
+    robot_pose.point.x = 100.0;  // 100m east
+    robot_pose.point.y = 200.0;  // 200m north
+    robot_pose.point.z = 10.0;   // 10m up
     
     // Update sensor
     gps_sensor->set_robot_pose(robot_pose);
@@ -95,9 +95,9 @@ void demonstrate_imu_sensor() {
     
     // Simulate robot motion (rotating and accelerating)
     concord::Pose robot_pose;
-    robot_pose.point.enu.x = 0.0;
-    robot_pose.point.enu.y = 0.0;
-    robot_pose.point.enu.z = 1.0;  // 1m above ground
+    robot_pose.point.x = 0.0;
+    robot_pose.point.y = 0.0;
+    robot_pose.point.z = 1.0;  // 1m above ground
     robot_pose.angle.roll = 0.0;
     robot_pose.angle.pitch = 0.0;
     robot_pose.angle.yaw = 0.1;  // Small rotation around Z-axis
@@ -177,9 +177,9 @@ void demonstrate_lidar_sensor() {
     
     // Simulate robot pose in environment
     concord::Pose robot_pose;
-    robot_pose.point.enu.x = 0.0;
-    robot_pose.point.enu.y = 0.0;
-    robot_pose.point.enu.z = 1.5;  // 1.5m above ground (typical sensor height)
+    robot_pose.point.x = 0.0;
+    robot_pose.point.y = 0.0;
+    robot_pose.point.z = 1.5;  // 1.5m above ground (typical sensor height)
     robot_pose.angle.roll = 0.0;
     robot_pose.angle.pitch = 0.0;
     robot_pose.angle.yaw = 0.0;  // No rotation

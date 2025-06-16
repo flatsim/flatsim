@@ -489,10 +489,10 @@ namespace mvs {
         double sin_yaw = std::sin(robot_pose.angle.yaw);
         
         // Rotate sensor offset by robot orientation
-        double world_x = robot_pose.point.enu.x + 
-                        (sensor_offset.point.enu.x * cos_yaw - sensor_offset.point.enu.y * sin_yaw);
-        double world_y = robot_pose.point.enu.y + 
-                        (sensor_offset.point.enu.x * sin_yaw + sensor_offset.point.enu.y * cos_yaw);
+        double world_x = robot_pose.point.x + 
+                        (sensor_offset.point.x * cos_yaw - sensor_offset.point.y * sin_yaw);
+        double world_y = robot_pose.point.y + 
+                        (sensor_offset.point.x * sin_yaw + sensor_offset.point.y * cos_yaw);
         
         return muli::Vec2(world_x, world_y);
     }

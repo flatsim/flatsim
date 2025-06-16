@@ -164,9 +164,9 @@ namespace mvs {
         static double last_vel_x = 0.0, last_vel_y = 0.0, last_vel_z = 0.0;
         
         // Estimate velocity from position change
-        double vel_x = (robot_pose.point.enu.x - last_pose.point.enu.x) / dt;
-        double vel_y = (robot_pose.point.enu.y - last_pose.point.enu.y) / dt;
-        double vel_z = (robot_pose.point.enu.z - last_pose.point.enu.z) / dt;
+        double vel_x = (robot_pose.point.x - last_pose.point.x) / dt;
+        double vel_y = (robot_pose.point.y - last_pose.point.y) / dt;
+        double vel_z = (robot_pose.point.z - last_pose.point.z) / dt;
         
         // Calculate acceleration from velocity change
         double accel_x = (vel_x - last_vel_x) / dt;

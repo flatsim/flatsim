@@ -19,8 +19,8 @@ namespace mvs {
         float h = bound.size.y; // usually 2 * w
                                 //
         muli::Transform t;
-        t.position.x = bound.pose.point.enu.x;
-        t.position.y = bound.pose.point.enu.y;
+        t.position.x = bound.pose.point.x;
+        t.position.y = bound.pose.point.y;
         t.rotation = bound.pose.angle.yaw;
 
         body = world->CreateBox(w, h, t);
@@ -49,9 +49,6 @@ namespace mvs {
         }
 
         wheel_damping(mvs::constants::linearDamping, mvs::constants::angularDamping);
-
-        auto main_left_hook = muli::Vec2(bound.pose.point.enu.x - bound.size.x / 2, bound.pose.point.enu.y);
-        auto main_right_hook = muli::Vec2(bound.pose.point.enu.x + bound.size.x / 2, bound.pose.point.enu.y);
 
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
@@ -126,8 +123,8 @@ namespace mvs {
 
     void Chasis::teleport(concord::Pose pose) {
         muli::Transform t;
-        t.position.x = pose.point.enu.x;
-        t.position.y = pose.point.enu.y;
+        t.position.x = pose.point.x;
+        t.position.y = pose.point.y;
         t.rotation = pose.angle.yaw;
         body->SetTransform(t);
         body->SetSleeping(true);

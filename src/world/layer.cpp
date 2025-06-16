@@ -24,17 +24,19 @@ namespace mvs {
             gd.data = 0.0f;
         }
 
-        auto corners = grid.corners(datum);
+        auto corners = grid.corners();
         for (auto &p : corners) {
-            enu_corners_.push_back({float(p.enu.x), float(p.enu.y), 0.0f});
-            wgs_corners_.push_back({float(p.wgs.lat), float(p.wgs.lon)});
+            enu_corners_.push_back({float(p.x), float(p.y), 0.0f});
+            auto wgs_coords = p.toWGS(datum);
+            wgs_corners_.push_back({float(wgs_coords.lat), float(wgs_coords.lon)});
         }
         enu_corners_.push_back(enu_corners_[0]);
         wgs_corners_.push_back(wgs_corners_[0]);
 
         for (auto &p : info.field) {
-            polygon_corners_wgs_.push_back({float(p.wgs.lat), float(p.wgs.lon)});
-            polygon_corners_.push_back({float(p.enu.x), float(p.enu.y), 0.0f});
+            auto wgs_coords = p.toWGS(datum);
+            polygon_corners_wgs_.push_back({float(wgs_coords.lat), float(wgs_coords.lon)});
+            polygon_corners_.push_back({float(p.x), float(p.y), 0.0f});
         }
         polygon_corners_wgs_.push_back(polygon_corners_wgs_[0]);
         polygon_corners_.push_back(polygon_corners_[0]);
@@ -49,8 +51,8 @@ namespace mvs {
             for (std::size_t c = 0; c < grid.cols(); ++c) {
                 auto &[pt, gd] = grid(r, c);
                 if (in_polygon_only) {
-                    if (pt.enu.x > enu_corners_[0][0] && pt.enu.x < enu_corners_[enu_corners_.size() - 1][0] &&
-                        pt.enu.y > enu_corners_[0][1] && pt.enu.y < enu_corners_[enu_corners_.size() - 1][1]) {
+                    if (pt.x > enu_corners_[0][0] && pt.x < enu_corners_[enu_corners_.size() - 1][0] &&
+                        pt.y > enu_corners_[0][1] && pt.y < enu_corners_[enu_corners_.size() - 1][1]) {
                         gd.data = noise.GetNoise(float(r), float(c)) / 2;
                     }
                 } else {

@@ -16,7 +16,6 @@ set(params
     -Wno-unused-parameter
 )
 
-option(MULTIVERSE_BUILD_TESTS "Build tests" OFF)
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
 
 string(TOUPPER ${project_name} project_name_upper)
@@ -30,15 +29,8 @@ set(ext_deps)
 
 # Muli Physics Engine
 set(MULI_BUILD_DEMO OFF)
-FetchContent_Declare(muli 
-    GIT_REPOSITORY https://github.com/Sopiro/Muli
-    # Note: No GIT_TAG specified to use default branch
-    GIT_SHALLOW TRUE
-)
+FetchContent_Declare(muli GIT_REPOSITORY https://github.com/Sopiro/Muli GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(muli)
-if(NOT muli_POPULATED)
-    message(FATAL_ERROR "Failed to fetch muli dependency")
-endif()
 include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
@@ -51,27 +43,27 @@ FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git 
 FetchContent_MakeAvailable(spdlog)
 list(APPEND ext_deps spdlog::spdlog)
 
-FetchContent_Declare(concord GIT_REPOSITORY https://github.com/smolfetch/concord.git GIT_TAG develop)
+FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.0.2)
 FetchContent_MakeAvailable(concord)
 list(APPEND ext_deps concord::concord)
 
-FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/smolfetch/pigment.git GIT_TAG develop)
+FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/onlyhead/pigment.git GIT_TAG 0.3.1)
 FetchContent_MakeAvailable(pigment)
 list(APPEND ext_deps pigment::pigment)
 
-FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/smolfetch/entropy.git GIT_TAG develop)
+FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.git GIT_TAG 0.1.0)
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(geoson GIT_REPOSITORY https://github.com/smolfetch/geoson.git GIT_TAG develop)
+FetchContent_Declare(geoson GIT_REPOSITORY https://github.com/onlyhead/geoson.git GIT_TAG 1.1.0)
 FetchContent_MakeAvailable(geoson)
 list(APPEND ext_deps geoson::geoson)
 
-FetchContent_Declare(geotiv GIT_REPOSITORY https://github.com/smolfetch/geotiv.git GIT_TAG develop)
+FetchContent_Declare(geotiv GIT_REPOSITORY https://github.com/onlyhead/geotiv.git GIT_TAG 1.0.0)
 FetchContent_MakeAvailable(geotiv)
 list(APPEND ext_deps geotiv::geotiv)
 
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/smolfetch/farmtrax.git GIT_TAG develop)
+FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 0.3.0)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
