@@ -37,10 +37,15 @@ namespace fs {
 
         muli::CollisionFilter filter;
         concord::Pose spawn_position;
+        
+        // Connection tracking
+        Robot* connected_slave = nullptr;
+        muli::RevoluteJoint* connection_joint = nullptr;
 
       public:
         RobotInfo info;
         OP mode = OP::IDLE;
+        RobotRole role;
 
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
@@ -92,6 +97,11 @@ namespace fs {
         void fill_tank(float amount) { 
             if (tank.has_value()) tank->fill(amount); 
         }
+        
+        // Connection management
+        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>>& all_robots);
+        void disconnect_trailer();
+        bool is_connected() const;
         
         // Power management
         bool has_power() const { return power.has_value(); }

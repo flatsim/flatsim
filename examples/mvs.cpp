@@ -107,10 +107,10 @@ int main(int argc, char *argv[]) {
 
     sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(1),
-                                       pigment::RGB(255, 200, 0)));
-    sim->add_robot(fs::tractor(concord::Pose(10 * 2, 10 * 2, 0.0f), "tractor" + std::to_string(2),
+    sim->add_robot(fs::tractor(concord::Pose(10 * 1, 10 * 1, 0.0f), "tractor" + std::to_string(1),
                                 pigment::RGB(0, 255, 100)));
+    sim->add_robot(fs::trailer(concord::Pose(10 * 1, 10 * 1 - 5, 0.0f), "trailer" + std::to_string(2),
+                                pigment::RGB(255, 150, 0)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
@@ -161,7 +161,18 @@ int main(int argc, char *argv[]) {
                             sim->get_robot(selected_robot_idx).pulse();
                         }
                         if (button == 10 && pressed) {
-                            sim->get_robot(selected_robot_idx).pulse();
+                            // Try to connect to nearby slave
+                            auto& robot = sim->get_robot(selected_robot_idx);
+                            if (robot.role == fs::RobotRole::MASTER) {
+                                if (robot.try_connect_nearby_slave(sim->robots)) {
+                                    std::cout << "Connected to trailer!" << std::endl;
+                                } else if (robot.is_connected()) {
+                                    robot.disconnect_trailer();
+                                    std::cout << "Disconnected trailer!" << std::endl;
+                                } else {
+                                    std::cout << "No trailer nearby to connect" << std::endl;
+                                }
+                            }
                         }
                     }
                 }

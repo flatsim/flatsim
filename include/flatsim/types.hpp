@@ -43,6 +43,8 @@ namespace fs {
         float charge_rate = 0.0f;  // only for batteries
     };
 
+    enum class RobotRole { MASTER, FOLLOWER, SLAVE };
+
     struct RobotInfo {
         uint RCI;
         uint group;
@@ -60,8 +62,9 @@ namespace fs {
         std::vector<KarosserieInfo> karos;
         std::optional<TankInfo> tank;  // Optional tank (harvesters, biners)
         std::optional<PowerInfo> power_source;  // Optional power (not all machines need power)
+        RobotRole role = RobotRole::MASTER;  // Default to MASTER
     };
-
+    
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
     // WORLD
     struct LayerInfo {

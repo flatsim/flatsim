@@ -133,10 +133,10 @@ namespace fs {
         kaross.has_physics = false;
         robot_info.karos.push_back(kaross);
 
-        // hitch
+        // rear hitch for pulling
         concord::Bound hitch_bound =
             concord::Bound(concord::Pose(0, -(height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
-        robot_info.hitches["hook"] = hitch_bound;
+        robot_info.hitches["rear_hitch"] = hitch_bound;
 
         // color
         pigment::RGB robot_color = color;
@@ -154,8 +154,8 @@ namespace fs {
         return robot_info;
     }
 
-    inline fs::RobotInfo biner(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
-                               std::string uuid = "") {
+    inline fs::RobotInfo trailer(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
+                                 std::string uuid = "") {
         // extract dimensions
         const float width = 1.5f;
         const float height = 2.6f;
@@ -164,8 +164,9 @@ namespace fs {
         robot_info.RCI = 3;
         robot_info.name = name;
         robot_info.uuid = uuid.empty() ? name : uuid;
-        robot_info.type = "tractor";
+        robot_info.type = "trailer";
         robot_info.works_on = {"food"};
+        robot_info.role = RobotRole::SLAVE;
 
         // overall bound
         robot_info.bound = concord::Bound(pose, concord::Size(width, height, 0.0f));
@@ -184,10 +185,10 @@ namespace fs {
         std::vector<bool> left_side = {false, true};
         robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
 
-        // hitch
+        // front hitch for being pulled
         concord::Bound hitch_bound =
             concord::Bound(concord::Pose(0, (height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
-        robot_info.hitches["hook"] = hitch_bound;
+        robot_info.hitches["front_hitch"] = hitch_bound;
 
         // color
         pigment::RGB robot_color = color;

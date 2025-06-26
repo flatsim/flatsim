@@ -52,6 +52,7 @@ namespace fs {
         const concord::Pose& get_pose() const { return pose; }
         const concord::Bound& get_bound() const { return bound; }
         const std::string& get_name() const { return name; }
+        muli::RigidBody* get_body() { return body; }
         
     };
 } // namespace fs

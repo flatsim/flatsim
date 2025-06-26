@@ -1,4 +1,5 @@
 #include "flatsim/robot.hpp"
+#include <cmath>
 
 namespace fs {
 
@@ -63,6 +64,7 @@ namespace fs {
         spdlog::info("Initializing robot {}...", robo.name);
         this->datum = datum;
         this->info = robo;
+        this->role = robo.role;  // Set role from RobotInfo
         this->spawn_position = robo.bound.pose;
 
         if (!world) {
@@ -239,5 +241,79 @@ namespace fs {
         return nullptr;
     }
 
+    bool Robot::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>>& all_robots) {
+        // Only MASTER robots can initiate connections
+        if (role != RobotRole::MASTER || !info.hitches.count("rear_hitch")) {
+            return false;
+        }
+        
+        // Already connected
+        if (connected_slave) {
+            return false;
+        }
+        
+        auto my_pos = get_position().point;
+        float connection_range = 5.0f;  // 5 unit connection range
+        
+        for (const auto& other_robot : all_robots) {
+            // Skip self and non-slaves
+            if (other_robot.get() == this || other_robot->role != RobotRole::SLAVE) {
+                continue;
+            }
+            
+            // Check if slave has front hitch
+            if (!other_robot->info.hitches.count("front_hitch")) {
+                continue;
+            }
+            
+            // Check distance
+            auto other_pos = other_robot->get_position().point;
+            float dist = std::sqrt(std::pow(my_pos.x - other_pos.x, 2) + std::pow(my_pos.y - other_pos.y, 2));
+            
+            if (dist <= connection_range) {
+                // Create joint between rear hitch and front hitch
+                auto my_rear_hitch_pos = info.hitches["rear_hitch"];
+                auto slave_front_hitch_pos = other_robot->info.hitches["front_hitch"];
+                
+                // Calculate world positions of hitches
+                muli::Vec2 hitch_world_pos(
+                    my_pos.x + my_rear_hitch_pos.pose.point.x,
+                    my_pos.y + my_rear_hitch_pos.pose.point.y
+                );
+                
+                connection_joint = world->CreateRevoluteJoint(
+                    chassis->get_body(),
+                    other_robot->chassis->get_body(),
+                    hitch_world_pos,
+                    20.0f,  // frequency
+                    0.8f,   // damping
+                    10.0f   // joint mass
+                );
+                
+                if (connection_joint) {
+                    connected_slave = other_robot.get();
+                    other_robot->role = RobotRole::FOLLOWER;  // Change slave to follower
+                    spdlog::info("Connected {} to {}", info.name, other_robot->info.name);
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    void Robot::disconnect_trailer() {
+        if (connection_joint && connected_slave) {
+            world->Destroy(connection_joint);
+            connection_joint = nullptr;
+            connected_slave->role = RobotRole::SLAVE;  // Change back to slave
+            spdlog::info("Disconnected trailer from {}", info.name);
+            connected_slave = nullptr;
+        }
+    }
+
+    bool Robot::is_connected() const {
+        return connected_slave != nullptr && connection_joint != nullptr;
+    }
 
 } // namespace fs
