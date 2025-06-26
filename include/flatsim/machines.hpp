@@ -1,17 +1,17 @@
 #pragma once
 
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
-namespace mvs {
+namespace fs {
 
-    inline mvs::RobotInfo oxbo_harvester(concord::Pose pose, std::string name,
+    inline fs::RobotInfo oxbo_harvester(concord::Pose pose, std::string name,
                                          pigment::RGB color = pigment::RGB(255, 200, 0), std::string uuid = "") {
         // extract dimensions
         const float width = 2.8f;
         const float height = 7.68f;
 
-        mvs::RobotInfo robot_info;
+        fs::RobotInfo robot_info;
         robot_info.RCI = 3;
         robot_info.name = name;
         robot_info.uuid = uuid.empty() ? name : uuid;
@@ -66,13 +66,13 @@ namespace mvs {
         return robot_info;
     }
 
-    inline mvs::RobotInfo tractor(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
+    inline fs::RobotInfo tractor(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
                                   std::string uuid = "") {
         // extract dimensions
         const float width = 1.6f;
         const float height = 2.8f;
 
-        mvs::RobotInfo robot_info;
+        fs::RobotInfo robot_info;
         robot_info.RCI = 3;
         robot_info.name = name;
         robot_info.uuid = uuid.empty() ? name : uuid;
@@ -124,13 +124,13 @@ namespace mvs {
         return robot_info;
     }
 
-    inline mvs::RobotInfo biner(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
+    inline fs::RobotInfo biner(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
                                 std::string uuid = "") {
         // extract dimensions
         const float width = 1.5f;
         const float height = 2.6f;
 
-        mvs::RobotInfo robot_info;
+        fs::RobotInfo robot_info;
         robot_info.RCI = 3;
         robot_info.name = name;
         robot_info.uuid = uuid.empty() ? name : uuid;
@@ -166,4 +166,4 @@ namespace mvs {
         return robot_info;
     }
 
-} // namespace mvs
+} // namespace fs

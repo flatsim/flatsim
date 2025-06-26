@@ -1,10 +1,10 @@
 #pragma once
 
-#include "multiverse/robot/sensor.hpp"
-#include "multiverse/types.hpp"
+#include "flatsim/robot/sensor.hpp"
+#include "flatsim/types.hpp"
 #include <chrono>
 
-namespace mvs {
+namespace fs {
     /**
      * @brief IMU sensor data structure
      * 
@@ -224,4 +224,4 @@ namespace mvs {
          */
         void normalize_quaternion();
     };
-} // namespace mvs
+} // namespace fs

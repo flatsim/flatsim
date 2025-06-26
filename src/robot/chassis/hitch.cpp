@@ -1,6 +1,6 @@
-#include "multiverse/robot/chassis/hitch.hpp"
+#include "flatsim/robot/chassis/hitch.hpp"
 
-namespace mvs {
+namespace fs {
     Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
@@ -45,4 +45,4 @@ namespace mvs {
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
                 .with_colors(colors_a));
     }
-} // namespace mvs
+} // namespace fs

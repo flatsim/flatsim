@@ -1,6 +1,6 @@
-#include "multiverse/simulator.hpp"
+#include "flatsim/simulator.hpp"
 
-namespace mvs {
+namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     Simulator::~Simulator() {}
     void Simulator::tick(float dt) {
@@ -42,7 +42,7 @@ namespace mvs {
         }
     }
     void Simulator::init(concord::Datum datum, concord::Size world_size) {
-        world = std::make_shared<mvs::World>(rec);
+        world = std::make_shared<fs::World>(rec);
         world->init(datum, world_size);
         world_datum = datum;
     }
@@ -187,10 +187,10 @@ namespace mvs {
     // RERUN MANAGEMENT
     void Simulator::reset_recording() {
         static int session_counter = 0;
-        std::string session_id = "multiverse_session_" + std::to_string(++session_counter);
+        std::string session_id = "flatsim_session_" + std::to_string(++session_counter);
         
         // Create new recording stream
-        rec = std::make_shared<rerun::RecordingStream>("multiverse", session_id);
+        rec = std::make_shared<rerun::RecordingStream>("flatsim", session_id);
         rec->spawn().exit_on_failure();
         rec->set_global();
         
@@ -212,4 +212,4 @@ namespace mvs {
         // Reset timeline
         rec->reset_time();
     }
-} // namespace mvs
+} // namespace fs

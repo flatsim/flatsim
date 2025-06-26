@@ -1,8 +1,8 @@
-#include "multiverse/robot/sensors/gps_sensor.hpp"
+#include "flatsim/robot/sensors/gps_sensor.hpp"
 #include <random>
 #include <cmath>
 
-namespace mvs {
+namespace fs {
     
     GPSSensor::GPSSensor(double frequency, bool enable_rtk, double base_acc, double rtk_acc)
         : update_frequency(frequency)
@@ -195,4 +195,4 @@ namespace mvs {
         last_time = last_update_time;
     }
     
-} // namespace mvs
+} // namespace fs

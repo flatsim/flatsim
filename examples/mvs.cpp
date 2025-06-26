@@ -7,9 +7,9 @@
 #include <unistd.h>
 #include <vector>
 
-#include "multiverse/machines.hpp"
-#include "multiverse/simulator.hpp"
-#include "multiverse/types.hpp"
+#include "flatsim/machines.hpp"
+#include "flatsim/simulator.hpp"
+#include "flatsim/types.hpp"
 #include "rerun/recording_stream.hpp"
 
 #include "geotiv/geotiv.hpp"
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     }
 
     // 5) Connect to Rerun
-    auto rec = std::make_shared<rerun::RecordingStream>("multiverse", "space");
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
     if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
         std::cerr << "Failed to connect to rerun\n";
         return 1;
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
     concord::Size world_size{300.0f, 300.0f, 300.0f};
 
-    auto sim = std::make_shared<mvs::Simulator>(rec);
+    auto sim = std::make_shared<fs::Simulator>(rec);
     sim->init(world_datum, world_size);
 
     std::vector<concord::WGS> coordinates;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
         polygon.addPoint(concord::Point{enu_coord.x, enu_coord.y, enu_coord.z});
     }
 
-    mvs::LayerInfo layer_info;
+    fs::LayerInfo layer_info;
     layer_info.name = "grid";
     layer_info.uuid = "grid";
     layer_info.type = "field";
@@ -105,11 +105,11 @@ int main(int argc, char *argv[]) {
     std::filesystem::path outPath = "output.tif";
     geotiv::WriteRasterCollection(rc, outPath);
 
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
+    sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(1),
+    sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(1),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(mvs::tractor(concord::Pose(10 * 2, 10 * 2, 0.0f), "tractor" + std::to_string(2),
+    sim->add_robot(fs::tractor(concord::Pose(10 * 2, 10 * 2, 0.0f), "tractor" + std::to_string(2),
                                 pigment::RGB(0, 255, 100)));
 
     auto last_time = std::chrono::steady_clock::now();

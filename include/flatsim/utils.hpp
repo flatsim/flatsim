@@ -1,11 +1,11 @@
 #pragma once
 
 #include "muli/muli.h"
-#include "multiverse/types.hpp"
+#include "flatsim/types.hpp"
 #include <algorithm>
 #include <cmath>
 
-namespace mvs {
+namespace fs {
     namespace utils {
         inline float rad2deg(float rad) { return rad * 180.0f / M_PI; }
         inline float deg2rad(float deg) { return deg * M_PI / 180.0f; }
@@ -92,4 +92,4 @@ namespace mvs {
         }
 
     } // namespace utils
-} // namespace mvs
+} // namespace fs

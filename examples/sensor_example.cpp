@@ -11,15 +11,15 @@
  * 6. Show LIDAR sensor integration with physics
  */
 
-#include "multiverse/robot/sensors.hpp"
-#include "multiverse/robot.hpp"
-#include "multiverse/world.hpp"  // For muli::World
+#include "flatsim/robot/sensors.hpp"
+#include "flatsim/robot.hpp"
+#include "flatsim/world.hpp"  // For muli::World
 #include <iostream>
 #include <memory>
 #include <iomanip>
 #include <algorithm>
 
-using namespace mvs;
+using namespace fs;
 
 void demonstrate_gps_sensor() {
     std::cout << "=== GPS Sensor Example ===\n";

@@ -1,9 +1,9 @@
-#include "multiverse/robot/sensors/lidar_sensor.hpp"
+#include "flatsim/robot/sensors/lidar_sensor.hpp"
 #include <random>
 #include <cmath>
 #include <algorithm>
 
-namespace mvs {
+namespace fs {
     
     LIDARSensor::LIDARSensor(std::shared_ptr<muli::World> world,
                            ScanPattern pattern,
@@ -524,4 +524,4 @@ namespace mvs {
         if (num_vertical_layers < 1) num_vertical_layers = 1;
     }
     
-} // namespace mvs
+} // namespace fs

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "multiverse/types.hpp"
+#include "flatsim/types.hpp"
 #include <memory>
 
-namespace mvs {
+namespace fs {
     /**
      * @brief Abstract base class for all sensors
      * 
@@ -54,4 +54,4 @@ namespace mvs {
         double last_update_time = 0.0;
         bool data_valid = false;
     };
-} // namespace mvs
+} // namespace fs

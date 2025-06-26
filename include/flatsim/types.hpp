@@ -5,7 +5,7 @@
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 #include <unordered_map>
-namespace mvs {
+namespace fs {
 
     // ROBOT
     struct RobotControll {
@@ -53,4 +53,4 @@ namespace mvs {
         float resolution;
     };
 
-} // namespace mvs
+} // namespace fs

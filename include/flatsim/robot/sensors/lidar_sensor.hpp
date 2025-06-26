@@ -1,12 +1,12 @@
 #pragma once
 
-#include "multiverse/robot/sensor.hpp"
-#include "multiverse/types.hpp"
+#include "flatsim/robot/sensor.hpp"
+#include "flatsim/types.hpp"
 #include "muli/world.h"
 #include <chrono>
 #include <vector>
 
-namespace mvs {
+namespace fs {
     /**
      * @brief LIDAR sensor data structure
      * 
@@ -331,4 +331,4 @@ namespace mvs {
          */
         void initialize_scan_parameters();
     };
-} // namespace mvs
+} // namespace fs

@@ -1,6 +1,6 @@
-#include "multiverse/robot.hpp"
+#include "flatsim/robot.hpp"
 
-namespace mvs {
+namespace fs {
 
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
         : rec(rec), world(world) {
@@ -186,4 +186,4 @@ namespace mvs {
         return nullptr;
     }
 
-} // namespace mvs
+} // namespace fs

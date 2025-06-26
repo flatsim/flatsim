@@ -2,13 +2,15 @@
 
 #include "muli/collision_filter.h"
 #include "muli/world.h"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
-namespace mvs {
-    class Hitch {
+namespace fs {
+    class Karosserie {
       private:
         std::shared_ptr<muli::World> world;
+        muli::RigidBody *karosserie;
+        muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
 
@@ -17,18 +19,21 @@ namespace mvs {
         concord::Bound bound;
         concord::Pose pose;
         pigment::RGB color;
-        bool hooked = false;
+        bool working = false;
+        bool has_physics = true;
 
-        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         void init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
-                  concord::Bound bound, muli::CollisionFilter filter);
+                  concord::Bound bound, muli::CollisionFilter filter, bool has_physics = true);
         void tick(float dt, concord::Pose trans_pose);
 
+        muli::Transform get_transform() const;
+        muli::RigidBody *get_body() const;
         void teleport(concord::Pose pose);
         void visualize();
 
-        void toggle_hook() { hooked = !hooked; }
+        void toggle_work() { working = !working; }
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
     };
-} // namespace mvs
+} // namespace fs

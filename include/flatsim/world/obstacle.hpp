@@ -5,10 +5,10 @@
 #include <vector>
 
 #include "muli/types.h"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
-namespace mvs {
+namespace fs {
 
     class Obstacle {
       private:
@@ -20,4 +20,4 @@ namespace mvs {
         virtual void tick(float dt, concord::Pose &position) = 0;
         virtual void init(std::string name, concord::Pose position, const std::vector<std::any> &args) = 0;
     };
-} // namespace mvs
+} // namespace fs

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace mvs {
+namespace fs {
     namespace constants {
         // Camera and visualization settings
         inline constexpr bool followCam = true;
@@ -17,4 +17,4 @@ namespace mvs {
         inline constexpr float brake = 10.0f;
         inline constexpr float drag = 0.5f;          // Velocity-dependent drag coefficient
     } // namespace constants
-} // namespace mvs
+} // namespace fs

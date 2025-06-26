@@ -6,17 +6,17 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "multiverse/exceptions.hpp"
-#include "multiverse/robot/chassis/chassis.hpp"
-#include "multiverse/robot/sensor.hpp"
-#include "multiverse/robot/sensors/gps_sensor.hpp"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
-#include "multiverse/world.hpp"
+#include "flatsim/exceptions.hpp"
+#include "flatsim/robot/chassis/chassis.hpp"
+#include "flatsim/robot/sensor.hpp"
+#include "flatsim/robot/sensors/gps_sensor.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
+#include "flatsim/world.hpp"
 
 #include <vector>
 
-namespace mvs {
+namespace fs {
     class Robot {
       private:
         bool pulsing = false;
@@ -83,4 +83,4 @@ namespace mvs {
         void visualize_once();
         void visualize();
     };
-} // namespace mvs
+} // namespace fs

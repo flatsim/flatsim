@@ -6,13 +6,13 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "multiverse/exceptions.hpp"
-#include "multiverse/robot.hpp"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
-#include "multiverse/world/layer.hpp"
+#include "flatsim/exceptions.hpp"
+#include "flatsim/robot.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
+#include "flatsim/world/layer.hpp"
 
-namespace mvs {
+namespace fs {
     class WorldSettings : public muli::WorldSettings {
       private:
         concord::Datum world_datum_;
@@ -51,4 +51,4 @@ namespace mvs {
         std::shared_ptr<muli::World> get_world() const { return world; }
         const WorldSettings &get_settings() const { return settings; }
     };
-} // namespace mvs
+} // namespace fs

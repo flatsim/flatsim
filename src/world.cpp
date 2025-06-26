@@ -1,6 +1,6 @@
-#include "multiverse/world.hpp"
+#include "flatsim/world.hpp"
 
-namespace mvs {
+namespace fs {
     namespace utl {
         std::vector<concord::ENU> build_corners(float width, float height) {
             std::vector<concord::ENU> corners;
@@ -90,4 +90,4 @@ namespace mvs {
         //                             .with_radii({{0.005f}}));
     }
 
-} // namespace mvs
+} // namespace fs

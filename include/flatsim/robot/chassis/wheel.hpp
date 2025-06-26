@@ -1,11 +1,11 @@
 #pragma once
 
 #include "muli/world.h"
-#include "multiverse/exceptions.hpp"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/exceptions.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
-namespace mvs {
+namespace fs {
     // Remove duplicate function - use utils::deg2rad instead
     // --- Utility functions ---
 
@@ -51,4 +51,4 @@ namespace mvs {
         muli::RigidBody* get_wheel() { return wheel; }
         muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
     };
-} // namespace mvs
+} // namespace fs

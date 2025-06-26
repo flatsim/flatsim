@@ -1,6 +1,6 @@
-#include "multiverse/robot/chassis/chassis.hpp"
+#include "flatsim/robot/chassis/chassis.hpp"
 
-namespace mvs {
+namespace fs {
 
     float distance(float x1, float y1, float x2, float y2) {
         return std::sqrt(std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2));
@@ -10,7 +10,7 @@ namespace mvs {
                    muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Chassis::init(mvs::RobotInfo &robo) {
+    void Chassis::init(fs::RobotInfo &robo) {
         this->bound = robo.bound;
         this->color = robo.color;
         this->name = robo.name;
@@ -29,8 +29,8 @@ namespace mvs {
         }
         body->SetCollisionFilter(filter);
 
-        body->SetLinearDamping(mvs::constants::linearDamping);
-        body->SetAngularDamping(mvs::constants::angularDamping);
+        body->SetLinearDamping(fs::constants::linearDamping);
+        body->SetAngularDamping(fs::constants::angularDamping);
 
         // Configure motor joint parameters for soft constraints
         float mf = 300.0f;    // Max force (scaled in wheel update)
@@ -41,7 +41,7 @@ namespace mvs {
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
-            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], mvs::constants::force, mvs::constants::friction, mvs::constants::maxImpulse, mvs::constants::brake, mvs::constants::drag,
+            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], fs::constants::force, fs::constants::friction, fs::constants::maxImpulse, fs::constants::brake, fs::constants::drag,
                        robo.controls.throttles_max[i], robo.controls.steerings_max[i]);
             wheels.push_back(wheel);
 
@@ -53,7 +53,7 @@ namespace mvs {
             angle_joints.emplace_back(anglejoing);
         }
 
-        wheel_damping(mvs::constants::linearDamping, mvs::constants::angularDamping);
+        wheel_damping(fs::constants::linearDamping, fs::constants::angularDamping);
 
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
@@ -140,4 +140,4 @@ namespace mvs {
         }
     }
 
-} // namespace mvs
+} // namespace fs

@@ -1,6 +1,6 @@
-#include "multiverse/robot/chassis/wheel.hpp"
+#include "flatsim/robot/chassis/wheel.hpp"
 
-namespace mvs {
+namespace fs {
 
     Wheel::Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
                  muli::CollisionFilter filter)
@@ -123,4 +123,4 @@ namespace mvs {
         wheel->SetAngularDamping(angular_damping);
     }
 
-} // namespace mvs
+} // namespace fs

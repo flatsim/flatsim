@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace mvs {
+namespace fs {
     /// Base exception class for all Multiverse simulation errors
     class MultiverseException : public std::runtime_error {
     public:
@@ -52,4 +52,4 @@ namespace mvs {
         explicit SensorException(const std::string& sensor_type, const std::string& message)
             : MultiverseException("Sensor error (" + sensor_type + "): " + message) {}
     };
-} // namespace mvs
+} // namespace fs

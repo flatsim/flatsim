@@ -1,15 +1,15 @@
 #pragma once
 
-#include "multiverse/exceptions.hpp"
-#include "multiverse/robot.hpp"
-#include "multiverse/types.hpp"
-#include "multiverse/world.hpp"
+#include "flatsim/exceptions.hpp"
+#include "flatsim/robot.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/world.hpp"
 
 #include "muli/world.h"
 #include <optional>
 #include <rerun.hpp>
 
-namespace mvs {
+namespace fs {
     class Simulator {
       public:
         std::shared_ptr<World> world;
@@ -47,4 +47,4 @@ namespace mvs {
         void reset_recording();
         void clear_all_entities();
     };
-} // namespace mvs
+} // namespace fs

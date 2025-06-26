@@ -1,10 +1,10 @@
 #pragma once
 
-#include "multiverse/robot/sensor.hpp"
-#include "multiverse/types.hpp"
+#include "flatsim/robot/sensor.hpp"
+#include "flatsim/types.hpp"
 #include <chrono>
 
-namespace mvs {
+namespace fs {
     /**
      * @brief GPS sensor data structure with RTK capabilities
      * 
@@ -136,4 +136,4 @@ namespace mvs {
          */
         void convert_enu_to_wgs84(const concord::Pose& robot_pose);
     };
-} // namespace mvs
+} // namespace fs

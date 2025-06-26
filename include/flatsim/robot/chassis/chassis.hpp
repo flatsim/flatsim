@@ -1,18 +1,18 @@
 #pragma once
 
 #include "muli/world.h"
-#include "multiverse/constants.hpp"
-#include "multiverse/exceptions.hpp"
-#include "multiverse/robot/chassis/hitch.hpp"
-#include "multiverse/robot/chassis/karosserie.hpp"
-#include "multiverse/robot/chassis/wheel.hpp"
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/constants.hpp"
+#include "flatsim/exceptions.hpp"
+#include "flatsim/robot/chassis/hitch.hpp"
+#include "flatsim/robot/chassis/karosserie.hpp"
+#include "flatsim/robot/chassis/wheel.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
 #include <rerun.hpp>
 #include <spdlog/spdlog.h>
 
-namespace mvs {
+namespace fs {
 
     class Chassis {
       private:
@@ -37,7 +37,7 @@ namespace mvs {
 
         Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
 
-        void init(mvs::RobotInfo &robo);
+        void init(fs::RobotInfo &robo);
 
         void tick(float dt);
         void visualize();
@@ -52,4 +52,4 @@ namespace mvs {
         const concord::Bound& get_bound() const { return bound; }
         const std::string& get_name() const { return name; }
     };
-} // namespace mvs
+} // namespace fs

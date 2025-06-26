@@ -1,6 +1,6 @@
-#include "multiverse/world/layer.hpp"
+#include "flatsim/world/layer.hpp"
 
-namespace mvs {
+namespace fs {
     Layer::Layer(std::shared_ptr<rerun::RecordingStream> rec, concord::Datum datum)
         : rec(rec), datum(datum), rnd(std::random_device()()) {}
 
@@ -165,4 +165,4 @@ namespace mvs {
                         rerun::GeoLineStrings(polystr).with_colors({{color}}).with_radii({{0.1f}}));
     }
 
-} // namespace mvs
+} // namespace fs

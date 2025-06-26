@@ -1,14 +1,14 @@
 #pragma once
 
-#include "multiverse/types.hpp"
-#include "multiverse/utils.hpp"
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 
 #include <any>
 #include <random>
 #include <type_traits>
 #include <vector>
 
-namespace mvs {
+namespace fs {
 
     struct GridData {
         pigment::RGB color;
@@ -54,4 +54,4 @@ namespace mvs {
         concord::Grid<GridData> &getGrid() { return grid; }
         const concord::Grid<GridData> &getGrid() const { return grid; }
     };
-} // namespace mvs
+} // namespace fs

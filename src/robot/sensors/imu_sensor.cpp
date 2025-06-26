@@ -1,8 +1,8 @@
-#include "multiverse/robot/sensors/imu_sensor.hpp"
+#include "flatsim/robot/sensors/imu_sensor.hpp"
 #include <random>
 #include <cmath>
 
-namespace mvs {
+namespace fs {
     
     IMUSensor::IMUSensor(double frequency, double accel_noise, double gyro_noise, double mag_noise)
         : update_frequency(frequency)
@@ -387,4 +387,4 @@ namespace mvs {
         }
     }
     
-} // namespace mvs
+} // namespace fs
