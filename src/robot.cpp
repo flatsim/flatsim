@@ -51,7 +51,10 @@ namespace fs {
             (*power)->update(dt, consumption_multiplier);
         }
 
-        // Tank is now handled by chassis
+        // Update tank if present
+        if (tank.has_value()) {
+            tank->tick(dt, chassis->get_pose(), rec);
+        }
 
         visualize();
     }
@@ -82,7 +85,12 @@ namespace fs {
         throttles.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controls.throttles_max;
 
-        // Tank is now initialized by chassis
+        // Initialize tank if present
+        if (robo.tank.has_value()) {
+            tank = Tank(robo.tank->name, Tank::Type::HARVEST, 
+                       robo.tank->capacity, 0.0f, 0.0f);
+            tank->init(info.color, info.name, robo.tank->bound);
+        }
 
         // Initialize power source if present
         if (robo.power_source.has_value()) {

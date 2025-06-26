@@ -115,7 +115,7 @@ public:
                 rerun::datatypes::Vec3D(t_w, filled_height, 0.0f)};
             
             rec->log_static(
-                parent_name + "/chassis/tank/" + name + "/fill",
+                parent_name + "/tank/" + name + "/fill",
                 rerun::Boxes3D::from_centers_and_sizes(fill_centers, fill_sizes)
                     .with_radii({{0.01f}})
                     .with_fill_mode(rerun::FillMode::Solid)
@@ -133,7 +133,7 @@ public:
             rerun::datatypes::Vec3D(t_w, t_h, 0.0f)};
         
         rec->log_static(
-            parent_name + "/chassis/tank/" + name + "/outline",
+            parent_name + "/tank/" + name + "/outline",
             rerun::Boxes3D::from_centers_and_sizes(outline_centers, outline_sizes)
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::MajorWireframe)

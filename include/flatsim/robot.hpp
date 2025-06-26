@@ -29,6 +29,7 @@ namespace fs {
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chassis> chassis;
         std::optional<std::unique_ptr<Power>> power;
+        std::optional<Tank> tank;
         std::vector<std::shared_ptr<Robot>> slaves;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
@@ -82,13 +83,14 @@ namespace fs {
         }
 
         // Tank management
-        bool has_tank() const { return chassis && chassis->get_tank() != nullptr; }
-        Tank* get_tank() const { return chassis ? chassis->get_tank() : nullptr; }
+        bool has_tank() const { return tank.has_value(); }
+        Tank* get_tank() { return tank.has_value() ? &tank.value() : nullptr; }
+        const Tank* get_tank() const { return tank.has_value() ? &tank.value() : nullptr; }
         void empty_tank() { 
-            if (auto* tank = get_tank()) tank->empty_all(); 
+            if (tank.has_value()) tank->empty_all(); 
         }
         void fill_tank(float amount) { 
-            if (auto* tank = get_tank()) tank->fill(amount); 
+            if (tank.has_value()) tank->fill(amount); 
         }
         
         // Power management

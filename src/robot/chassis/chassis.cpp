@@ -67,12 +67,6 @@ namespace fs {
             hitches.push_back(hitch);
         }
 
-        if (robo.tank.has_value()) {
-            Tank tank(robo.tank->name, Tank::Type::HARVEST, 
-                     robo.tank->capacity, 0.0f, 0.0f);
-            tank.init(color, name, robo.tank->bound);
-            tanks.push_back(tank);
-        }
     }
 
     void Chassis::tick(float dt) {
@@ -85,9 +79,6 @@ namespace fs {
         }
         for (uint i = 0; i < hitches.size(); ++i) {
             hitches[i].tick(dt, pose);
-        }
-        for (uint i = 0; i < tanks.size(); ++i) {
-            tanks[i].tick(dt, pose, rec);
         }
     }
 
