@@ -254,7 +254,7 @@ namespace fs {
         }
         
         auto my_pos = get_position().point;
-        float connection_range = 5.0f;  // 5 unit connection range
+        float connection_range = 0.1f;  // Hitch points must be overlapping
         
         for (const auto& other_robot : all_robots) {
             // Skip self and non-slaves
@@ -267,19 +267,28 @@ namespace fs {
                 continue;
             }
             
-            // Check distance
+            // Calculate actual world positions of hitch points
+            auto my_rear_hitch_pos = info.hitches["rear_hitch"];
+            auto slave_front_hitch_pos = other_robot->info.hitches["front_hitch"];
             auto other_pos = other_robot->get_position().point;
-            float dist = std::sqrt(std::pow(my_pos.x - other_pos.x, 2) + std::pow(my_pos.y - other_pos.y, 2));
+            auto my_angle = get_position().angle.yaw;
+            auto other_angle = other_robot->get_position().angle.yaw;
             
-            if (dist <= connection_range) {
-                // Create joint between rear hitch and front hitch
-                auto my_rear_hitch_pos = info.hitches["rear_hitch"];
-                auto slave_front_hitch_pos = other_robot->info.hitches["front_hitch"];
-                
-                // Calculate world positions of hitches
+            // Transform hitch positions to world coordinates considering robot rotation
+            float my_hitch_world_x = my_pos.x + my_rear_hitch_pos.pose.point.x * cos(my_angle) - my_rear_hitch_pos.pose.point.y * sin(my_angle);
+            float my_hitch_world_y = my_pos.y + my_rear_hitch_pos.pose.point.x * sin(my_angle) + my_rear_hitch_pos.pose.point.y * cos(my_angle);
+            
+            float other_hitch_world_x = other_pos.x + slave_front_hitch_pos.pose.point.x * cos(other_angle) - slave_front_hitch_pos.pose.point.y * sin(other_angle);
+            float other_hitch_world_y = other_pos.y + slave_front_hitch_pos.pose.point.x * sin(other_angle) + slave_front_hitch_pos.pose.point.y * cos(other_angle);
+            
+            // Check if hitch points are overlapping (very close)
+            float hitch_dist = std::sqrt(std::pow(my_hitch_world_x - other_hitch_world_x, 2) + std::pow(my_hitch_world_y - other_hitch_world_y, 2));
+            
+            if (hitch_dist <= connection_range) {
+                // Use the midpoint between the two hitch points as the joint position
                 muli::Vec2 hitch_world_pos(
-                    my_pos.x + my_rear_hitch_pos.pose.point.x,
-                    my_pos.y + my_rear_hitch_pos.pose.point.y
+                    (my_hitch_world_x + other_hitch_world_x) / 2.0f,
+                    (my_hitch_world_y + other_hitch_world_y) / 2.0f
                 );
                 
                 connection_joint = world->CreateRevoluteJoint(

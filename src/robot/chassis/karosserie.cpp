@@ -4,7 +4,7 @@ namespace fs {
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Karosserie::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name,
+    void Karosserie::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                           concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
                           bool has_physics) {
         this->name = name;
@@ -47,15 +47,15 @@ namespace fs {
         }
     }
 
-    muli::Transform Karosserie::get_transform() const { 
+    muli::Transform Karosserie::get_transform() const {
         if (karosserie) {
-            return karosserie->GetTransform(); 
+            return karosserie->GetTransform();
         }
         // For compound shape karosseries, return identity transform
         return muli::Transform();
     }
-    
-    muli::RigidBody *Karosserie::get_body() const { 
+
+    muli::RigidBody *Karosserie::get_body() const {
         return karosserie; // Will be nullptr for compound shape karosseries
     }
 

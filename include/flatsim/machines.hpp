@@ -133,9 +133,19 @@ namespace fs {
         kaross.has_physics = true;
         robot_info.karos.push_back(kaross);
 
-        // rear hitch for pulling
+        // Small rear extrusion for hitch connection
+        concord::Size hitch_size = concord::Size(width * 0.15f, height * 0.1f, 0.0f); // Small extrusion
+        KarosserieInfo hitch_mount;
+        hitch_mount.name = "hitch_mount";
+        hitch_mount.bound = concord::Bound(concord::Pose(0.0f, -(height / 2) - hitch_size.y / 2, 0.0f), hitch_size);
+        hitch_mount.color = color;
+        hitch_mount.controllable = false;
+        hitch_mount.has_physics = true;
+        robot_info.karos.push_back(hitch_mount);
+
+        // rear hitch for pulling - beyond the extrusion to avoid collision during rotation
         concord::Bound hitch_bound =
-            concord::Bound(concord::Pose(0, -(height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
+            concord::Bound(concord::Pose(0, -(height / 2) - hitch_size.y - 0.2f, 0.0f), concord::Size(0.05f, 0.05f, 0.0f));
         robot_info.hitches["rear_hitch"] = hitch_bound;
 
         // color
@@ -185,9 +195,19 @@ namespace fs {
         std::vector<bool> left_side = {false, true};
         robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
 
-        // front hitch for being pulled
+        // Extended karosserie as towing pole
+        concord::Size pole_size = concord::Size(width * 0.1f, height * 0.4f, 0.0f); // Thin pole extending forward
+        KarosserieInfo pole;
+        pole.name = "towing_pole";
+        pole.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + pole_size.y / 2, 0.0f), pole_size);
+        pole.color = color;
+        pole.controllable = false;
+        pole.has_physics = true;
+        robot_info.karos.push_back(pole);
+
+        // front hitch for being pulled - beyond the pole to avoid collision during rotation
         concord::Bound hitch_bound =
-            concord::Bound(concord::Pose(0, (height / 2) * 0.9, 0.0f), concord::Size(0.1f, 0.1f, 0.0f));
+            concord::Bound(concord::Pose(0, (height / 2) + pole_size.y + 0.2f, 0.0f), concord::Size(0.05f, 0.05f, 0.0f));
         robot_info.hitches["front_hitch"] = hitch_bound;
 
         // color
