@@ -220,7 +220,7 @@ namespace fs {
         tank_info.capacity = 2000.0f; // 2000 units capacity (larger than harvester)
         // Tank fills most of the biner
         float tank_width = width * 0.9f;
-        float tank_height = height * 0.8f;
+        float tank_height = height * 0.9f;
         tank_info.bound = concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), // Centered
                                          concord::Size(tank_width, tank_height, 0.0f));
         robot_info.tank = tank_info;
@@ -229,8 +229,8 @@ namespace fs {
         return robot_info;
     }
 
-    inline fs::RobotInfo big_truck(concord::Pose pose, std::string name,
-                                   pigment::RGB color = pigment::RGB(100, 100, 255), std::string uuid = "") {
+    inline fs::RobotInfo truck(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(100, 100, 255),
+                               std::string uuid = "") {
         // extract dimensions
         const float width = 2.5f;
         const float height = 8.0f; // Big truck length
@@ -256,7 +256,7 @@ namespace fs {
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, front_y, 0.0f), w_size));
 
         // Second pair in the middle but a bit forward
-        float middle_y = height * 0.2f; // Slightly forward of center
+        float middle_y = height * 0.3f; // Slightly forward of center
         wheels.push_back(concord::Bound(concord::Pose(width / 2, middle_y, 0.0f), w_size));
         wheels.push_back(concord::Bound(concord::Pose(-width / 2, middle_y, 0.0f), w_size));
 
@@ -296,10 +296,9 @@ namespace fs {
         cargo_tank.capacity = 50000.0f; // Large capacity
         // Tank fills the rear 4/5 of the truck
         float tank_width = width * 0.9f;
-        float tank_height = height * 0.75f;    // Most of the chassis length
-        float tank_y_offset = -height * 0.05f; // Positioned in rear portion
+        float tank_height = height * 0.95f; // Most of the chassis length
         cargo_tank.bound =
-            concord::Bound(concord::Pose(0.0f, tank_y_offset, 0.0f), concord::Size(tank_width, tank_height, 0.0f));
+            concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), concord::Size(tank_width, tank_height, 0.0f));
         robot_info.tank = cargo_tank;
 
         // Power source - large fuel tank
