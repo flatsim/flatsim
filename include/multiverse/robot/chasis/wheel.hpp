@@ -37,7 +37,8 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose pose);
-        void update(float steering, float throttle, muli::MotorJoint *joint);
+        void update(float steering, float throttle, muli::MotorJoint *joint, float dt);
+        void configure_physics_for_size();
 
         concord::Bound get_bound() const { return bound; }
     };

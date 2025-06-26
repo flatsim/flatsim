@@ -26,6 +26,8 @@ namespace mvs {
         maxImpulse = _maxImpulse;
         brake = _brake;
         drag = _drag;
+        
+        configure_physics_for_size();
     }
 
     void Wheel::tick(float dt) {
@@ -39,19 +41,22 @@ namespace mvs {
         float vf = Dot(v, forward);
         float vn = Dot(v, normal);
 
+        // Apply lateral friction to prevent sliding
         if (muli::Abs(vn) > muli::epsilon) {
-            muli::Vec2 j = -wheel->GetMass() * friction * vn * normal;
-            if (muli::Length(j) > maxImpulse) {
-                j = muli::Normalize(j) * maxImpulse;
+            // Scale friction impulse by wheel size and dt
+            float wheelRadius = bound.size.x / 2.0f;
+            float scaledFriction = friction * (1.0f + wheelRadius);
+            muli::Vec2 j = -wheel->GetMass() * scaledFriction * vn * normal;
+            
+            // Scale max impulse by wheel size
+            float scaledMaxImpulse = maxImpulse * (1.0f + wheelRadius * 2.0f);
+            if (muli::Length(j) > scaledMaxImpulse) {
+                j = muli::Normalize(j) * scaledMaxImpulse;
             }
             wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
         }
 
-        float av = wheel->GetAngularVelocity();
-        if (muli::Abs(av) > muli::epsilon) {
-            wheel->ApplyAngularImpulse(0.1f * wheel->GetInertia() * -av, true);
-        }
-
+        // Apply drag force (velocity-dependent)
         if (muli::Abs(vf) > muli::epsilon) {
             float dragForceMagnitude = -drag * vf;
             wheel->ApplyForce(wheel->GetPosition(), dragForceMagnitude * forward, true);
@@ -60,14 +65,19 @@ namespace mvs {
         visualize();
     }
 
-    void Wheel::update(float steering, float throttle, muli::MotorJoint *joint) {
+    void Wheel::update(float steering, float throttle, muli::MotorJoint *joint, float dt) {
         throttle_val = throttle;
         steering_val = steering;
-        if (steering == 0.0f) {
-            joint->SetAngularOffset(steering);
-        } else {
-            joint->SetAngularOffset(0.0f);
-            muli::Vec2 f2 = forward * (throttle * force);
+        joint->SetAngularOffset(steering);
+        
+        if (muli::Abs(throttle) > muli::epsilon) {
+            // Scale force by wheel size and apply dt correctly
+            float wheelRadius = bound.size.x / 2.0f;
+            float scaleFactor = muli::Sqrt(wheelRadius / 0.2f); // Normalize to typical wheel size
+            float scaledForce = force * scaleFactor;
+            
+            // Apply force scaled by dt for consistent acceleration
+            muli::Vec2 f2 = forward * (throttle * scaledForce);
             wheel->ApplyForce(wheel->GetPosition(), f2, true);
         }
     }
@@ -92,6 +102,22 @@ namespace mvs {
                 .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));
+    }
+    
+    void Wheel::configure_physics_for_size() {
+        float wheelRadius = bound.size.x / 2.0f;
+        
+        // Scale damping based on wheel size
+        // Larger wheels need more damping to prevent oscillation
+        float linearDamping = 0.2f + (wheelRadius - 0.1f) * 0.3f;
+        float angularDamping = 0.5f + (wheelRadius - 0.1f) * 1.5f;
+        
+        // Clamp values to reasonable ranges
+        linearDamping = muli::Clamp(linearDamping, 0.2f, 0.8f);
+        angularDamping = muli::Clamp(angularDamping, 0.5f, 3.0f);
+        
+        wheel->SetLinearDamping(linearDamping);
+        wheel->SetAngularDamping(angularDamping);
     }
 
 } // namespace mvs

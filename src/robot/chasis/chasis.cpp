@@ -29,9 +29,11 @@ namespace mvs {
         body->SetLinearDamping(mvs::constants::linearDamping);
         body->SetAngularDamping(mvs::constants::angularDamping);
 
-        float mf = -1;
-        float fr = -1;
-        float dr = 0.1f;
+        // Configure motor joint parameters for soft constraints
+        float mf = 300.0f;    // Max force (scaled in wheel update)
+        float mt = 100.0f;    // Max torque
+        float fr = 30.0f;     // Frequency for soft joint
+        float dr = 1.0f;      // Critical damping
         float jm = body->GetMass();
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
@@ -40,7 +42,7 @@ namespace mvs {
                        robo.controlz.throttles_max[i], robo.controlz.steerings_max[i]);
             wheelz.push_back(wheel);
 
-            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, mvs::constants::torque, fr, dr, jm);
+            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, mt, fr, dr, jm);
             jointz.emplace_back(joint);
 
             float mm = std::abs(robo.controlz.steerings_max[i] + robo.controlz.steerings_diff[i]);
@@ -96,13 +98,9 @@ namespace mvs {
                 .with_colors(colors));
     }
 
-    void Chasis::update(std::vector<float> steering, std::vector<float> throttle) {
+    void Chasis::update(std::vector<float> steering, std::vector<float> throttle, float dt) {
         for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].steering_val = steering[i];
-            wheelz[i].throttle_val = throttle[i];
-            jointz[i]->SetAngularOffset(steering[i]);
-            muli::Vec2 f2 = wheelz[i].forward * (throttle[i] * wheelz[i].force);
-            wheelz[i].wheel->ApplyForce(wheelz[i].wheel->GetPosition(), f2, true);
+            wheelz[i].update(steering[i], throttle[i], jointz[i], dt);
         }
     }
 

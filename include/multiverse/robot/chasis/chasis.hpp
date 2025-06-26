@@ -40,7 +40,7 @@ namespace mvs {
         void tick(float dt);
         void visualize();
         void teleport(concord::Pose);
-        void update(std::vector<float> steering, std::vector<float> throttle);
+        void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linearDamping, float angularDamping);
         muli::Transform get_transform() const;
         void toggle_work(std::string karosserie_name);

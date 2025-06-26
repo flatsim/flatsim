@@ -18,7 +18,7 @@ namespace mvs {
         this->info.bound.pose.point.y = chassis->get_transform().position.y;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
         chassis->tick(dt);
-        chassis->update(steerings, throttles);
+        chassis->update(steerings, throttles, dt);
 
         visualize();
     }
