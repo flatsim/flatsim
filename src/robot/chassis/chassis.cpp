@@ -66,6 +66,13 @@ namespace fs {
             hitch.init(color, name, h.first, bound, h.second, filter);
             hitches.push_back(hitch);
         }
+
+        if (robo.tank.has_value()) {
+            Tank tank(robo.tank->name, Tank::Type::HARVEST, 
+                     robo.tank->capacity, 0.0f, 0.0f);
+            tank.init(color, name, robo.tank->bound);
+            tanks.push_back(tank);
+        }
     }
 
     void Chassis::tick(float dt) {
@@ -79,11 +86,18 @@ namespace fs {
         for (uint i = 0; i < hitches.size(); ++i) {
             hitches[i].tick(dt, pose);
         }
+        for (uint i = 0; i < tanks.size(); ++i) {
+            tanks[i].tick(dt, pose, rec);
+        }
     }
 
     muli::Transform Chassis::get_transform() const { return body->GetTransform(); }
 
     void Chassis::visualize() {
+        visualize(this->name);
+    }
+
+    void Chassis::visualize(const std::string& label) {
         auto x = body->GetPosition().x;
         auto y = body->GetPosition().y;
         auto th = body->GetRotation().GetAngle();
@@ -95,7 +109,7 @@ namespace fs {
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
                 .with_radii({{0.02f}})
-                .with_labels({this->name})
+                .with_labels({label})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));

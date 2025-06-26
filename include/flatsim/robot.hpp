@@ -10,11 +10,15 @@
 #include "flatsim/robot/chassis/chassis.hpp"
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
+#include "flatsim/robot/tank.hpp"
+#include "flatsim/robot/power.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
 
 #include <vector>
+#include <memory>
+#include <optional>
 
 namespace fs {
     class Robot {
@@ -24,6 +28,7 @@ namespace fs {
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chassis> chassis;
+        std::optional<std::unique_ptr<Power>> power;
         std::vector<std::shared_ptr<Robot>> slaves;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
@@ -74,6 +79,26 @@ namespace fs {
                 throw NullPointerException("chassis");
             }
             return &chassis->karosseries; 
+        }
+
+        // Tank management
+        bool has_tank() const { return chassis && chassis->get_tank() != nullptr; }
+        Tank* get_tank() const { return chassis ? chassis->get_tank() : nullptr; }
+        void empty_tank() { 
+            if (auto* tank = get_tank()) tank->empty_all(); 
+        }
+        void fill_tank(float amount) { 
+            if (auto* tank = get_tank()) tank->fill(amount); 
+        }
+        
+        // Power management
+        bool has_power() const { return power.has_value(); }
+        Power* get_power() const { return power ? power->get() : nullptr; }
+        bool is_powered() const { 
+            return power && *power && !(*power)->is_empty(); 
+        }
+        float get_power_percentage() const { 
+            return (power && *power) ? (*power)->get_percentage() : 0.0f; 
         }
 
       private:

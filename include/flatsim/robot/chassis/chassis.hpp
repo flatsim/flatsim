@@ -6,6 +6,7 @@
 #include "flatsim/robot/chassis/hitch.hpp"
 #include "flatsim/robot/chassis/karosserie.hpp"
 #include "flatsim/robot/chassis/wheel.hpp"
+#include "flatsim/robot/tank.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 
@@ -33,6 +34,7 @@ namespace fs {
       public:
         std::vector<Karosserie> karosseries;
         std::vector<Hitch> hitches;
+        std::vector<Tank> tanks;
         muli::RigidBody *body; // Owned by physics world
 
         Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
@@ -41,6 +43,7 @@ namespace fs {
 
         void tick(float dt);
         void visualize();
+        void visualize(const std::string& label);
         void teleport(concord::Pose);
         void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linear_damping, float angular_damping);
@@ -51,5 +54,9 @@ namespace fs {
         const concord::Pose& get_pose() const { return pose; }
         const concord::Bound& get_bound() const { return bound; }
         const std::string& get_name() const { return name; }
+        
+        // Tank accessors
+        Tank* get_tank() { return tanks.empty() ? nullptr : &tanks[0]; }
+        const Tank* get_tank() const { return tanks.empty() ? nullptr : &tanks[0]; }
     };
 } // namespace fs

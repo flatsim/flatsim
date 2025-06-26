@@ -5,6 +5,7 @@
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 #include <unordered_map>
+#include <optional>
 namespace fs {
 
     // ROBOT
@@ -23,6 +24,25 @@ namespace fs {
         bool has_physics = true;
     };
 
+    struct TankInfo {
+        std::string name;
+        float capacity;
+        concord::Bound bound;  // Position and size relative to robot center
+    };
+
+    enum class PowerType {
+        FUEL,
+        BATTERY
+    };
+
+    struct PowerInfo {
+        std::string name;
+        PowerType type;
+        float capacity;
+        float consumption_rate;
+        float charge_rate = 0.0f;  // only for batteries
+    };
+
     struct RobotInfo {
         uint RCI;
         uint group;
@@ -38,6 +58,8 @@ namespace fs {
         RobotControll controls;
         std::unordered_map<std::string, concord::Bound> hitches;
         std::vector<KarosserieInfo> karos;
+        std::optional<TankInfo> tank;  // Optional tank (harvesters, biners)
+        std::optional<PowerInfo> power_source;  // Optional power (not all machines need power)
     };
 
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };

@@ -28,6 +28,31 @@ namespace fs {
         chassis->tick(dt);
         chassis->update(steerings, throttles, dt);
 
+        // Update power consumption based on operation mode
+        if (power && *power && is_powered()) {
+            float consumption_multiplier = 1.0f;
+            switch (mode) {
+                case OP::IDLE:
+                    consumption_multiplier = 0.1f;  // Minimal consumption when idle
+                    break;
+                case OP::TRANSPORT:
+                    consumption_multiplier = 0.5f;  // Medium consumption when moving
+                    break;
+                case OP::WORK:
+                    consumption_multiplier = 1.5f;  // Higher consumption when working
+                    break;
+                case OP::CHARGING:
+                    consumption_multiplier = 0.0f;  // No consumption when charging
+                    (*power)->charge(dt); // Charge battery
+                    break;
+                default:
+                    consumption_multiplier = 0.1f;
+            }
+            (*power)->update(dt, consumption_multiplier);
+        }
+
+        // Tank is now handled by chassis
+
         visualize();
     }
 
@@ -56,6 +81,19 @@ namespace fs {
         steerings_diff = robo.controls.steerings_diff;
         throttles.resize(robo.wheels.size(), 0.0f);
         throttles_max = robo.controls.throttles_max;
+
+        // Tank is now initialized by chassis
+
+        // Initialize power source if present
+        if (robo.power_source.has_value()) {
+            auto power_type = (robo.power_source->type == PowerType::BATTERY) ? 
+                Power::Type::BATTERY : Power::Type::FUEL;
+            power = std::make_unique<Power>(
+                robo.power_source->name, power_type, 
+                robo.power_source->capacity, robo.power_source->consumption_rate,
+                robo.power_source->charge_rate
+            );
+        }
     }
 
     void Robot::reset_controls() {
@@ -102,7 +140,14 @@ namespace fs {
     }
 
     void Robot::visualize() {
-        chassis->visualize();
+        // Create label with power percentage
+        std::string label = info.name;
+        if (has_power()) {
+            int percentage = static_cast<int>(get_power_percentage());
+            label += "(" + std::to_string(percentage) + "%)";
+        }
+        
+        chassis->visualize(label);
 
         auto x = this->info.bound.pose.point.x;
         auto y = this->info.bound.pose.point.y;
@@ -185,5 +230,6 @@ namespace fs {
         }
         return nullptr;
     }
+
 
 } // namespace fs

@@ -6,7 +6,7 @@
 namespace fs {
 
     inline fs::RobotInfo oxbo_harvester(concord::Pose pose, std::string name,
-                                         pigment::RGB color = pigment::RGB(255, 200, 0), std::string uuid = "") {
+                                        pigment::RGB color = pigment::RGB(255, 200, 0), std::string uuid = "") {
         // extract dimensions
         const float width = 2.8f;
         const float height = 7.68f;
@@ -63,11 +63,32 @@ namespace fs {
         pigment::RGB robot_color = color;
         robot_info.color = robot_color;
 
+        // Tank - harvester has a harvest tank in upper 1/3 with padding
+        TankInfo harvest_tank;
+        harvest_tank.name = "harvest_bin";
+        harvest_tank.capacity = 10000.0f; // 10000 units capacity
+        // Tank in upper 1/3 of chassis with padding
+        float padding = 0.2f; // Padding from edges
+        float tank_width = width * (1.0f - 2 * padding);
+        float tank_height = height * (1.0f / 2.0f - padding);    // 1/3 height minus padding
+        float y_offset = height / 2 - tank_height / 2 - padding; // Position at top
+        harvest_tank.bound =
+            concord::Bound(concord::Pose(0.0f, y_offset, 0.0f), concord::Size(tank_width, tank_height, 0.0f));
+        robot_info.tank = harvest_tank;
+
+        // Power source - fuel tank
+        PowerInfo power_info;
+        power_info.name = "fuel_tank";
+        power_info.type = PowerType::FUEL;
+        power_info.capacity = 200.0f;        // 200 liters
+        power_info.consumption_rate = 0.05f; // 0.5 liters per second at full work
+        robot_info.power_source = power_info;
+
         return robot_info;
     }
 
     inline fs::RobotInfo tractor(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
-                                  std::string uuid = "") {
+                                 std::string uuid = "") {
         // extract dimensions
         const float width = 1.6f;
         const float height = 2.8f;
@@ -121,11 +142,20 @@ namespace fs {
         pigment::RGB robot_color = color;
         robot_info.color = robot_color;
 
+        // Power source - fuel tank (no harvest tank for tractor)
+        PowerInfo power_info;
+        power_info.name = "fuel_tank";
+        power_info.type = PowerType::FUEL;
+        power_info.capacity = 150.0f;        // 150 liters
+        power_info.consumption_rate = 0.03f; // 0.3 liters per second at full work
+        robot_info.power_source = power_info;
+        // No tank for tractor
+
         return robot_info;
     }
 
     inline fs::RobotInfo biner(concord::Pose pose, std::string name, pigment::RGB color = pigment::RGB(255, 200, 0),
-                                std::string uuid = "") {
+                               std::string uuid = "") {
         // extract dimensions
         const float width = 1.5f;
         const float height = 2.6f;
@@ -162,6 +192,18 @@ namespace fs {
         // color
         pigment::RGB robot_color = color;
         robot_info.color = robot_color;
+
+        // Biner has a tank but no power (carried by tractor)
+        TankInfo tank_info;
+        tank_info.name = "storage_bin";
+        tank_info.capacity = 2000.0f; // 2000 units capacity (larger than harvester)
+        // Tank fills most of the biner
+        float tank_width = width * 0.9f;
+        float tank_height = height * 0.8f;
+        tank_info.bound = concord::Bound(concord::Pose(0.0f, 0.0f, 0.0f), // Centered
+                                         concord::Size(tank_width, tank_height, 0.0f));
+        robot_info.tank = tank_info;
+        // No power source - it's carried
 
         return robot_info;
     }

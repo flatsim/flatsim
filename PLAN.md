@@ -30,6 +30,22 @@
 - [ ] Add physics joint constraints between robots
 - [ ] Complete hitch system implementation
 
+### 3.1. Tank and Power System (NEW - In Progress)
+- [ ] Create Tank base class for harvest storage
+- [ ] Create PowerSource base class (Fuel/Battery types)
+- [ ] Integrate tanks and power sources into Robot system
+- [ ] Add consumption logic based on operation modes
+- [ ] Implement harvest tank filling during work
+- [ ] Add tank/power visualization in Rerun
+- [ ] Support multiple tanks per machine
+- [ ] Implement quick emptying for harvest tanks
+
+### 3.2. Physics-Based Karosserie Parts (NEW - Planned)
+- [ ] Study Muli physics engine rigid body system
+- [ ] Add mass and collision to karosserie parts
+- [ ] Implement joint constraints between parts and body
+- [ ] Test physics interactions with harvest tanks
+
 ## Code Quality Issues (Medium Priority)
 
 ### 4. Naming & Style
