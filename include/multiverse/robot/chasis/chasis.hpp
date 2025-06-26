@@ -2,6 +2,7 @@
 
 #include "muli/world.h"
 #include "multiverse/constants.hpp"
+#include "multiverse/exceptions.hpp"
 #include "multiverse/robot/chasis/hitch.hpp"
 #include "multiverse/robot/chasis/karosserie.hpp"
 #include "multiverse/robot/chasis/wheel.hpp"
@@ -23,10 +24,9 @@ namespace mvs {
         muli::CollisionFilter filter;
 
       public:
-        std::shared_ptr<muli::RigidBody> bodyz;
         std::vector<Karosserie> karosseriez;
         std::vector<Hitch> hitchz;
-        muli::RigidBody *body;
+        muli::RigidBody *body; // Owned by physics world
         std::string name;
         pigment::RGB color;
         concord::Bound bound;

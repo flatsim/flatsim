@@ -14,7 +14,7 @@ namespace mvs {
     } // namespace utl
 
     World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
-    World::~World() { world.reset(); }
+    World::~World() = default;
 
     void World::init(concord::Datum datum, concord::Size world_size) {
         settings.init(datum, world_size);
@@ -42,11 +42,14 @@ namespace mvs {
 
     concord::Point World::at(std::string name, uint x, uint y) const {
         for (auto &layer : layers) {
+            if (!layer) {
+                continue; // Skip null layers
+            }
             if (layer->info.name == name) {
                 return layer->at(x, y);
             }
         }
-        return {0, 0};
+        throw EntityNotFoundException("Layer", name);
     }
 
     void World::adjust_word() {

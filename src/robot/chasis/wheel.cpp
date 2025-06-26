@@ -20,6 +20,9 @@ namespace mvs {
         auto wheelTf = utils::pose_to_transform(pose);
 
         wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
+        if (!wheel) {
+            throw InitializationException("Failed to create wheel body");
+        }
         wheel->SetCollisionFilter(filter);
         force = _force;
         friction = _friction;

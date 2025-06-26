@@ -24,6 +24,9 @@ namespace mvs {
         t.rotation = bound.pose.angle.yaw;
 
         body = world->CreateBox(w, h, t);
+        if (!body) {
+            throw InitializationException("Failed to create chassis body");
+        }
         body->SetCollisionFilter(filter);
 
         body->SetLinearDamping(mvs::constants::linearDamping);

@@ -1,11 +1,13 @@
 #pragma once
 
+#include "multiverse/exceptions.hpp"
 #include "multiverse/robot.hpp"
 #include "multiverse/types.hpp"
 #include "multiverse/world.hpp"
 
 #include "muli/world.h"
 #include <optional>
+#include <rerun.hpp>
 
 namespace mvs {
     class Simulator {
@@ -40,5 +42,9 @@ namespace mvs {
         Layer &get_layer(uint i);
         Layer &get_layer(std::string uuid);
         void add_layer(LayerInfo layz, bool noise = false);
+        
+        // RERUN MANAGEMENT
+        void reset_recording();
+        void clear_all_entities();
     };
 } // namespace mvs

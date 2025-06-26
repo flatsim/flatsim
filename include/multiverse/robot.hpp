@@ -6,6 +6,7 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
+#include "multiverse/exceptions.hpp"
 #include "multiverse/robot/chasis/chasis.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/robot/sensors/gps_sensor.hpp"
@@ -53,6 +54,9 @@ namespace mvs {
         template<typename T>
         T* get_sensor() const {
             for (const auto& sensor : sensors) {
+                if (!sensor) {
+                    continue; // Skip null sensors
+                }
                 T* typed_sensor = dynamic_cast<T*>(sensor.get());
                 if (typed_sensor) {
                     return typed_sensor;
@@ -65,7 +69,12 @@ namespace mvs {
         const concord::Pose &get_position() const { return info.bound.pose; }
         void pulse() { pulsining = true; }
         void toggle_work(std::string karosserie_name) { chassis->toggle_work(karosserie_name); }
-        std::vector<Karosserie> *get_karosseies() { return &chassis->karosseriez; }
+        std::vector<Karosserie> *get_karosseies() { 
+            if (!chassis) {
+                throw NullPointerException("chassis");
+            }
+            return &chassis->karosseriez; 
+        }
 
       private:
         concord::Datum datum;

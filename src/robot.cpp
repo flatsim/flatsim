@@ -11,9 +11,17 @@ namespace mvs {
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
+            if (!sensor) {
+                continue; // Skip null sensors
+            }
             sensor->set_robot_pose(info.bound.pose);
             sensor->update(dt);
         }
+        
+        if (!chassis) {
+            throw NullPointerException("chassis");
+        }
+        
         this->info.bound.pose.point.x = chassis->get_transform().position.x;
         this->info.bound.pose.point.y = chassis->get_transform().position.y;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
@@ -24,12 +32,23 @@ namespace mvs {
     }
 
     void Robot::init(concord::Datum datum, RobotInfo robo) {
-        spdlog::info("Initializing robot {}...", info.name);
+        spdlog::info("Initializing robot {}...", robo.name);
         this->datum = datum;
         this->info = robo;
         this->spawn_position = robo.bound.pose;
 
+        if (!world) {
+            throw NullPointerException("world");
+        }
+        
+        if (!rec) {
+            throw NullPointerException("recording stream");
+        }
+
         chassis = std::make_unique<Chasis>(world, rec, filter);
+        if (!chassis) {
+            throw InitializationException("chassis creation failed");
+        }
         chassis->init(robo);
 
         steerings.resize(robo.wheels.size(), 0.0f);

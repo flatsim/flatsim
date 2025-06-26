@@ -1,6 +1,7 @@
 #pragma once
 
 #include "muli/world.h"
+#include "multiverse/exceptions.hpp"
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
 
@@ -19,7 +20,7 @@ namespace mvs {
         concord::Pose pose;
         muli::CollisionFilter filter;
 
-        muli::RigidBody *wheel;
+        muli::RigidBody *wheel; // Owned by physics world
         muli::Vec2 forward, normal;
         float force, torque;
         float brake, drag;

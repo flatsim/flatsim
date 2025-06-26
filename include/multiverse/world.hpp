@@ -6,6 +6,7 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
+#include "multiverse/exceptions.hpp"
 #include "multiverse/robot.hpp"
 #include "multiverse/types.hpp"
 #include "multiverse/utils.hpp"
