@@ -23,11 +23,18 @@ namespace fs {
         t.position.y = bound.pose.point.y;
         t.rotation = bound.pose.angle.yaw;
 
-        body = world->CreateBox(w, h, t);
+        // Create empty body for compound shape
+        body = world->CreateEmptyBody(t);
         if (!body) {
             throw InitializationException("Failed to create chassis body");
         }
+        
+        // Add main chassis as first collider
+        auto chassis_collider = body->CreateBoxCollider(w, h);
+        
+        // Set collision filter on the body AND explicitly on each collider
         body->SetCollisionFilter(filter);
+        chassis_collider->SetFilter(filter);
 
         body->SetLinearDamping(fs::constants::linearDamping);
         body->SetAngularDamping(fs::constants::angularDamping);
@@ -59,6 +66,19 @@ namespace fs {
             Karosserie karosserie(rec, world);
             karosserie.init(color, name, k.name, bound, k.bound, filter, k.has_physics);
             karosseries.push_back(karosserie);
+            
+            // Add karosserie as collider to chassis body if it has physics
+            if (k.has_physics) {
+                // Calculate relative transform of karosserie to chassis
+                muli::Transform karos_transform;
+                karos_transform.position.x = k.bound.pose.point.x;
+                karos_transform.position.y = k.bound.pose.point.y;
+                karos_transform.rotation = k.bound.pose.angle.yaw;
+                
+                // Add as collider to main chassis body and set filter explicitly
+                auto karos_collider = body->CreateBoxCollider(k.bound.size.x, k.bound.size.y, 0.02f, karos_transform);
+                karos_collider->SetFilter(filter);
+            }
         }
 
         for (auto const &h : robo.hitches) {

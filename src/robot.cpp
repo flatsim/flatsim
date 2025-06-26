@@ -5,8 +5,9 @@ namespace fs {
 
     Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
         : rec(rec), world(world) {
-        filter.bit = 1 << group;
-        filter.mask = ~(1 << group);
+        filter.group = 0;                    // Use bit/mask system, not group system
+        filter.bit = 1 << group;             // Each robot gets unique bit position
+        filter.mask = ~(1 << group);         // Exclude own bit from collision mask
     }
     Robot::~Robot() {}
 

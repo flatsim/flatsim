@@ -14,18 +14,20 @@ namespace fs {
         this->has_physics = has_physics;
 
         pose = utils::shift(parent_bound.pose, bound.pose);
-        auto karosseriePosition = utils::pose_to_transform(pose);
 
+        // Physics karosseries are now handled as compound shapes in chassis
+        // No separate RigidBody needed - they're part of the chassis body
         if (has_physics) {
-            karosserie = world->CreateBox(bound.size.x, bound.size.y, karosseriePosition);
-            karosserie->SetCollisionFilter(filter);
+            // Physics handled by chassis compound shape
+            karosserie = nullptr;
         }
     }
 
     void Karosserie::tick(float dt, concord::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
 
-        if (has_physics) {
+        if (has_physics && karosserie) {
+            // Only update transform if it's a separate body (not part of compound shape)
             karosserie->SetTransform(utils::pose_to_transform(new_pose));
         }
 
@@ -38,14 +40,24 @@ namespace fs {
 
     void Karosserie::teleport(concord::Pose trans_pose) {
         pose = trans_pose;
-        if (has_physics) {
+        if (has_physics && karosserie) {
+            // Only update if it's a separate body (not part of compound shape)
             karosserie->SetTransform(utils::pose_to_transform(trans_pose));
             karosserie->SetSleeping(true);
         }
     }
 
-    muli::Transform Karosserie::get_transform() const { return karosserie->GetTransform(); }
-    muli::RigidBody *Karosserie::get_body() const { return karosserie; }
+    muli::Transform Karosserie::get_transform() const { 
+        if (karosserie) {
+            return karosserie->GetTransform(); 
+        }
+        // For compound shape karosseries, return identity transform
+        return muli::Transform();
+    }
+    
+    muli::RigidBody *Karosserie::get_body() const { 
+        return karosserie; // Will be nullptr for compound shape karosseries
+    }
 
     void Karosserie::visualize() {
         auto k_x = pose.point.x;

@@ -8,17 +8,17 @@
 
 #include "flatsim/exceptions.hpp"
 #include "flatsim/robot/chassis/chassis.hpp"
+#include "flatsim/robot/power.hpp"
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
 #include "flatsim/robot/tank.hpp"
-#include "flatsim/robot/power.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
 
-#include <vector>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace fs {
     class Robot {
@@ -37,10 +37,10 @@ namespace fs {
 
         muli::CollisionFilter filter;
         concord::Pose spawn_position;
-        
+
         // Connection tracking
-        Robot* connected_slave = nullptr;
-        muli::RevoluteJoint* connection_joint = nullptr;
+        Robot *connected_slave = nullptr;
+        muli::RevoluteJoint *connection_joint = nullptr;
 
       public:
         RobotInfo info;
@@ -59,59 +59,56 @@ namespace fs {
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
-        
+
         // Sensor management
         void add_sensor(std::unique_ptr<Sensor> sensor);
-        template<typename T>
-        T* get_sensor() const {
-            for (const auto& sensor : sensors) {
+        template <typename T> T *get_sensor() const {
+            for (const auto &sensor : sensors) {
                 if (!sensor) {
                     continue; // Skip null sensors
                 }
-                T* typed_sensor = dynamic_cast<T*>(sensor.get());
+                T *typed_sensor = dynamic_cast<T *>(sensor.get());
                 if (typed_sensor) {
                     return typed_sensor;
                 }
             }
             return nullptr;
         }
-        Sensor* get_sensor(const std::string& type) const;
+        Sensor *get_sensor(const std::string &type) const;
 
         const concord::Pose &get_position() const { return info.bound.pose; }
         void pulse() { pulsing = true; }
-        void toggle_work(const std::string& karosserie_name) { chassis->toggle_work(karosserie_name); }
-        std::vector<Karosserie> *get_karosseries() { 
+        void toggle_work(const std::string &karosserie_name) { chassis->toggle_work(karosserie_name); }
+        std::vector<Karosserie> *get_karosseries() {
             if (!chassis) {
                 throw NullPointerException("chassis");
             }
-            return &chassis->karosseries; 
+            return &chassis->karosseries;
         }
 
         // Tank management
         bool has_tank() const { return tank.has_value(); }
-        Tank* get_tank() { return tank.has_value() ? &tank.value() : nullptr; }
-        const Tank* get_tank() const { return tank.has_value() ? &tank.value() : nullptr; }
-        void empty_tank() { 
-            if (tank.has_value()) tank->empty_all(); 
+        Tank *get_tank() { return tank.has_value() ? &tank.value() : nullptr; }
+        const Tank *get_tank() const { return tank.has_value() ? &tank.value() : nullptr; }
+        void empty_tank() {
+            if (tank.has_value())
+                tank->empty_all();
         }
-        void fill_tank(float amount) { 
-            if (tank.has_value()) tank->fill(amount); 
+        void fill_tank(float amount) {
+            if (tank.has_value())
+                tank->fill(amount);
         }
-        
+
         // Connection management
-        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>>& all_robots);
+        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);
         void disconnect_trailer();
         bool is_connected() const;
-        
+
         // Power management
         bool has_power() const { return power.has_value(); }
-        Power* get_power() const { return power ? power->get() : nullptr; }
-        bool is_powered() const { 
-            return power && *power && !(*power)->is_empty(); 
-        }
-        float get_power_percentage() const { 
-            return (power && *power) ? (*power)->get_percentage() : 0.0f; 
-        }
+        Power *get_power() const { return power ? power->get() : nullptr; }
+        bool is_powered() const { return power && *power && !(*power)->is_empty(); }
+        float get_power_percentage() const { return (power && *power) ? (*power)->get_percentage() : 0.0f; }
 
       private:
         concord::Datum datum;

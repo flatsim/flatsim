@@ -105,12 +105,12 @@ int main(int argc, char *argv[]) {
     std::filesystem::path outPath = "output.tif";
     geotiv::WriteRasterCollection(rc, outPath);
 
-    sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 0, 10 * 0, 0.0f), "oxbo" + std::to_string(0),
-                                       pigment::RGB(255, 200, 0)));
-    sim->add_robot(fs::tractor(concord::Pose(10 * 1, 10 * 1, 0.0f), "tractor" + std::to_string(1),
+    sim->add_robot(fs::tractor(concord::Pose(10 * 0, 10 * 0, 0.0f), "tractor" + std::to_string(0),
                                 pigment::RGB(0, 255, 100)));
-    sim->add_robot(fs::trailer(concord::Pose(10 * 1, 10 * 1 - 5, 0.0f), "trailer" + std::to_string(2),
+    sim->add_robot(fs::trailer(concord::Pose(10 * 0, 10 * 0 - 5, 0.0f), "trailer" + std::to_string(1),
                                 pigment::RGB(255, 150, 0)));
+    sim->add_robot(fs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(2),
+                                       pigment::RGB(255, 200, 0)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
