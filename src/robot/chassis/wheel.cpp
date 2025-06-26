@@ -19,7 +19,7 @@ namespace fs {
         pose = utils::shift(parent_bound.pose, bound.pose);
         auto wheel_tf = utils::pose_to_transform(pose);
 
-        wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheel_tf);
+        wheel = world->CreateBox(bound.size.x, bound.size.y, wheel_tf);
         if (!wheel) {
             throw InitializationException("Failed to create wheel body");
         }
