@@ -7,7 +7,7 @@
 #include "muli/world.h"
 
 #include "multiverse/exceptions.hpp"
-#include "multiverse/robot/chasis/chasis.hpp"
+#include "multiverse/robot/chassis/chassis.hpp"
 #include "multiverse/robot/sensor.hpp"
 #include "multiverse/robot/sensors/gps_sensor.hpp"
 #include "multiverse/types.hpp"
@@ -19,11 +19,11 @@
 namespace mvs {
     class Robot {
       private:
-        bool pulsining = false;
+        bool pulsing = false;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::vector<std::unique_ptr<Sensor>> sensors;
-        std::unique_ptr<Chasis> chassis;
+        std::unique_ptr<Chassis> chassis;
         std::vector<std::shared_ptr<Robot>> slaves;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
@@ -67,13 +67,13 @@ namespace mvs {
         Sensor* get_sensor(const std::string& type) const;
 
         const concord::Pose &get_position() const { return info.bound.pose; }
-        void pulse() { pulsining = true; }
-        void toggle_work(std::string karosserie_name) { chassis->toggle_work(karosserie_name); }
-        std::vector<Karosserie> *get_karosseies() { 
+        void pulse() { pulsing = true; }
+        void toggle_work(const std::string& karosserie_name) { chassis->toggle_work(karosserie_name); }
+        std::vector<Karosserie> *get_karosseries() { 
             if (!chassis) {
                 throw NullPointerException("chassis");
             }
-            return &chassis->karosseriez; 
+            return &chassis->karosseries; 
         }
 
       private:

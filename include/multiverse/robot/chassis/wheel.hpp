@@ -10,7 +10,7 @@ namespace mvs {
     // --- Utility functions ---
 
     class Wheel {
-      public:
+      private:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         std::string name;
@@ -24,14 +24,16 @@ namespace mvs {
         muli::Vec2 forward, normal;
         float force, torque;
         float brake, drag;
-        float friction, maxImpulse;
+        float friction, max_impulse;
 
         float throttle_val = 0.0f, steering_val = 0.0f;
         float steering_max, throttle_max;
 
+      public:
+
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
-        void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound bound,
+        void init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound bound,
                   concord::Bound parent_bound, float _force, float _friction, float _maxImpulse, float _brake,
                   float _drag, float throttle_max, float steering_max);
 
@@ -42,5 +44,11 @@ namespace mvs {
         void configure_physics_for_size();
 
         concord::Bound get_bound() const { return bound; }
+        
+        // Accessors for external access
+        void set_linear_damping(float damping) { if (wheel) wheel->SetLinearDamping(damping); }
+        void set_angular_damping(float damping) { if (wheel) wheel->SetAngularDamping(damping); }
+        muli::RigidBody* get_wheel() { return wheel; }
+        muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
     };
 } // namespace mvs

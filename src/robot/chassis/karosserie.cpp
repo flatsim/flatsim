@@ -1,10 +1,10 @@
-#include "multiverse/robot/chasis/karosserie.hpp"
+#include "multiverse/robot/chassis/karosserie.hpp"
 
 namespace mvs {
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Karosserie::init(const pigment::RGB &color, std::string parent_name, std::string name,
+    void Karosserie::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name,
                           concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
                           bool has_physics) {
         this->name = name;
@@ -59,7 +59,7 @@ namespace mvs {
             rerun::components::PoseTranslation3D(float(k_x), float(k_y), 0.1f)};
         std::vector<rerun::datatypes::Vec3D> sizes = {rerun::datatypes::Vec3D(float(k_w), float(k_h), 0.0f)};
         rec->log_static(
-            this->parent_name + "/chasis/karosserie/" + name,
+            this->parent_name + "/chassis/karosserie/" + name,
             rerun::Boxes3D::from_centers_and_sizes(centers, sizes)
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

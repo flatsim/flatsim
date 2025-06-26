@@ -45,17 +45,17 @@ namespace mvs {
             throw NullPointerException("recording stream");
         }
 
-        chassis = std::make_unique<Chasis>(world, rec, filter);
+        chassis = std::make_unique<Chassis>(world, rec, filter);
         if (!chassis) {
             throw InitializationException("chassis creation failed");
         }
         chassis->init(robo);
 
         steerings.resize(robo.wheels.size(), 0.0f);
-        steerings_max = robo.controlz.steerings_max;
-        steerings_diff = robo.controlz.steerings_diff;
+        steerings_max = robo.controls.steerings_max;
+        steerings_diff = robo.controls.steerings_diff;
         throttles.resize(robo.wheels.size(), 0.0f);
-        throttles_max = robo.controlz.throttles_max;
+        throttles_max = robo.controls.throttles_max;
     }
 
     void Robot::reset_controls() {
@@ -81,10 +81,10 @@ namespace mvs {
         constexpr float in_min = -1.0f, in_max = 1.0f;
         for (uint i = 0; i < throttles.size(); ++i) {
             auto lin_val = linear;
-            if (steerings[i] > 0.0f && info.controlz.left_side[i]) {
+            if (steerings[i] > 0.0f && info.controls.left_side[i]) {
                 auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
                 lin_val = linear * proportion;
-            } else if (steerings[i] < 0.0f && !info.controlz.left_side[i]) {
+            } else if (steerings[i] < 0.0f && !info.controls.left_side[i]) {
                 auto proportion = utils::ackermann_scale(steerings[i], info.bound.size.x);
                 lin_val = linear * proportion;
             }
@@ -126,7 +126,7 @@ namespace mvs {
 
     void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
         concord::Point point(this->info.bound.pose.point.x, this->info.bound.pose.point.y, 0.0f);
-        if (!pulsining) {
+        if (!pulsing) {
             return;
         }
 
@@ -134,7 +134,7 @@ namespace mvs {
         std::vector<rerun::Vec3D> poi;
         auto pulse_enu_size = pulse_enu.getRadius() + inc;
         if (pulse_enu.getRadius() > p_s) {
-            pulsining = false;
+            pulsing = false;
             pulse_enu_size = 0.0;
         }
         pulse_enu = concord::Circle(point, pulse_enu_size);
@@ -154,7 +154,7 @@ namespace mvs {
         std::vector<rerun::LatLon> locators;
         auto pulse_gps_size = pulse_gps.getRadius() + inc * gps_mult;
         if (pulse_gps.getRadius() > p_s * gps_mult) {
-            pulsining = false;
+            pulsing = false;
             pulse_gps_size = 0.0;
         }
         pulse_gps = concord::Circle(point, pulse_gps_size);

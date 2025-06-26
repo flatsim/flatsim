@@ -24,17 +24,17 @@ namespace mvs {
                         return std::find(layer->info.can_accept.begin(), layer->info.can_accept.end(), sa) !=
                                layer->info.can_accept.end();
                     })) {
-                    auto karosseies = robott->get_karosseies();
-                    if (!karosseies) {
-                        continue; // Skip if no karosseies
+                    auto karosseries = robott->get_karosseries();
+                    if (!karosseries) {
+                        continue; // Skip if no karosseries
                     }
                     
-                    for (auto &karosserie : *karosseies) {
-                        pigment::RGB colorz = robott->info.color;
+                    for (auto &karosserie : *karosseries) {
+                        pigment::RGB color = robott->info.color;
                         if (karosserie.working) {
                             concord::Polygon brush;
                             brush = brush.from_vector(karosserie.get_corners());
-                            layer->paint(colorz, brush);
+                            layer->paint(color, brush);
                         }
                     }
                 }
@@ -86,7 +86,7 @@ namespace mvs {
         robots[robot_idx]->set_linear(throttle);
     }
 
-    void Simulator::toggle_work(uint robot_idx, std::string karosserie_name) {
+    void Simulator::toggle_work(uint robot_idx, const std::string& karosserie_name) {
         if (robot_idx >= robots.size()) {
             throw IndexOutOfRangeException("robot index " + std::to_string(robot_idx) + 
                                          " >= " + std::to_string(robots.size()));
@@ -111,7 +111,7 @@ namespace mvs {
         
         return *robots[i];
     }
-    Robot &Simulator::get_robot(std::string uuid) {
+    Robot &Simulator::get_robot(const std::string& uuid) {
         for (auto &robot : robots) {
             if (!robot) {
                 continue; // Skip null robots
@@ -125,20 +125,20 @@ namespace mvs {
     int Simulator::num_robots() const { return robots.size(); }
 
     // WORLD
-    void Simulator::add_layer(LayerInfo layz, bool noise) {
+    void Simulator::add_layer(LayerInfo layer_info, bool noise) {
         if (!world) {
             throw NullPointerException("world");
         }
         
         for (auto &layer : world->layers) {
-            if (layer && layer->info.uuid == layz.uuid) {
-                spdlog::warn("Layer with uuid {} already exists, skipping", layz.uuid);
+            if (layer && layer->info.uuid == layer_info.uuid) {
+                spdlog::warn("Layer with uuid {} already exists, skipping", layer_info.uuid);
                 return;
             }
         }
         
         auto layer = std::make_shared<Layer>(rec, world_datum);
-        layer->init(layz);
+        layer->init(layer_info);
         world->layers.push_back(layer);
         if (noise) {
             layer->add_noise();
@@ -168,7 +168,7 @@ namespace mvs {
         
         return *world->layers[i];
     }
-    Layer &Simulator::get_layer(std::string uuid) {
+    Layer &Simulator::get_layer(const std::string& uuid) {
         if (!world) {
             throw NullPointerException("world");
         }

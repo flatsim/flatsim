@@ -32,16 +32,16 @@ namespace mvs {
         // ROBOT
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
-        void toggle_work(uint robot_idx, std::string karosserie_name);
+        void toggle_work(uint robot_idx, const std::string& karosserie_name);
         Robot &get_robot(uint i);
-        Robot &get_robot(std::string uuid);
+        Robot &get_robot(const std::string& uuid);
         int num_robots() const;
         // WORLD
         concord::Datum get_datum() const;
         World &get_world() { return *world; }
         Layer &get_layer(uint i);
-        Layer &get_layer(std::string uuid);
-        void add_layer(LayerInfo layz, bool noise = false);
+        Layer &get_layer(const std::string& uuid);
+        void add_layer(LayerInfo layer_info, bool noise = false);
         
         // RERUN MANAGEMENT
         void reset_recording();

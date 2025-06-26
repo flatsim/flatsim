@@ -1,10 +1,10 @@
-#include "multiverse/robot/chasis/hitch.hpp"
+#include "multiverse/robot/chassis/hitch.hpp"
 
 namespace mvs {
     Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Hitch::init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
+    void Hitch::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
                      concord::Bound bound, muli::CollisionFilter filter) {
         this->name = name;
         this->parent_name = parent_name;
@@ -38,7 +38,7 @@ namespace mvs {
             rerun::components::PoseTranslation3D(float(k_x), float(k_y), 0.1f)};
         std::vector<rerun::datatypes::Vec3D> sizes = {rerun::datatypes::Vec3D(float(k_w), float(k_h), 0.0f)};
         rec->log_static(
-            this->parent_name + "/chasis/hitch/" + name,
+            this->parent_name + "/chassis/hitch/" + name,
             rerun::Boxes3D::from_centers_and_sizes(centers, sizes)
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

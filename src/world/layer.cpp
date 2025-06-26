@@ -116,7 +116,7 @@ namespace mvs {
         }
     }
 
-    concord::Grid<uint8_t> Layer::get_grid_data() {
+    concord::Grid<uint8_t> Layer::get_grid_data() const {
         // Use the same size, resolution, datum and pose as the original grid:
         const auto rows = grid.rows();
         const auto cols = grid.cols();
@@ -143,26 +143,26 @@ namespace mvs {
     }
 
     void Layer::visualize() {
-        rerun::Color colorz(this->info.color.r, this->info.color.g, this->info.color.b);
+        rerun::Color color(this->info.color.r, this->info.color.g, this->info.color.b);
         to_image(image);
         rec->log_static(info.name + "/image",
                         rerun::Image::from_rgba32(image, {uint32_t(grid.cols()), uint32_t(grid.rows())}));
 
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static(info.name + "/border",
-                        rerun::LineStrips3D(border__).with_colors({{colorz}}).with_radii({{0.1f}}));
+                        rerun::LineStrips3D(border__).with_colors({{color}}).with_radii({{0.1f}}));
 
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static(info.name + "/border",
-                        rerun::GeoLineStrings(linestring).with_colors({{colorz}}).with_radii({{0.1f}}));
+                        rerun::GeoLineStrings(linestring).with_colors({{color}}).with_radii({{0.1f}}));
 
         auto polygon__ = rerun::components::LineStrip3D(polygon_corners_);
         rec->log_static(info.name + "/polygon",
-                        rerun::LineStrips3D(polygon__).with_colors({{colorz}}).with_radii({{0.1f}}));
+                        rerun::LineStrips3D(polygon__).with_colors({{color}}).with_radii({{0.1f}}));
 
         auto polystr = rerun::components::GeoLineString::from_lat_lon(polygon_corners_wgs_);
         rec->log_static(info.name + "/polygon",
-                        rerun::GeoLineStrings(polystr).with_colors({{colorz}}).with_radii({{0.1f}}));
+                        rerun::GeoLineStrings(polystr).with_colors({{color}}).with_radii({{0.1f}}));
     }
 
 } // namespace mvs

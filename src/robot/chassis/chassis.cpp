@@ -1,4 +1,4 @@
-#include "multiverse/robot/chasis/chasis.hpp"
+#include "multiverse/robot/chassis/chassis.hpp"
 
 namespace mvs {
 
@@ -6,11 +6,11 @@ namespace mvs {
         return std::sqrt(std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2));
     }
 
-    Chasis::Chasis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+    Chassis::Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
                    muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Chasis::init(mvs::RobotInfo &robo) {
+    void Chassis::init(mvs::RobotInfo &robo) {
         this->bound = robo.bound;
         this->color = robo.color;
         this->name = robo.name;
@@ -42,15 +42,15 @@ namespace mvs {
         for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter);
             wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], mvs::constants::force, mvs::constants::friction, mvs::constants::maxImpulse, mvs::constants::brake, mvs::constants::drag,
-                       robo.controlz.throttles_max[i], robo.controlz.steerings_max[i]);
-            wheelz.push_back(wheel);
+                       robo.controls.throttles_max[i], robo.controls.steerings_max[i]);
+            wheels.push_back(wheel);
 
-            auto joint = world->CreateMotorJoint(body, wheel.wheel, wheel.wheel->GetPosition(), mf, mt, fr, dr, jm);
-            jointz.emplace_back(joint);
+            auto joint = world->CreateMotorJoint(body, wheel.get_wheel(), wheel.get_position(), mf, mt, fr, dr, jm);
+            joints.emplace_back(joint);
 
-            float mm = std::abs(robo.controlz.steerings_max[i] + robo.controlz.steerings_diff[i]);
-            auto anglejoing = world->CreateLimitedAngleJoint(body, wheel.wheel, -mm, mm);
-            anglejointz.emplace_back(anglejoing);
+            float mm = std::abs(robo.controls.steerings_max[i] + robo.controls.steerings_diff[i]);
+            auto anglejoing = world->CreateLimitedAngleJoint(body, wheel.get_wheel(), -mm, mm);
+            angle_joints.emplace_back(anglejoing);
         }
 
         wheel_damping(mvs::constants::linearDamping, mvs::constants::angularDamping);
@@ -58,32 +58,32 @@ namespace mvs {
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
             karosserie.init(color, name, k.name, bound, k.bound, filter, k.has_physics);
-            karosseriez.push_back(karosserie);
+            karosseries.push_back(karosserie);
         }
 
         for (auto const &h : robo.hitches) {
             Hitch hitch(rec, world);
             hitch.init(color, name, h.first, bound, h.second, filter);
-            hitchz.push_back(hitch);
+            hitches.push_back(hitch);
         }
     }
 
-    void Chasis::tick(float dt) {
+    void Chassis::tick(float dt) {
         pose = utils::transform_to_pose(body->GetTransform());
-        for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].tick(dt);
+        for (uint i = 0; i < wheels.size(); ++i) {
+            wheels[i].tick(dt);
         }
-        for (uint i = 0; i < karosseriez.size(); ++i) {
-            karosseriez[i].tick(dt, pose);
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            karosseries[i].tick(dt, pose);
         }
-        for (uint i = 0; i < hitchz.size(); ++i) {
-            hitchz[i].tick(dt, pose);
+        for (uint i = 0; i < hitches.size(); ++i) {
+            hitches[i].tick(dt, pose);
         }
     }
 
-    muli::Transform Chasis::get_transform() const { return body->GetTransform(); }
+    muli::Transform Chassis::get_transform() const { return body->GetTransform(); }
 
-    void Chasis::visualize() {
+    void Chassis::visualize() {
         auto x = body->GetPosition().x;
         auto y = body->GetPosition().y;
         auto th = body->GetRotation().GetAngle();
@@ -101,28 +101,28 @@ namespace mvs {
                 .with_colors(colors));
     }
 
-    void Chasis::update(std::vector<float> steering, std::vector<float> throttle, float dt) {
-        for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].update(steering[i], throttle[i], jointz[i], dt);
+    void Chassis::update(std::vector<float> steering, std::vector<float> throttle, float dt) {
+        for (uint i = 0; i < wheels.size(); ++i) {
+            wheels[i].update(steering[i], throttle[i], joints[i], dt);
         }
     }
 
-    void Chasis::wheel_damping(float linearDamping, float angularDamping) {
-        for (uint i = 0; i < wheelz.size(); ++i) {
-            wheelz[i].wheel->SetLinearDamping(linearDamping);
-            wheelz[i].wheel->SetAngularDamping(angularDamping);
+    void Chassis::wheel_damping(float linear_damping, float angular_damping) {
+        for (uint i = 0; i < wheels.size(); ++i) {
+            wheels[i].set_linear_damping(linear_damping);
+            wheels[i].set_angular_damping(angular_damping);
         }
     }
 
-    void Chasis::toggle_work(std::string karosserie_name) {
-        for (uint i = 0; i < karosseriez.size(); ++i) {
-            if (karosseriez[i].name == karosserie_name) {
-                karosseriez[i].toggle_work();
+    void Chassis::toggle_work(const std::string& karosserie_name) {
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            if (karosseries[i].name == karosserie_name) {
+                karosseries[i].toggle_work();
             }
         }
     }
 
-    void Chasis::teleport(concord::Pose pose) {
+    void Chassis::teleport(concord::Pose pose) {
         muli::Transform t;
         t.position.x = pose.point.x;
         t.position.y = pose.point.y;
@@ -130,13 +130,13 @@ namespace mvs {
         body->SetTransform(t);
         body->SetSleeping(true);
 
-        for (uint i = 0; i < wheelz.size(); ++i) {
-            auto nw = utils::move(wheelz[i].get_bound().pose, pose);
-            wheelz[i].teleport(nw);
+        for (uint i = 0; i < wheels.size(); ++i) {
+            auto nw = utils::move(wheels[i].get_bound().pose, pose);
+            wheels[i].teleport(nw);
         }
-        for (uint i = 0; i < karosseriez.size(); ++i) {
-            auto nw = utils::move(karosseriez[i].get_bound().pose, pose);
-            karosseriez[i].teleport(nw);
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            auto nw = utils::move(karosseries[i].get_bound().pose, pose);
+            karosseries[i].teleport(nw);
         }
     }
 

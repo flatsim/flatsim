@@ -23,7 +23,7 @@ namespace mvs {
         bool has_physics = true;
 
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
-        void init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
+        void init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
                   concord::Bound bound, muli::CollisionFilter filter, bool has_physics = true);
         void tick(float dt, concord::Pose trans_pose);
 
@@ -33,7 +33,7 @@ namespace mvs {
         void visualize();
 
         void toggle_work() { working = !working; }
-        std::vector<concord::Point> get_corners() { return pose.get_corners(bound.size); }
+        std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
     };
 } // namespace mvs

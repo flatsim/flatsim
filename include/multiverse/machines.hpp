@@ -39,7 +39,7 @@ namespace mvs {
         std::vector<float> steerings_diff = {-utils::deg2rad(2), utils::deg2rad(2), 0.0f, 0.0f,
                                              utils::deg2rad(4),  -utils::deg2rad(4)};
         std::vector<bool> left_side = {false, true, false, true, false, true};
-        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
 
         concord::Size k_size;
         KarosserieInfo kaross;
@@ -100,7 +100,7 @@ namespace mvs {
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.2f, 0.2f};
         std::vector<float> steerings_diff = {-utils::deg2rad(4), utils::deg2rad(4), 0.0f, 0.0f};
         std::vector<bool> left_side = {false, true, false, true};
-        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
 
         // karosserie
         concord::Size k_size = concord::Size(width * 0.50f, height * 0.05f, 0.0f);
@@ -152,7 +152,7 @@ namespace mvs {
         std::vector<float> throttles_max = {0.0f, 0.0f};
         std::vector<float> steerings_diff = {0.0f, 0.0f};
         std::vector<bool> left_side = {false, true};
-        robot_info.controlz = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
 
         // hitch
         concord::Bound hitch_bound =

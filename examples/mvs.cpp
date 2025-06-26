@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
                                        pigment::RGB(255, 200, 0)));
     sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(1),
                                        pigment::RGB(255, 200, 0)));
-    sim->add_robot(mvs::oxbo_harvester(concord::Pose(10 * 2, 10 * 2, 0.0f), "oxbo" + std::to_string(2),
-                                       pigment::RGB(255, 200, 0)));
+    sim->add_robot(mvs::tractor(concord::Pose(10 * 2, 10 * 2, 0.0f), "tractor" + std::to_string(2),
+                                pigment::RGB(0, 255, 100)));
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";

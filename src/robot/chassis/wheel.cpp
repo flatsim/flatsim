@@ -1,4 +1,4 @@
-#include "multiverse/robot/chasis/wheel.hpp"
+#include "multiverse/robot/chassis/wheel.hpp"
 
 namespace mvs {
 
@@ -6,7 +6,7 @@ namespace mvs {
                  muli::CollisionFilter filter)
         : world(world), rec(rec), filter(filter) {}
 
-    void Wheel::init(const pigment::RGB &color, std::string parent_name, std::string name, concord::Bound parent_bound,
+    void Wheel::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
                      concord::Bound bound, float _force, float _friction, float _maxImpulse, float _brake, float _drag,
                      float throttle_max, float steering_max) {
         this->bound = bound;
@@ -17,16 +17,16 @@ namespace mvs {
         this->throttle_max = throttle_max;
 
         pose = utils::shift(parent_bound.pose, bound.pose);
-        auto wheelTf = utils::pose_to_transform(pose);
+        auto wheel_tf = utils::pose_to_transform(pose);
 
-        wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheelTf);
+        wheel = world->CreateCapsule(bound.size.y, bound.size.x, false, wheel_tf);
         if (!wheel) {
             throw InitializationException("Failed to create wheel body");
         }
         wheel->SetCollisionFilter(filter);
         force = _force;
         friction = _friction;
-        maxImpulse = _maxImpulse;
+        max_impulse = _maxImpulse;
         brake = _brake;
         drag = _drag;
         
@@ -47,14 +47,14 @@ namespace mvs {
         // Apply lateral friction to prevent sliding
         if (muli::Abs(vn) > muli::epsilon) {
             // Scale friction impulse by wheel size and dt
-            float wheelRadius = bound.size.x / 2.0f;
-            float scaledFriction = friction * (1.0f + wheelRadius);
-            muli::Vec2 j = -wheel->GetMass() * scaledFriction * vn * normal;
+            float wheel_radius = bound.size.x / 2.0f;
+            float scaled_friction = friction * (1.0f + wheel_radius);
+            muli::Vec2 j = -wheel->GetMass() * scaled_friction * vn * normal;
             
             // Scale max impulse by wheel size
-            float scaledMaxImpulse = maxImpulse * (1.0f + wheelRadius * 2.0f);
-            if (muli::Length(j) > scaledMaxImpulse) {
-                j = muli::Normalize(j) * scaledMaxImpulse;
+            float scaled_max_impulse = max_impulse * (1.0f + wheel_radius * 2.0f);
+            if (muli::Length(j) > scaled_max_impulse) {
+                j = muli::Normalize(j) * scaled_max_impulse;
             }
             wheel->ApplyLinearImpulse(wheel->GetPosition(), j, true);
         }
@@ -75,12 +75,12 @@ namespace mvs {
         
         if (muli::Abs(throttle) > muli::epsilon) {
             // Scale force by wheel size and apply dt correctly
-            float wheelRadius = bound.size.x / 2.0f;
-            float scaleFactor = muli::Sqrt(wheelRadius / 0.2f); // Normalize to typical wheel size
-            float scaledForce = force * scaleFactor;
+            float wheel_radius = bound.size.x / 2.0f;
+            float scale_factor = muli::Sqrt(wheel_radius / 0.2f); // Normalize to typical wheel size
+            float scaled_force = force * scale_factor;
             
             // Apply force scaled by dt for consistent acceleration
-            muli::Vec2 f2 = forward * (throttle * scaledForce);
+            muli::Vec2 f2 = forward * (throttle * scaled_force);
             wheel->ApplyForce(wheel->GetPosition(), f2, true);
         }
     }
@@ -99,7 +99,7 @@ namespace mvs {
         colors.push_back(rerun::Color(color.r, color.g, color.b));
 
         rec->log_static(
-            this->parent_name + "/chasis/wheel/" + this->name,
+            this->parent_name + "/chassis/wheel/" + this->name,
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
@@ -108,19 +108,19 @@ namespace mvs {
     }
     
     void Wheel::configure_physics_for_size() {
-        float wheelRadius = bound.size.x / 2.0f;
+        float wheel_radius = bound.size.x / 2.0f;
         
         // Scale damping based on wheel size
         // Larger wheels need more damping to prevent oscillation
-        float linearDamping = 0.2f + (wheelRadius - 0.1f) * 0.3f;
-        float angularDamping = 0.5f + (wheelRadius - 0.1f) * 1.5f;
+        float linear_damping = 0.2f + (wheel_radius - 0.1f) * 0.3f;
+        float angular_damping = 0.5f + (wheel_radius - 0.1f) * 1.5f;
         
         // Clamp values to reasonable ranges
-        linearDamping = muli::Clamp(linearDamping, 0.2f, 0.8f);
-        angularDamping = muli::Clamp(angularDamping, 0.5f, 3.0f);
+        linear_damping = muli::Clamp(linear_damping, 0.2f, 0.8f);
+        angular_damping = muli::Clamp(angular_damping, 0.5f, 3.0f);
         
-        wheel->SetLinearDamping(linearDamping);
-        wheel->SetAngularDamping(angularDamping);
+        wheel->SetLinearDamping(linear_damping);
+        wheel->SetAngularDamping(angular_damping);
     }
 
 } // namespace mvs
