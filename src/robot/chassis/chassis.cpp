@@ -64,7 +64,7 @@ namespace fs {
 
         for (auto const &k : robo.karos) {
             Karosserie karosserie(rec, world);
-            karosserie.init(color, name, k.name, bound, k.bound, filter, k.has_physics);
+            karosserie.init(color, name, k.name, bound, k.bound, filter, k.sections, k.has_physics);
             karosseries.push_back(karosserie);
             
             // Add karosserie as collider to chassis body if it has physics
@@ -139,10 +139,26 @@ namespace fs {
         }
     }
 
-    void Chassis::toggle_work(const std::string& karosserie_name) {
+    void Chassis::toggle_section_work(const std::string& karosserie_name, int section_id) {
         for (uint i = 0; i < karosseries.size(); ++i) {
             if (karosseries[i].name == karosserie_name) {
-                karosseries[i].toggle_work();
+                karosseries[i].toggle_section_work(section_id);
+            }
+        }
+    }
+    
+    void Chassis::toggle_all_sections_work(const std::string& karosserie_name) {
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            if (karosseries[i].name == karosserie_name) {
+                karosseries[i].toggle_all_sections_work();
+            }
+        }
+    }
+    
+    void Chassis::toggle_all_except_section_work(const std::string& karosserie_name, int except_section_id) {
+        for (uint i = 0; i < karosseries.size(); ++i) {
+            if (karosseries[i].name == karosserie_name) {
+                karosseries[i].toggle_all_except_section_work(except_section_id);
             }
         }
     }

@@ -20,7 +20,7 @@ namespace fs {
         std::string name;
         concord::Bound bound;
         pigment::RGB color;
-        bool controllable = false;
+        int sections = 0;
         bool has_physics = true;
     };
 

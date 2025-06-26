@@ -154,8 +154,9 @@ int main(int argc, char *argv[]) {
                         std::cout << "Selected robot #" << selected_robot_idx << std::endl;
                     }
                     if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                        if ((button == 5) && pressed) {
-                            sim->get_robot(selected_robot_idx).toggle_work("front");
+                        if ((button == 12) && pressed) {
+                            sim->get_robot(selected_robot_idx)
+                                .toggle_all_except_section_work("front", 2); // Toggle all except middle section
                         }
                         if ((button == 4) && pressed) {
                             sim->get_robot(selected_robot_idx).respawn();

@@ -4,6 +4,7 @@
 #include "muli/world.h"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
+#include "flatsim/robot/chassis/section.hpp"
 
 namespace fs {
     class Karosserie {
@@ -21,10 +22,11 @@ namespace fs {
         pigment::RGB color;
         bool working = false;
         bool has_physics = true;
+        std::vector<Section> sections;
 
         Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
         void init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
-                  concord::Bound bound, muli::CollisionFilter filter, bool has_physics = true);
+                  concord::Bound bound, muli::CollisionFilter filter, int num_sections = 0, bool has_physics = true);
         void tick(float dt, concord::Pose trans_pose);
 
         muli::Transform get_transform() const;
@@ -32,7 +34,9 @@ namespace fs {
         void teleport(concord::Pose pose);
         void visualize();
 
-        void toggle_work() { working = !working; }
+        void toggle_section_work(int section_id);
+        void toggle_all_sections_work();
+        void toggle_all_except_section_work(int except_section_id);
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
     };

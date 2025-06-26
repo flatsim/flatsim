@@ -31,11 +31,18 @@ namespace fs {
                     
                     for (auto &karosserie : *karosseries) {
                         pigment::RGB color = robott->info.color;
-                        if (karosserie.working) {
-                            concord::Polygon brush;
-                            brush = brush.from_vector(karosserie.get_corners());
-                            layer->paint(color, brush);
+                        
+                        // Only paint sections if karosserie has sections
+                        if (!karosserie.sections.empty()) {
+                            for (const auto &section : karosserie.sections) {
+                                if (section.working) {
+                                    concord::Polygon brush;
+                                    brush = brush.from_vector(section.get_corners());
+                                    layer->paint(color, brush);
+                                }
+                            }
                         }
+                        // Karosseries without sections cannot work
                     }
                 }
             }
@@ -86,7 +93,7 @@ namespace fs {
         robots[robot_idx]->set_linear(throttle);
     }
 
-    void Simulator::toggle_work(uint robot_idx, const std::string& karosserie_name) {
+    void Simulator::toggle_section_work(uint robot_idx, const std::string& karosserie_name, int section_id) {
         if (robot_idx >= robots.size()) {
             throw IndexOutOfRangeException("robot index " + std::to_string(robot_idx) + 
                                          " >= " + std::to_string(robots.size()));
@@ -96,7 +103,33 @@ namespace fs {
             throw NullPointerException("robot at index " + std::to_string(robot_idx));
         }
         
-        robots[robot_idx]->toggle_work(karosserie_name);
+        robots[robot_idx]->toggle_section_work(karosserie_name, section_id);
+    }
+    
+    void Simulator::toggle_all_sections_work(uint robot_idx, const std::string& karosserie_name) {
+        if (robot_idx >= robots.size()) {
+            throw IndexOutOfRangeException("robot index " + std::to_string(robot_idx) + 
+                                         " >= " + std::to_string(robots.size()));
+        }
+        
+        if (!robots[robot_idx]) {
+            throw NullPointerException("robot at index " + std::to_string(robot_idx));
+        }
+        
+        robots[robot_idx]->toggle_all_sections_work(karosserie_name);
+    }
+    
+    void Simulator::toggle_all_except_section_work(uint robot_idx, const std::string& karosserie_name, int except_section_id) {
+        if (robot_idx >= robots.size()) {
+            throw IndexOutOfRangeException("robot index " + std::to_string(robot_idx) + 
+                                         " >= " + std::to_string(robots.size()));
+        }
+        
+        if (!robots[robot_idx]) {
+            throw NullPointerException("robot at index " + std::to_string(robot_idx));
+        }
+        
+        robots[robot_idx]->toggle_all_except_section_work(karosserie_name, except_section_id);
     }
 
     Robot &Simulator::get_robot(uint i) {

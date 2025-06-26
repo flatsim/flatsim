@@ -78,7 +78,9 @@ namespace fs {
 
         const concord::Pose &get_position() const { return info.bound.pose; }
         void pulse() { pulsing = true; }
-        void toggle_work(const std::string &karosserie_name) { chassis->toggle_work(karosserie_name); }
+        void toggle_section_work(const std::string &karosserie_name, int section_id) { chassis->toggle_section_work(karosserie_name, section_id); }
+        void toggle_all_sections_work(const std::string &karosserie_name) { chassis->toggle_all_sections_work(karosserie_name); }
+        void toggle_all_except_section_work(const std::string &karosserie_name, int except_section_id) { chassis->toggle_all_except_section_work(karosserie_name, except_section_id); }
         std::vector<Karosserie> *get_karosseries() {
             if (!chassis) {
                 throw NullPointerException("chassis");

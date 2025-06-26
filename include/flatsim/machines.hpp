@@ -47,7 +47,7 @@ namespace fs {
         k_size = concord::Size(width * 1.26f, height * 0.23f, 0.0f);
         kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
         kaross.color = color;
-        kaross.controllable = true;
+        kaross.sections = 5;
         kaross.has_physics = true;
         robot_info.karos.push_back(kaross);
 
@@ -55,7 +55,7 @@ namespace fs {
         k_size = concord::Size(width * 0.9f, height * 0.15f, 0.0f);
         kaross.bound = concord::Bound(concord::Pose(0.0f, -(height / 2) - k_size.y / 2, 0.0f), k_size);
         kaross.color = color;
-        kaross.controllable = false;
+        kaross.sections = 0;
         kaross.has_physics = true;
         robot_info.karos.push_back(kaross);
 
@@ -129,7 +129,7 @@ namespace fs {
         kaross.name = "front";
         kaross.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + k_size.y / 2, 0.0f), k_size);
         kaross.color = color;
-        kaross.controllable = true;
+        kaross.sections = 0;
         kaross.has_physics = true;
         robot_info.karos.push_back(kaross);
 
@@ -139,7 +139,7 @@ namespace fs {
         hitch_mount.name = "hitch_mount";
         hitch_mount.bound = concord::Bound(concord::Pose(0.0f, -(height / 2) - hitch_size.y / 2, 0.0f), hitch_size);
         hitch_mount.color = color;
-        hitch_mount.controllable = false;
+        hitch_mount.sections = 0;
         hitch_mount.has_physics = false;
         robot_info.karos.push_back(hitch_mount);
 
@@ -201,7 +201,7 @@ namespace fs {
         pole.name = "towing_pole";
         pole.bound = concord::Bound(concord::Pose(0.0f, (height / 2) + pole_size.y / 2, 0.0f), pole_size);
         pole.color = color;
-        pole.controllable = false;
+        pole.sections = 0;
         pole.has_physics = true;
         robot_info.karos.push_back(pole);
 
@@ -283,7 +283,7 @@ namespace fs {
         cabin.name = "cabin";
         cabin.bound = concord::Bound(concord::Pose(0.0f, height / 2 + cabin_size.y / 2, 0.0f), cabin_size);
         cabin.color = color;
-        cabin.controllable = true;
+        cabin.sections = 0;
         cabin.has_physics = true;
         robot_info.karos.push_back(cabin);
 

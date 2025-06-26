@@ -32,7 +32,9 @@ namespace fs {
         // ROBOT
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
-        void toggle_work(uint robot_idx, const std::string& karosserie_name);
+        void toggle_section_work(uint robot_idx, const std::string& karosserie_name, int section_id);
+        void toggle_all_sections_work(uint robot_idx, const std::string& karosserie_name);
+        void toggle_all_except_section_work(uint robot_idx, const std::string& karosserie_name, int except_section_id);
         Robot &get_robot(uint i);
         Robot &get_robot(const std::string& uuid);
         int num_robots() const;

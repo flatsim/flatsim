@@ -46,7 +46,9 @@ namespace fs {
         void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linear_damping, float angular_damping);
         muli::Transform get_transform() const;
-        void toggle_work(const std::string& karosserie_name);
+        void toggle_section_work(const std::string& karosserie_name, int section_id);
+        void toggle_all_sections_work(const std::string& karosserie_name);
+        void toggle_all_except_section_work(const std::string& karosserie_name, int except_section_id);
         
         // Accessors
         const concord::Pose& get_pose() const { return pose; }
