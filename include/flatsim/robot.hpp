@@ -42,9 +42,10 @@ namespace fs {
         muli::CollisionFilter filter;
         concord::Pose spawn_position;
 
-        // Connection tracking
-        Robot *connected_slave = nullptr;
-        muli::RevoluteJoint *connection_joint = nullptr;
+        // Connection tracking - support multiple followers
+        std::vector<Robot*> connected_followers;
+        std::vector<muli::RevoluteJoint*> connection_joints;
+        Robot* master_robot = nullptr;  // Backward reference if this robot is a follower
 
       public:
         RobotInfo info;
@@ -108,8 +109,15 @@ namespace fs {
         // Connection management
         bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);  // Old method - keep for compatibility
         bool try_connect_nearby();  // New method using get_all_robots()
-        void disconnect_trailer();
+        void disconnect_trailer();  // Disconnect all followers
+        void disconnect_all_followers();  // New method to disconnect all followers
         bool is_connected() const;
+        
+        // Chain management
+        std::vector<Robot*> get_connected_followers() const { return connected_followers; }
+        Robot* get_master_robot() const { return master_robot; }
+        bool is_follower() const { return master_robot != nullptr; }
+        Robot* get_root_master() const;
 
         // Power management
         bool has_power() const { return power.has_value(); }

@@ -152,8 +152,24 @@ namespace fs {
     }
 
     void Robot::visualize() {
-        // Create label with power percentage
-        std::string label = info.name;
+        // Create label with role prefix and power percentage
+        std::string role_prefix;
+        switch (role) {
+            case RobotRole::MASTER:
+                role_prefix = "(M)";
+                break;
+            case RobotRole::SLAVE:
+                role_prefix = "(S)";
+                break;
+            case RobotRole::FOLLOWER:
+                role_prefix = "(F)";
+                break;
+            default:
+                role_prefix = "(?)";
+                break;
+        }
+        
+        std::string label = role_prefix + info.name;
         if (has_power()) {
             int percentage = static_cast<int>(get_power_percentage());
             label += "(" + std::to_string(percentage) + "%)";
@@ -249,8 +265,8 @@ namespace fs {
             return false;
         }
         
-        // Already connected
-        if (connected_slave) {
+        // Already connected (check if we have any followers)
+        if (!connected_followers.empty()) {
             return false;
         }
         
@@ -292,7 +308,7 @@ namespace fs {
                     (my_hitch_world_y + other_hitch_world_y) / 2.0f
                 );
                 
-                connection_joint = world->CreateRevoluteJoint(
+                auto new_joint = world->CreateRevoluteJoint(
                     chassis->get_body(),
                     other_robot->chassis->get_body(),
                     hitch_world_pos,
@@ -301,8 +317,11 @@ namespace fs {
                     10.0f   // joint mass
                 );
                 
-                if (connection_joint) {
-                    connected_slave = other_robot.get();
+                if (new_joint) {
+                    // Add to followers using new system
+                    connected_followers.push_back(other_robot.get());
+                    connection_joints.push_back(new_joint);
+                    other_robot->master_robot = this;
                     other_robot->role = RobotRole::FOLLOWER;  // Change slave to follower
                     spdlog::info("Connected {} to {}", info.name, other_robot->info.name);
                     return true;
@@ -314,17 +333,42 @@ namespace fs {
     }
 
     void Robot::disconnect_trailer() {
-        if (connection_joint && connected_slave) {
-            world->Destroy(connection_joint);
-            connection_joint = nullptr;
-            connected_slave->role = RobotRole::SLAVE;  // Change back to slave
-            spdlog::info("Disconnected trailer from {}", info.name);
-            connected_slave = nullptr;
+        disconnect_all_followers();
+    }
+
+    void Robot::disconnect_all_followers() {
+        for (size_t i = 0; i < connected_followers.size(); ++i) {
+            Robot* follower = connected_followers[i];
+            muli::RevoluteJoint* joint = connection_joints[i];
+            
+            if (joint) {
+                world->Destroy(joint);
+            }
+            
+            if (follower) {
+                follower->role = RobotRole::SLAVE;  // Change back to slave
+                follower->master_robot = nullptr;
+                spdlog::info("Disconnected {} from {}", follower->info.name, info.name);
+                
+                // Recursively disconnect any sub-followers
+                follower->disconnect_all_followers();
+            }
         }
+        
+        connected_followers.clear();
+        connection_joints.clear();
     }
 
     bool Robot::is_connected() const {
-        return connected_slave != nullptr && connection_joint != nullptr;
+        return !connected_followers.empty() || master_robot != nullptr;
+    }
+
+    Robot* Robot::get_root_master() const {
+        const Robot* current = this;
+        while (current->master_robot != nullptr) {
+            current = current->master_robot;
+        }
+        return const_cast<Robot*>(current);
     }
 
     // Spatial queries - delegate to simulator
@@ -343,18 +387,31 @@ namespace fs {
     }
 
     bool Robot::try_connect_nearby() {
-        // Only MASTER robots can initiate connections
-        if (role != RobotRole::MASTER || !chassis) {
+        // Only MASTER robots or FOLLOWERS with available master hitches can initiate connections
+        if ((role != RobotRole::MASTER && role != RobotRole::FOLLOWER) || !chassis) {
             return false;
         }
         
-        // Already connected
-        if (connected_slave) {
-            return false;
+        // Check if this robot has any available master hitch
+        bool has_available_master_hitch = false;
+        for (const auto& hitch : chassis->hitches) {
+            if (hitch.is_master) {
+                // Check if this hitch is already used
+                bool hitch_used = false;
+                for (size_t i = 0; i < connected_followers.size(); ++i) {
+                    // This is a simplified check - in reality we'd need to track which hitch was used
+                    // For now, assume only one master hitch per robot
+                    hitch_used = true;
+                    break;
+                }
+                if (!hitch_used) {
+                    has_available_master_hitch = true;
+                    break;
+                }
+            }
         }
         
-        // Check if this robot has any hitch
-        if (chassis->hitches.empty()) {
+        if (!has_available_master_hitch) {
             return false;
         }
         
@@ -397,7 +454,7 @@ namespace fs {
                             (my_hitch_pos.y + other_hitch_pos.y) / 2.0f
                         );
                         
-                        connection_joint = world->CreateRevoluteJoint(
+                        auto new_joint = world->CreateRevoluteJoint(
                             chassis->get_body(),
                             other_robot->chassis->get_body(),
                             hitch_world_pos,
@@ -406,9 +463,15 @@ namespace fs {
                             10.0f   // joint mass
                         );
                         
-                        if (connection_joint) {
-                            connected_slave = other_robot;
+                        if (new_joint) {
+                            // Add to followers list
+                            connected_followers.push_back(other_robot);
+                            connection_joints.push_back(new_joint);
+                            
+                            // Set backward reference
+                            other_robot->master_robot = this;
                             other_robot->role = RobotRole::FOLLOWER;
+                            
                             spdlog::info("Connected {} to {} (hitch distance: {:.2f}m)", 
                                         info.name, other_robot->info.name, hitch_dist);
                             return true;

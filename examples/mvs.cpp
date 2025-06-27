@@ -3,11 +3,11 @@
 #include <fcntl.h>
 #include <iostream>
 #include <linux/joystick.h>
+#include <sys/select.h>
+#include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <vector>
-#include <termios.h>
-#include <sys/select.h>
 
 #include "flatsim/loader.hpp"
 #include "flatsim/simulator.hpp"
@@ -171,14 +171,15 @@ int main(int argc, char *argv[]) {
                 int robot_num = key - '0';
                 if (robot_num < sim->num_robots()) {
                     selected_robot_idx = robot_num;
-                    auto& robot = sim->get_robot(selected_robot_idx);
-                    std::cout << "Keyboard selected robot #" << selected_robot_idx << " (" << robot.info.name << ")" << std::endl;
+                    auto &robot = sim->get_robot(selected_robot_idx);
+                    std::cout << "Keyboard selected robot #" << selected_robot_idx << " (" << robot.info.name << ")"
+                              << std::endl;
                 } else {
                     std::cout << "Robot #" << robot_num << " doesn't exist (only " << sim->num_robots() << " robots)\n";
                 }
             }
         }
-        
+
         // --- read one joystick event if available ---
         for (int i = 0; i < sim->num_robots(); ++i) {
             if (selected_robot_idx != i) {
@@ -219,7 +220,7 @@ int main(int argc, char *argv[]) {
                             sim->get_robot(selected_robot_idx)
                                 .toggle_all_except_section_work("front", 2); // Toggle all except middle section
                         }
-                        
+
                         // Button 11 = Attach trailer
                         if (button == 11 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
@@ -229,8 +230,8 @@ int main(int argc, char *argv[]) {
                                 std::cout << "No compatible robot nearby to connect" << std::endl;
                             }
                         }
-                        
-                        // Button 12 = Detach trailer  
+
+                        // Button 12 = Detach trailer
                         if (button == 12 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
                             if (robot.is_connected()) {
@@ -257,7 +258,7 @@ int main(int argc, char *argv[]) {
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
-    
+
     if (joystk) {
         close(js_fd);
     }
