@@ -5,11 +5,12 @@ namespace fs {
         : rec(rec), world(world) {}
 
     void Hitch::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
-                     concord::Bound bound, muli::CollisionFilter filter) {
+                     concord::Bound bound, muli::CollisionFilter filter, bool is_master) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
         this->bound = bound;
+        this->is_master = is_master;
 
         pose = utils::shift(parent_bound.pose, bound.pose);
     }

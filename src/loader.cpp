@@ -217,7 +217,13 @@ void Loader::parse_hitches(RobotInfo& info, const json& hitches_json) {
     for (auto& [name, hitch] : hitches_json.items()) {
         concord::Pose hitch_pose = parse_pose(hitch["position"]);
         concord::Size hitch_size = parse_size(hitch["size"]);
-        info.hitches[name] = concord::Bound(hitch_pose, hitch_size);
+        bool is_master = hitch.value("is_master", true);  // Default to master
+        
+        HitchInfo hitch_info;
+        hitch_info.bound = concord::Bound(hitch_pose, hitch_size);
+        hitch_info.is_master = is_master;
+        
+        info.hitches[name] = hitch_info;
     }
 }
 

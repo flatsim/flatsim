@@ -276,11 +276,11 @@ namespace fs {
             auto other_angle = other_robot->get_position().angle.yaw;
             
             // Transform hitch positions to world coordinates considering robot rotation
-            float my_hitch_world_x = my_pos.x + my_rear_hitch_pos.pose.point.x * cos(my_angle) - my_rear_hitch_pos.pose.point.y * sin(my_angle);
-            float my_hitch_world_y = my_pos.y + my_rear_hitch_pos.pose.point.x * sin(my_angle) + my_rear_hitch_pos.pose.point.y * cos(my_angle);
+            float my_hitch_world_x = my_pos.x + my_rear_hitch_pos.bound.pose.point.x * cos(my_angle) - my_rear_hitch_pos.bound.pose.point.y * sin(my_angle);
+            float my_hitch_world_y = my_pos.y + my_rear_hitch_pos.bound.pose.point.x * sin(my_angle) + my_rear_hitch_pos.bound.pose.point.y * cos(my_angle);
             
-            float other_hitch_world_x = other_pos.x + slave_front_hitch_pos.pose.point.x * cos(other_angle) - slave_front_hitch_pos.pose.point.y * sin(other_angle);
-            float other_hitch_world_y = other_pos.y + slave_front_hitch_pos.pose.point.x * sin(other_angle) + slave_front_hitch_pos.pose.point.y * cos(other_angle);
+            float other_hitch_world_x = other_pos.x + slave_front_hitch_pos.bound.pose.point.x * cos(other_angle) - slave_front_hitch_pos.bound.pose.point.y * sin(other_angle);
+            float other_hitch_world_y = other_pos.y + slave_front_hitch_pos.bound.pose.point.x * sin(other_angle) + slave_front_hitch_pos.bound.pose.point.y * cos(other_angle);
             
             // Check if hitch points are overlapping (very close)
             float hitch_dist = std::sqrt(std::pow(my_hitch_world_x - other_hitch_world_x, 2) + std::pow(my_hitch_world_y - other_hitch_world_y, 2));
@@ -372,9 +372,14 @@ namespace fs {
                 continue;
             }
             
-            // Try to connect any of my hitches to any of their hitches
+            // Try to connect my master hitches to their slave hitches
             for (const auto& my_hitch : chassis->hitches) {
                 for (const auto& other_hitch : other_robot->chassis->hitches) {
+                    // Only connect master hitch to slave hitch
+                    if (!my_hitch.is_master || other_hitch.is_master) {
+                        continue;
+                    }
+                    
                     // Get actual world positions of hitches (updated by tick)
                     concord::Point my_hitch_pos = my_hitch.pose.point;
                     concord::Point other_hitch_pos = other_hitch.pose.point;

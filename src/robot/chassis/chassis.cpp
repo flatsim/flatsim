@@ -83,7 +83,7 @@ namespace fs {
 
         for (auto const &h : robo.hitches) {
             Hitch hitch(rec, world);
-            hitch.init(color, name, h.first, bound, h.second, filter);
+            hitch.init(color, name, h.first, bound, h.second.bound, filter, h.second.is_master);
             hitches.push_back(hitch);
         }
 

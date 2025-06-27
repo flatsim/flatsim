@@ -6,6 +6,8 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <termios.h>
+#include <sys/select.h>
 
 #include "flatsim/loader.hpp"
 #include "flatsim/simulator.hpp"
@@ -128,6 +130,13 @@ int main(int argc, char *argv[]) {
         sim->add_robot(oxbo);
         std::cout << "Loaded oxbo harvester from JSON\n";
 
+        // Load second trailer from JSON
+        auto trailer2 =
+            fs::Loader::load_from_json(machines_dir / "trailer.json", concord::Pose(10 * 0, 10 * 0 - 10, 0.0f),
+                                       "trailer2", pigment::RGB(255, 100, 50));
+        sim->add_robot(trailer2);
+        std::cout << "Loaded second trailer from JSON\n";
+
         // Load truck from JSON
         auto truck = fs::Loader::load_from_json(machines_dir / "truck.json", concord::Pose(10 * 2, 10 * 0, 0.0f),
                                                 "big_truck3", pigment::RGB(100, 100, 255));
@@ -140,11 +149,36 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Setup keyboard input (non-blocking)
+    struct termios old_termios, new_termios;
+    tcgetattr(STDIN_FILENO, &old_termios);
+    new_termios = old_termios;
+    new_termios.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+    fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
+    std::cout << "Keyboard: 0-9 to select robots\n";
+    std::cout << "Joystick: Button 11 = attach, Button 12 = detach\n";
 
-    // 7) Main loop: only joystick + simulation tick
+    // 7) Main loop: keyboard + joystick + simulation tick
     while (true) {
+        // --- Handle keyboard input for robot selection ---
+        char key;
+        if (read(STDIN_FILENO, &key, 1) == 1) {
+            if (key >= '0' && key <= '9') {
+                int robot_num = key - '0';
+                if (robot_num < sim->num_robots()) {
+                    selected_robot_idx = robot_num;
+                    auto& robot = sim->get_robot(selected_robot_idx);
+                    std::cout << "Keyboard selected robot #" << selected_robot_idx << " (" << robot.info.name << ")" << std::endl;
+                } else {
+                    std::cout << "Robot #" << robot_num << " doesn't exist (only " << sim->num_robots() << " robots)\n";
+                }
+            }
+        }
+        
         // --- read one joystick event if available ---
         for (int i = 0; i < sim->num_robots(); ++i) {
             if (selected_robot_idx != i) {
@@ -174,15 +208,7 @@ int main(int argc, char *argv[]) {
                 } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
                     int button = int(e.number);
                     bool pressed = e.value != 0;
-                    if (button < 4 && pressed) {
-                        selected_robot_idx = button;
-                        std::cout << "Selected robot #" << selected_robot_idx << std::endl;
-                    }
-                    if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                        if ((button == 12) && pressed) {
-                            sim->get_robot(selected_robot_idx)
-                                .toggle_all_except_section_work("front", 2); // Toggle all except middle section
-                        }
+                    if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
                         if ((button == 4) && pressed) {
                             sim->get_robot(selected_robot_idx).respawn();
                         }
@@ -190,17 +216,28 @@ int main(int argc, char *argv[]) {
                             sim->get_robot(selected_robot_idx).pulse();
                         }
                         if (button == 10 && pressed) {
-                            // Try to connect to nearby slave
+                            sim->get_robot(selected_robot_idx)
+                                .toggle_all_except_section_work("front", 2); // Toggle all except middle section
+                        }
+                        
+                        // Button 11 = Attach trailer
+                        if (button == 11 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
-                            if (robot.role == fs::RobotRole::MASTER) {
-                                if (robot.try_connect_nearby_slave(sim->robots)) {
-                                    std::cout << "Connected to trailer!" << std::endl;
-                                } else if (robot.is_connected()) {
-                                    robot.disconnect_trailer();
-                                    std::cout << "Disconnected trailer!" << std::endl;
-                                } else {
-                                    std::cout << "No trailer nearby to connect" << std::endl;
-                                }
+                            if (robot.try_connect_nearby()) {
+                                std::cout << "Connected to nearby robot!" << std::endl;
+                            } else {
+                                std::cout << "No compatible robot nearby to connect" << std::endl;
+                            }
+                        }
+                        
+                        // Button 12 = Detach trailer  
+                        if (button == 12 && pressed) {
+                            auto &robot = sim->get_robot(selected_robot_idx);
+                            if (robot.is_connected()) {
+                                robot.disconnect_trailer();
+                                std::cout << "Disconnected trailer!" << std::endl;
+                            } else {
+                                std::cout << "No trailer connected to disconnect" << std::endl;
                             }
                         }
                     }
@@ -218,6 +255,9 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::nanoseconds(100));
     }
 
+    // Restore terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
+    
     if (joystk) {
         close(js_fd);
     }

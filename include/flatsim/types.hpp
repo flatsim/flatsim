@@ -24,6 +24,11 @@ namespace fs {
         bool has_physics = true;
     };
 
+    struct HitchInfo {
+        concord::Bound bound;   // Position and size relative to robot center
+        bool is_master = true;  // true = master (can pull), false = slave (can be pulled)
+    };
+
     struct TankInfo {
         std::string name;
         float capacity;
@@ -65,7 +70,7 @@ namespace fs {
         concord::Polygon outline;
         std::vector<concord::Bound> wheels;
         RobotControll controls;
-        std::unordered_map<std::string, concord::Bound> hitches;
+        std::unordered_map<std::string, HitchInfo> hitches;
         std::vector<KarosserieInfo> karos;
         std::optional<TankInfo> tank;  // Optional tank (harvesters, biners)
         std::optional<PowerInfo> power_source;  // Optional power (not all machines need power)
