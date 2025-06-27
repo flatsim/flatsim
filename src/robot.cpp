@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <thread>
+#include <chrono>
 
 namespace fs {
 
@@ -81,9 +83,14 @@ public:
     
     // Allow Robot to set master relationship
     void set_master_robot(Robot* master) { master_robot = master; }
+    
+    // Teleport handling - break connections
+    void break_chain_for_teleport();
     void add_follower(Robot* follower, muli::RevoluteJoint* joint) {
         connected_followers.push_back(follower);
         connection_joints.push_back(joint);
+        
+        spdlog::info("Connected {} as follower to {}", follower->info.name, robot->info.name);
     }
 };
 
@@ -216,12 +223,28 @@ public:
     }
 
     void Robot::teleport(concord::Pose pose) {
+        teleport(pose, true);
+    }
+    
+    void Robot::teleport(concord::Pose pose, bool propagate) {
+        spdlog::info("Teleporting robot {} to ({:.2f}, {:.2f}) - breaking chain connections", info.name, pose.point.x, pose.point.y);
         control_system->reset_controls();
+        
+        // Break all chain connections before teleporting
+        if (propagate) {
+            chain_manager->break_chain_for_teleport();
+        }
+        
         chassis->teleport(pose);
     }
 
     void Robot::respawn() {
+        spdlog::info("Respawning robot {} - breaking chain connections", info.name);
         control_system->reset_controls();
+        
+        // Break all chain connections before respawning
+        chain_manager->break_chain_for_teleport();
+        
         chassis->teleport(spawn_position);
     }
 
@@ -505,8 +528,7 @@ bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Ro
             
             if (new_joint) {
                 // Add to followers using new system
-                connected_followers.push_back(other_robot.get());
-                connection_joints.push_back(new_joint);
+                add_follower(other_robot.get(), new_joint);
                 other_robot->chain_manager->set_master_robot(robot);
                 other_robot->role = RobotRole::FOLLOWER; // Change slave to follower
                 
@@ -600,8 +622,7 @@ bool ChainManager::try_connect_nearby() {
                     
                     if (new_joint) {
                         // Add to followers list
-                        connected_followers.push_back(other_robot);
-                        connection_joints.push_back(new_joint);
+                        add_follower(other_robot, new_joint);
                         
                         // Set backward reference
                         other_robot->chain_manager->set_master_robot(robot);
@@ -1086,6 +1107,30 @@ void ChainManager::disconnect_from_position(int position) {
     disconnect_at_position(position);
     
     spdlog::info("Disconnected chain from position {} onwards", position);
+}
+
+void ChainManager::break_chain_for_teleport() {
+    spdlog::info("Breaking chain and teleporting all robots to spawn for robot {}", robot->info.name);
+    
+    // Get the root master and the full chain
+    Robot* root_master = get_root_master();
+    auto full_chain = root_master->chain_manager->get_full_chain();
+    
+    spdlog::info("Full chain has {} robots, starting from root {}", full_chain.size(), root_master->info.name);
+    
+    // Step 1: Disconnect all connections in the entire chain
+    root_master->chain_manager->disconnect_all_followers();
+    
+    // Step 2: Teleport each robot individually to its spawn position
+    for (Robot* chain_robot : full_chain) {
+        if (chain_robot != robot) {  // Don't teleport the initiating robot here
+            spdlog::info("Teleporting chain robot {} to its spawn position", chain_robot->info.name);
+            chain_robot->teleport(chain_robot->get_spawn_position(), false);  // No propagation
+            
+            // Small delay to prevent physics conflicts
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
 }
 
 } // namespace fs

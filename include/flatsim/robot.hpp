@@ -78,6 +78,7 @@ namespace fs {
         void respawn();
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
+        void teleport(concord::Pose pose, bool propagate);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
         void update_color(const pigment::RGB& new_color);
 
@@ -98,6 +99,7 @@ namespace fs {
         Sensor *get_sensor(const std::string &type) const;
 
         const concord::Pose &get_position() const { return info.bound.pose; }
+        const concord::Pose &get_spawn_position() const { return spawn_position; }
         void pulse() { pulsing = true; }
         void toggle_section_work(const std::string &karosserie_name, int section_id) { chassis->toggle_section_work(karosserie_name, section_id); }
         void toggle_all_sections_work(const std::string &karosserie_name) { chassis->toggle_all_sections_work(karosserie_name); }
