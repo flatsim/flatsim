@@ -52,6 +52,7 @@ namespace fs {
 
         muli::CollisionFilter filter;
         concord::Pose spawn_position;
+        pigment::RGB original_color;  // Store original color for restoration when disconnected
 
         // New modular systems
         std::unique_ptr<ControlSystem> control_system;
@@ -78,6 +79,7 @@ namespace fs {
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
+        void update_color(const pigment::RGB& new_color);
 
         // Sensor management
         void add_sensor(std::unique_ptr<Sensor> sensor);

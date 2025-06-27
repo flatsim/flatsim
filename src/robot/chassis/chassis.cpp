@@ -181,4 +181,21 @@ namespace fs {
         }
     }
 
+    void Chassis::update_color(const pigment::RGB& new_color) {
+        // Update chassis color
+        color = new_color;
+        
+        // Update all wheels
+        for (auto& wheel : wheels) {
+            wheel.update_color(new_color);
+        }
+        
+        // Update all karosseries
+        for (auto& karosserie : karosseries) {
+            karosserie.update_color(new_color);
+        }
+        
+        // Note: hitches don't have color fields so we skip them
+    }
+
 } // namespace fs

@@ -155,6 +155,7 @@ public:
         this->info = robo;
         this->role = robo.role; // Set role from RobotInfo
         this->spawn_position = robo.bound.pose;
+        this->original_color = robo.color; // Store original color
 
         if (!world) {
             throw NullPointerException("world");
@@ -222,6 +223,13 @@ public:
     void Robot::respawn() {
         control_system->reset_controls();
         chassis->teleport(spawn_position);
+    }
+
+    void Robot::update_color(const pigment::RGB& new_color) {
+        info.color = new_color;
+        if (chassis) {
+            chassis->update_color(new_color);
+        }
     }
 
     void Robot::update(float angular, float linear) {
@@ -502,6 +510,9 @@ bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Ro
                 other_robot->chain_manager->set_master_robot(robot);
                 other_robot->role = RobotRole::FOLLOWER; // Change slave to follower
                 
+                // Follower adopts master's color
+                other_robot->update_color(robot->info.color);
+                
                 // Update capabilities for both robots
                 update_follower_capabilities();
                 other_robot->update_follower_capabilities();
@@ -596,6 +607,9 @@ bool ChainManager::try_connect_nearby() {
                         other_robot->chain_manager->set_master_robot(robot);
                         other_robot->role = RobotRole::FOLLOWER;
                         
+                        // Follower adopts master's color
+                        other_robot->update_color(robot->info.color);
+                        
                         // Update capabilities for both robots
                         update_follower_capabilities();
                         other_robot->update_follower_capabilities();
@@ -642,6 +656,10 @@ void ChainManager::disconnect_all_followers() {
         if (follower) {
             follower->role = RobotRole::SLAVE;  // Change back to slave
             follower->chain_manager->master_robot = nullptr;
+            
+            // Restore original color when disconnecting
+            follower->update_color(follower->original_color);
+            
             spdlog::info("Disconnected {} from {}", follower->info.name, robot->info.name);
             
             // Recursively disconnect any sub-followers
@@ -861,6 +879,10 @@ void ChainManager::disconnect_last_follower() {
             // Reset disconnected robot's state
             chain_end->role = RobotRole::SLAVE;
             chain_end->chain_manager->master_robot = nullptr;
+            
+            // Restore original color when disconnecting
+            chain_end->update_color(chain_end->original_color);
+            
             chain_end->update_follower_capabilities();
             
             // Update master's capabilities
@@ -1031,6 +1053,10 @@ void ChainManager::disconnect_at_position(int position) {
         // Reset disconnected robot's state (this will also disconnect its followers)
         robot_to_disconnect->role = RobotRole::SLAVE;
         robot_to_disconnect->chain_manager->master_robot = nullptr;
+        
+        // Restore original color when disconnecting
+        robot_to_disconnect->update_color(robot_to_disconnect->original_color);
+        
         robot_to_disconnect->disconnect_all_followers();  // Disconnect everything after this point
         robot_to_disconnect->update_follower_capabilities();
         

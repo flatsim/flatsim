@@ -39,5 +39,6 @@ namespace fs {
         void toggle_all_except_section_work(int except_section_id);
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
+        void update_color(const pigment::RGB& new_color) { color = new_color; }
     };
 } // namespace fs

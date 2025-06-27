@@ -50,5 +50,6 @@ namespace fs {
         void set_angular_damping(float damping) { if (wheel) wheel->SetAngularDamping(damping); }
         muli::RigidBody* get_wheel() { return wheel; }
         muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
+        void update_color(const pigment::RGB& new_color) { color = new_color; }
     };
 } // namespace fs
