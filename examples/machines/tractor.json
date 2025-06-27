@@ -79,5 +79,10 @@
     "capacity": 150.0,
     "consumption_rate": 0.03,
     "charge_rate": 0.0
+  },
+  "capability": {
+    "work_on": ["field", "crop"],
+    "connect_to": ["trailer", "cultivator"],
+    "unload_to": []
   }
 }

@@ -45,6 +45,12 @@ namespace fs {
 
     enum class RobotRole { MASTER, FOLLOWER, SLAVE };
 
+    struct Capability {
+        std::vector<std::string> work_on;      // What this machine can work on
+        std::vector<std::string> connect_to;   // What this machine can connect to
+        std::vector<std::string> unload_to;    // What this machine can unload to
+    };
+
     struct RobotInfo {
         uint RCI;
         uint group;
@@ -53,6 +59,7 @@ namespace fs {
         std::string uuid = "none";
         std::string type = "none";
         std::vector<std::string> works_on;
+        Capability capability;
         pigment::RGB color;
         concord::Bound bound;
         concord::Polygon outline;

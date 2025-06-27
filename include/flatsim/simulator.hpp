@@ -38,6 +38,11 @@ namespace fs {
         Robot &get_robot(uint i);
         Robot &get_robot(const std::string& uuid);
         int num_robots() const;
+        
+        // Spatial queries
+        std::vector<std::pair<std::string, concord::Pose>> get_all_robot_poses() const;
+        std::vector<Robot*> get_all_robots() const;
+        Robot* get_closest_robot(const Robot& from_robot, float max_distance = 50.0f) const;
         // WORLD
         concord::Datum get_datum() const;
         World &get_world() { return *world; }

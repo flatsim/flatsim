@@ -21,11 +21,15 @@
 #include <vector>
 
 namespace fs {
+    // Forward declaration to avoid circular dependency
+    class Simulator;
+    
     class Robot {
       private:
         bool pulsing = false;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
+        Simulator* simulator = nullptr;
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::unique_ptr<Chassis> chassis;
         std::optional<std::unique_ptr<Power>> power;
@@ -102,7 +106,8 @@ namespace fs {
         }
 
         // Connection management
-        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);
+        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);  // Old method - keep for compatibility
+        bool try_connect_nearby();  // New method using get_all_robots()
         void disconnect_trailer();
         bool is_connected() const;
 
@@ -111,6 +116,13 @@ namespace fs {
         Power *get_power() const { return power ? power->get() : nullptr; }
         bool is_powered() const { return power && *power && !(*power)->is_empty(); }
         float get_power_percentage() const { return (power && *power) ? (*power)->get_percentage() : 0.0f; }
+
+        // Spatial queries - robot can find other robots
+        std::vector<Robot*> get_all_robots() const;
+        Robot* get_closest_robot(float max_distance = 50.0f) const;
+        
+        // Set simulator reference (called by simulator when robot is added)
+        void set_simulator(Simulator* sim) { simulator = sim; }
 
       private:
         concord::Datum datum;

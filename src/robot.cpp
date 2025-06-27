@@ -1,4 +1,5 @@
 #include "flatsim/robot.hpp"
+#include "flatsim/simulator.hpp"
 #include <cmath>
 
 namespace fs {
@@ -324,6 +325,95 @@ namespace fs {
 
     bool Robot::is_connected() const {
         return connected_slave != nullptr && connection_joint != nullptr;
+    }
+
+    // Spatial queries - delegate to simulator
+    std::vector<Robot*> Robot::get_all_robots() const {
+        if (!simulator) {
+            return {};  // Return empty if no simulator reference
+        }
+        return simulator->get_all_robots();
+    }
+
+    Robot* Robot::get_closest_robot(float max_distance) const {
+        if (!simulator) {
+            return nullptr;  // Return null if no simulator reference
+        }
+        return simulator->get_closest_robot(*this, max_distance);
+    }
+
+    bool Robot::try_connect_nearby() {
+        // Only MASTER robots can initiate connections
+        if (role != RobotRole::MASTER || !chassis) {
+            return false;
+        }
+        
+        // Already connected
+        if (connected_slave) {
+            return false;
+        }
+        
+        // Check if this robot has any hitch
+        if (chassis->hitches.empty()) {
+            return false;
+        }
+        
+        auto all_robots = get_all_robots();
+        float connection_range = 2.0f;  // Increased range for easier connection
+        
+        for (Robot* other_robot : all_robots) {
+            // Skip self and non-slaves
+            if (other_robot == this || other_robot->role != RobotRole::SLAVE) {
+                continue;
+            }
+            
+            // Skip if other robot has no chassis or hitches
+            if (!other_robot->chassis || other_robot->chassis->hitches.empty()) {
+                continue;
+            }
+            
+            // Try to connect any of my hitches to any of their hitches
+            for (const auto& my_hitch : chassis->hitches) {
+                for (const auto& other_hitch : other_robot->chassis->hitches) {
+                    // Get actual world positions of hitches (updated by tick)
+                    concord::Point my_hitch_pos = my_hitch.pose.point;
+                    concord::Point other_hitch_pos = other_hitch.pose.point;
+                    
+                    // Calculate distance between hitches
+                    float hitch_dist = std::sqrt(
+                        std::pow(my_hitch_pos.x - other_hitch_pos.x, 2) + 
+                        std::pow(my_hitch_pos.y - other_hitch_pos.y, 2)
+                    );
+                    
+                    if (hitch_dist <= connection_range) {
+                        // Use the midpoint between the two hitch points as the joint position
+                        muli::Vec2 hitch_world_pos(
+                            (my_hitch_pos.x + other_hitch_pos.x) / 2.0f,
+                            (my_hitch_pos.y + other_hitch_pos.y) / 2.0f
+                        );
+                        
+                        connection_joint = world->CreateRevoluteJoint(
+                            chassis->get_body(),
+                            other_robot->chassis->get_body(),
+                            hitch_world_pos,
+                            20.0f,  // frequency
+                            0.8f,   // damping
+                            10.0f   // joint mass
+                        );
+                        
+                        if (connection_joint) {
+                            connected_slave = other_robot;
+                            other_robot->role = RobotRole::FOLLOWER;
+                            spdlog::info("Connected {} to {} (hitch distance: {:.2f}m)", 
+                                        info.name, other_robot->info.name, hitch_dist);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
 
 } // namespace fs

@@ -26,6 +26,7 @@ namespace fs {
         static void parse_hitches(RobotInfo &info, const nlohmann::json &hitches_json);
         static void parse_tank(RobotInfo &info, const nlohmann::json &tank_json);
         static void parse_power(RobotInfo &info, const nlohmann::json &power_json);
+        static void parse_capability(RobotInfo &info, const nlohmann::json &capability_json);
     };
 
 } // namespace fs

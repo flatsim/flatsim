@@ -1,4 +1,5 @@
 #include "flatsim/simulator.hpp"
+#include <cmath>
 
 namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
@@ -75,6 +76,7 @@ namespace fs {
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, physics_world, robots.size());
             r->init(world_datum, robot_info);
+            r->set_simulator(this);  // Give robot reference to simulator
             return r;
         }());
     }
@@ -156,6 +158,57 @@ namespace fs {
         throw EntityNotFoundException("Robot", uuid);
     };
     int Simulator::num_robots() const { return robots.size(); }
+
+    // Spatial queries
+    std::vector<std::pair<std::string, concord::Pose>> Simulator::get_all_robot_poses() const {
+        std::vector<std::pair<std::string, concord::Pose>> poses;
+        
+        for (const auto& robot : robots) {
+            if (robot) {  // Check for null robots
+                poses.emplace_back(robot->info.uuid, robot->info.bound.pose);
+            }
+        }
+        
+        return poses;
+    }
+
+    std::vector<Robot*> Simulator::get_all_robots() const {
+        std::vector<Robot*> robot_ptrs;
+        
+        for (const auto& robot : robots) {
+            if (robot) {  // Check for null robots
+                robot_ptrs.push_back(robot.get());
+            }
+        }
+        
+        return robot_ptrs;
+    }
+
+    Robot* Simulator::get_closest_robot(const Robot& from_robot, float max_distance) const {
+        Robot* closest = nullptr;
+        float min_distance = max_distance;
+        
+        concord::Point from_pos = from_robot.info.bound.pose.point;
+        
+        for (const auto& robot : robots) {
+            if (!robot || robot->info.uuid == from_robot.info.uuid) {
+                continue;  // Skip null robots and self
+            }
+            
+            concord::Point to_pos = robot->info.bound.pose.point;
+            float distance = std::sqrt(
+                std::pow(to_pos.x - from_pos.x, 2) + 
+                std::pow(to_pos.y - from_pos.y, 2)
+            );
+            
+            if (distance < min_distance) {
+                min_distance = distance;
+                closest = robot.get();
+            }
+        }
+        
+        return closest;
+    }
 
     // WORLD
     void Simulator::add_layer(LayerInfo layer_info, bool noise) {

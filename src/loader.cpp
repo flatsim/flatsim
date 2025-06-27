@@ -88,6 +88,11 @@ RobotInfo Loader::load_from_json(const std::filesystem::path& json_path,
         parse_power(robot_info, j["power"]);
     }
     
+    // Parse capability
+    if (j.contains("capability")) {
+        parse_capability(robot_info, j["capability"]);
+    }
+    
     return robot_info;
 }
 
@@ -237,6 +242,26 @@ void Loader::parse_power(RobotInfo& info, const json& power_json) {
     power.charge_rate = power_json.value("charge_rate", 0.0f);
     
     info.power_source = power;
+}
+
+void Loader::parse_capability(RobotInfo& info, const json& capability_json) {
+    if (capability_json.contains("work_on")) {
+        for (const auto& work : capability_json["work_on"]) {
+            info.capability.work_on.push_back(work.get<std::string>());
+        }
+    }
+    
+    if (capability_json.contains("connect_to")) {
+        for (const auto& connect : capability_json["connect_to"]) {
+            info.capability.connect_to.push_back(connect.get<std::string>());
+        }
+    }
+    
+    if (capability_json.contains("unload_to")) {
+        for (const auto& unload : capability_json["unload_to"]) {
+            info.capability.unload_to.push_back(unload.get<std::string>());
+        }
+    }
 }
 
 } // namespace fs
