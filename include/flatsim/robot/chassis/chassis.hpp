@@ -48,6 +48,7 @@ namespace fs {
         muli::Transform get_transform() const;
         void toggle_section_work(const std::string& karosserie_name, int section_id);
         void toggle_all_sections_work(const std::string& karosserie_name);
+        void update_color(const pigment::RGB& new_color);
         void toggle_all_except_section_work(const std::string& karosserie_name, int except_section_id);
         
         // Accessors

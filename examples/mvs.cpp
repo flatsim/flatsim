@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
     std::cout << "Keyboard: 0-9 to select robots\n";
-    std::cout << "Joystick: Button 11 = attach, Button 12 = detach\n";
+    std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = disconnect at pos 2\n";
 
     // 7) Main loop: keyboard + joystick + simulation tick
     while (true) {
@@ -221,24 +221,41 @@ int main(int argc, char *argv[]) {
                                 .toggle_all_except_section_work("front", 2); // Toggle all except middle section
                         }
 
-                        // Button 11 = Attach trailer
+                        // Button 11 = Attach trailer (smart chaining)
                         if (button == 11 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
-                            if (robot.try_connect_nearby()) {
+                            if (robot.try_connect_from_chain_end()) {
                                 std::cout << "Connected to nearby robot!" << std::endl;
                             } else {
                                 std::cout << "No compatible robot nearby to connect" << std::endl;
                             }
                         }
 
-                        // Button 12 = Detach trailer
+                        // Button 12 = Detach last trailer in chain
                         if (button == 12 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
                             if (robot.is_connected()) {
-                                robot.disconnect_trailer();
-                                std::cout << "Disconnected trailer!" << std::endl;
+                                robot.disconnect_last_follower();
+                                std::cout << "Disconnected last trailer in chain!" << std::endl;
                             } else {
                                 std::cout << "No trailer connected to disconnect" << std::endl;
+                            }
+                        }
+                        
+                        // Button 13 = Print chain status
+                        if (button == 13 && pressed) {
+                            auto &robot = sim->get_robot(selected_robot_idx);
+                            robot.print_chain_status();
+                        }
+                        
+                        // Button 14 = Disconnect at position 2 (for testing)
+                        if (button == 14 && pressed) {
+                            auto &robot = sim->get_robot(selected_robot_idx);
+                            if (robot.get_chain_length() > 2) {
+                                robot.disconnect_at_position(2);
+                                std::cout << "Disconnected at position 2!" << std::endl;
+                            } else {
+                                std::cout << "Chain too short to disconnect at position 2" << std::endl;
                             }
                         }
                     }

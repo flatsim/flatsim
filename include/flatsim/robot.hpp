@@ -12,6 +12,8 @@
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
 #include "flatsim/robot/tank.hpp"
+#include "flatsim/robot/systems/control.hpp"
+#include "flatsim/robot/systems/chain.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
@@ -25,6 +27,9 @@ namespace fs {
     class Simulator;
     
     class Robot {
+        friend class ControlSystem;
+        friend class ChainManager;
+        
       private:
         bool pulsing = false;
         std::shared_ptr<rerun::RecordingStream> rec;
@@ -34,18 +39,15 @@ namespace fs {
         std::unique_ptr<Chassis> chassis;
         std::optional<std::unique_ptr<Power>> power;
         std::optional<Tank> tank;
-        std::vector<std::shared_ptr<Robot>> slaves;
-        std::vector<float> steerings, throttles;
-        std::vector<float> steerings_max, throttles_max;
-        std::vector<float> steerings_diff;
+        std::vector<std::shared_ptr<Robot>> slaves;  // Legacy - can be removed later
 
         muli::CollisionFilter filter;
         concord::Pose spawn_position;
+        pigment::RGB original_color;  // Store original color for restoration when disconnected
 
-        // Connection tracking - support multiple followers
-        std::vector<Robot*> connected_followers;
-        std::vector<muli::RevoluteJoint*> connection_joints;
-        Robot* master_robot = nullptr;  // Backward reference if this robot is a follower
+        // New modular systems
+        std::unique_ptr<ControlSystem> control_system;
+        std::unique_ptr<ChainManager> chain_manager;
 
       public:
         RobotInfo info;
@@ -60,10 +62,16 @@ namespace fs {
         void reset_controls();
         void set_angular(float angular);
         void set_linear(float linear);
+        
+        // Control propagation methods for chain control
+        void set_angular_as_follower(float angular, const Robot& master);
+        void set_linear_as_follower(float linear, const Robot& master);
         void respawn();
         void update(float angular, float linear);
         void teleport(concord::Pose pose);
+        void teleport(concord::Pose pose, bool propagate);
         void visualize_pulse(float p_s, float gps_mult = 5, float inc = 0.0015);
+        void update_color(const pigment::RGB& new_color);
 
         // Sensor management
         void add_sensor(std::unique_ptr<Sensor> sensor);
@@ -82,6 +90,7 @@ namespace fs {
         Sensor *get_sensor(const std::string &type) const;
 
         const concord::Pose &get_position() const { return info.bound.pose; }
+        const concord::Pose &get_spawn_position() const { return spawn_position; }
         void pulse() { pulsing = true; }
         void toggle_section_work(const std::string &karosserie_name, int section_id) { chassis->toggle_section_work(karosserie_name, section_id); }
         void toggle_all_sections_work(const std::string &karosserie_name) { chassis->toggle_all_sections_work(karosserie_name); }
@@ -106,18 +115,33 @@ namespace fs {
                 tank->fill(amount);
         }
 
-        // Connection management
-        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);  // Old method - keep for compatibility
-        bool try_connect_nearby();  // New method using get_all_robots()
-        void disconnect_trailer();  // Disconnect all followers
-        void disconnect_all_followers();  // New method to disconnect all followers
+        // Connection management - delegate to ChainManager
+        bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);
+        bool try_connect_nearby();
+        bool try_connect_from_chain_end();
+        void disconnect_trailer();
+        void disconnect_all_followers();
+        void disconnect_last_follower();
+        void disconnect_at_position(int position);
+        void disconnect_from_position(int position);
         bool is_connected() const;
         
-        // Chain management
-        std::vector<Robot*> get_connected_followers() const { return connected_followers; }
-        Robot* get_master_robot() const { return master_robot; }
-        bool is_follower() const { return master_robot != nullptr; }
+        // Chain management - delegate to ChainManager
+        std::vector<Robot*> get_connected_followers() const;
+        Robot* get_master_robot() const;
+        bool is_follower() const;
         Robot* get_root_master() const;
+        std::vector<Robot*> get_full_chain() const;
+        int get_chain_length() const;
+        int get_position_in_chain() const;
+        void print_chain_status() const;
+        
+        // Capability management - delegate to ChainManager
+        void update_follower_capabilities();
+        const FollowerCapabilities& get_follower_capabilities() const;
+        bool has_steering_capability() const;
+        bool has_throttle_capability() const;
+        bool has_available_master_hitches() const;
 
         // Power management
         bool has_power() const { return power.has_value(); }
