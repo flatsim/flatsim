@@ -48,6 +48,13 @@
       "sections": 0,
       "has_physics": true,
       "description": "Extended pole for tractor connection"
+    },
+    {
+      "name": "hitch_mount",
+      "position": { "x": 0.0, "y": -1.30, "z": 0.0 },
+      "size": { "width": 0.24, "height": 0.28, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": false
     }
   ],
   "hitches": {

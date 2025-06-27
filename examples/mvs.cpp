@@ -160,7 +160,8 @@ int main(int argc, char *argv[]) {
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
     std::cout << "Keyboard: 0-9 to select robots\n";
-    std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = disconnect at pos 2\n";
+    std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = "
+                 "disconnect at pos 2\n";
 
     // 7) Main loop: keyboard + joystick + simulation tick
     while (true) {
@@ -241,13 +242,13 @@ int main(int argc, char *argv[]) {
                                 std::cout << "No trailer connected to disconnect" << std::endl;
                             }
                         }
-                        
+
                         // Button 13 = Print chain status
                         if (button == 13 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
                             robot.print_chain_status();
                         }
-                        
+
                         // Button 14 = Disconnect at position 2 (for testing)
                         if (button == 14 && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
@@ -270,7 +271,7 @@ int main(int argc, char *argv[]) {
         sim->tick(dt.count());
 
         // --- small sleep to cap CPU usage ---
-        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(10));
     }
 
     // Restore terminal settings

@@ -27,6 +27,10 @@ include(FetchContent)
 # External Dependencies
 set(ext_deps)
 
+FetchContent_Declare(kokkos GIT_REPOSITORY https://github.com/kokkos/kokkos.git GIT_TAG 4.6.01 GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(kokkos)
+list(APPEND ext_deps Kokkos::kokkos)
+
 # Muli Physics Engine
 set(MULI_BUILD_DEMO OFF)
 FetchContent_Declare(muli GIT_REPOSITORY https://github.com/Sopiro/Muli GIT_SHALLOW TRUE)
