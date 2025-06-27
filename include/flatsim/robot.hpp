@@ -12,6 +12,8 @@
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
 #include "flatsim/robot/tank.hpp"
+#include "flatsim/robot/systems/control.hpp"
+#include "flatsim/robot/systems/chain.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
@@ -23,17 +25,6 @@
 namespace fs {
     // Forward declaration to avoid circular dependency
     class Simulator;
-    class ControlSystem;
-    class ChainManager;
-    
-    // Follower capabilities structure
-    struct FollowerCapabilities {
-        bool has_steering = false;
-        bool has_throttle = false;
-        bool has_tank = false;
-        bool has_additional_hitches = false;
-        std::vector<std::string> available_master_hitches;
-    };
     
     class Robot {
         friend class ControlSystem;
