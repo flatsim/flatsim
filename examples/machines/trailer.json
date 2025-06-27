@@ -1,0 +1,67 @@
+{
+  "info": {
+    "type": "trailer",
+    "name": "Grain Trailer",
+    "uuid": "",
+    "rci": 3,
+    "works_on": ["food"],
+    "role": "SLAVE"
+  },
+  "dimensions": {
+    "width": 1.8,
+    "height": 2.6,
+    "description": "2-wheel trailer for grain transport"
+  },
+  "color": {
+    "r": 255,
+    "g": 150,
+    "b": 0
+  },
+  "wheels": [
+    {
+      "name": "rear_right",
+      "position": { "x": 0.9, "y": -0.78, "z": 0.0 },
+      "size": { "width": 0.396, "height": 0.78, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "rear_left",
+      "position": { "x": -0.9, "y": -0.78, "z": 0.0 },
+      "size": { "width": 0.396, "height": 0.78, "depth": 0.0 },
+      "side": "left"
+    }
+  ],
+  "controls": {
+    "steering": {
+      "max_angles": [0, 0],
+      "differential": [0, 0]
+    },
+    "throttle": {
+      "max_values": [0.0, 0.0]
+    }
+  },
+  "karosseries": [
+    {
+      "name": "towing_pole",
+      "position": { "x": 0.0, "y": 1.82, "z": 0.0 },
+      "size": { "width": 0.18, "height": 1.04, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": true,
+      "description": "Extended pole for tractor connection"
+    }
+  ],
+  "hitches": {
+    "front_hitch": {
+      "position": { "x": 0.0, "y": 2.54, "z": 0.0 },
+      "size": { "width": 0.05, "height": 0.05, "depth": 0.0 },
+      "description": "Connection point to tractor"
+    }
+  },
+  "tank": {
+    "name": "storage_bin",
+    "capacity": 2000.0,
+    "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "size": { "width": 1.62, "height": 2.34, "depth": 0.0 },
+    "description": "Central storage compartment"
+  }
+}

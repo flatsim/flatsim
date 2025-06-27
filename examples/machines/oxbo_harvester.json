@@ -1,0 +1,98 @@
+{
+  "info": {
+    "type": "harvester",
+    "name": "Oxbo 2475",
+    "uuid": "",
+    "rci": 3,
+    "works_on": ["pea"],
+    "role": "MASTER"
+  },
+  "dimensions": {
+    "width": 2.8,
+    "height": 7.68,
+    "description": "Large 6-wheel pea harvester"
+  },
+  "color": {
+    "r": 255,
+    "g": 200,
+    "b": 0
+  },
+  "wheels": [
+    {
+      "name": "front_right",
+      "position": { "x": 1.4, "y": 2.304, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "front_left", 
+      "position": { "x": -1.4, "y": 2.304, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "middle_right",
+      "position": { "x": 1.4, "y": 0.1, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "middle_left",
+      "position": { "x": -1.4, "y": 0.1, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "rear_right",
+      "position": { "x": 1.4, "y": -2.688, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "rear_left",
+      "position": { "x": -1.4, "y": -2.688, "z": 0.0 },
+      "size": { "width": 0.7, "height": 1.536, "depth": 0.0 },
+      "side": "left"
+    }
+  ],
+  "controls": {
+    "steering": {
+      "max_angles": [14, 14, 0, 0, -25, -25],
+      "differential": [-2, 2, 0, 0, 4, -4]
+    },
+    "throttle": {
+      "max_values": [0.2, 0.2, 0.0, 0.0, 0.9, 0.9]
+    }
+  },
+  "karosseries": [
+    {
+      "name": "front",
+      "position": { "x": 0.0, "y": 4.7232, "z": 0.0 },
+      "size": { "width": 3.528, "height": 1.7664, "depth": 0.0 },
+      "sections": 5,
+      "has_physics": true,
+      "description": "Working implement with 5 controllable sections"
+    },
+    {
+      "name": "back",
+      "position": { "x": 0.0, "y": -4.416, "z": 0.0 },
+      "size": { "width": 2.52, "height": 1.152, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": true
+    }
+  ],
+  "tank": {
+    "name": "harvest_bin",
+    "capacity": 10000.0,
+    "position": { "x": 0.0, "y": 2.24, "z": 0.0 },
+    "size": { "width": 1.68, "height": 2.24, "depth": 0.0 },
+    "description": "Upper harvest storage tank"
+  },
+  "power": {
+    "name": "fuel_tank",
+    "type": "FUEL",
+    "capacity": 200.0,
+    "consumption_rate": 0.05,
+    "charge_rate": 0.0
+  }
+}

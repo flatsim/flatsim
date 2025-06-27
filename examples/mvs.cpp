@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "flatsim/machines.hpp"
+#include "flatsim/loader.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include "rerun/recording_stream.hpp"
@@ -105,15 +105,40 @@ int main(int argc, char *argv[]) {
     std::filesystem::path outPath = "output.tif";
     geotiv::WriteRasterCollection(rc, outPath);
 
-    sim->add_robot(
-        fs::tractor(concord::Pose(10 * 0, 10 * 0, 0.0f), "tractor" + std::to_string(0), pigment::RGB(0, 255, 100)));
-    sim->add_robot(
-        fs::trailer(concord::Pose(10 * 0, 10 * 0 - 5, 0.0f), "trailer" + std::to_string(1), pigment::RGB(255, 150, 0)));
-    sim->add_robot(
-        fs::oxbo_harvester(concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo" + std::to_string(2), pigment::RGB(255, 200, 0)));
+    // Load machines from JSON files
+    std::filesystem::path machines_dir = "examples/machines";
 
-    sim->add_robot(
-        fs::truck(concord::Pose(10 * 2, 10 * 0, 0.0f), "big_truck" + std::to_string(3), pigment::RGB(100, 100, 255)));
+    try {
+        // Load tractor from JSON
+        auto tractor = fs::Loader::load_from_json(machines_dir / "tractor.json", concord::Pose(10 * 0, 10 * 0, 0.0f),
+                                                  "tractor0", pigment::RGB(0, 255, 100));
+        sim->add_robot(tractor);
+        std::cout << "Loaded tractor from JSON\n";
+
+        // Load trailer from JSON
+        auto trailer =
+            fs::Loader::load_from_json(machines_dir / "trailer.json", concord::Pose(10 * 0, 10 * 0 - 5, 0.0f),
+                                       "trailer1", pigment::RGB(255, 150, 0));
+        sim->add_robot(trailer);
+        std::cout << "Loaded trailer from JSON\n";
+
+        // Load oxbo harvester from JSON
+        auto oxbo = fs::Loader::load_from_json(machines_dir / "oxbo_harvester.json",
+                                               concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo2", pigment::RGB(255, 200, 0));
+        sim->add_robot(oxbo);
+        std::cout << "Loaded oxbo harvester from JSON\n";
+
+        // Load truck from JSON
+        auto truck = fs::Loader::load_from_json(machines_dir / "truck.json", concord::Pose(10 * 2, 10 * 0, 0.0f),
+                                                "big_truck3", pigment::RGB(100, 100, 255));
+        sim->add_robot(truck);
+        std::cout << "Loaded truck from JSON\n";
+
+    } catch (const std::exception &e) {
+        std::cerr << "Error loading machines: " << e.what() << std::endl;
+        std::cerr << "Make sure JSON files exist in: " << machines_dir << std::endl;
+        return 1;
+    }
 
     auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";

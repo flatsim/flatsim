@@ -1,0 +1,103 @@
+{
+  "info": {
+    "type": "big_truck",
+    "name": "Cargo Truck 8x8",
+    "uuid": "",
+    "rci": 3,
+    "works_on": ["cargo"],
+    "role": "MASTER"
+  },
+  "dimensions": {
+    "width": 2.5,
+    "height": 8.0,
+    "description": "Heavy-duty 8-wheel cargo truck"
+  },
+  "color": {
+    "r": 100,
+    "g": 100,
+    "b": 255
+  },
+  "wheels": [
+    {
+      "name": "front_right_1",
+      "position": { "x": 1.25, "y": 5.0, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "front_left_1",
+      "position": { "x": -1.25, "y": 5.0, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "middle_right",
+      "position": { "x": 1.25, "y": 2.4, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "middle_left",
+      "position": { "x": -1.25, "y": 2.4, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "rear_right_1",
+      "position": { "x": 1.25, "y": -1.6, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "rear_left_1",
+      "position": { "x": -1.25, "y": -1.6, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "rear_right_2",
+      "position": { "x": 1.25, "y": -2.8, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "rear_left_2",
+      "position": { "x": -1.25, "y": -2.8, "z": 0.0 },
+      "size": { "width": 0.45, "height": 0.96, "depth": 0.0 },
+      "side": "left"
+    }
+  ],
+  "controls": {
+    "steering": {
+      "max_angles": [30, 30, 0, 0, 0, 0, 0, 0],
+      "differential": [-3, 3, 0, 0, 0, 0, 0, 0]
+    },
+    "throttle": {
+      "max_values": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    }
+  },
+  "karosseries": [
+    {
+      "name": "cabin",
+      "position": { "x": 0.0, "y": 5.0, "z": 0.0 },
+      "size": { "width": 2.625, "height": 2.0, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": true,
+      "description": "Driver cabin at front"
+    }
+  ],
+  "tank": {
+    "name": "cargo_bed",
+    "capacity": 50000.0,
+    "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "size": { "width": 2.25, "height": 7.6, "depth": 0.0 },
+    "description": "Large cargo storage area"
+  },
+  "power": {
+    "name": "fuel_tank",
+    "type": "FUEL",
+    "capacity": 500.0,
+    "consumption_rate": 0.1,
+    "charge_rate": 0.0
+  }
+}

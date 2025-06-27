@@ -1,0 +1,83 @@
+{
+  "info": {
+    "type": "tractor",
+    "name": "John Deere 8R",
+    "uuid": "",
+    "rci": 3,
+    "works_on": ["food"],
+    "role": "MASTER"
+  },
+  "dimensions": {
+    "width": 1.6,
+    "height": 2.8
+  },
+  "color": {
+    "r": 0,
+    "g": 255,
+    "b": 100
+  },
+  "wheels": [
+    {
+      "name": "front_right",
+      "position": { "x": 0.8, "y": 0.84, "z": 0.0 },
+      "size": { "width": 0.352, "height": 0.84, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "front_left",
+      "position": { "x": -0.8, "y": 0.84, "z": 0.0 },
+      "size": { "width": 0.352, "height": 0.84, "depth": 0.0 },
+      "side": "left"
+    },
+    {
+      "name": "rear_right",
+      "position": { "x": 0.8, "y": -0.84, "z": 0.0 },
+      "size": { "width": 0.64, "height": 1.4, "depth": 0.0 },
+      "side": "right"
+    },
+    {
+      "name": "rear_left",
+      "position": { "x": -0.8, "y": -0.84, "z": 0.0 },
+      "size": { "width": 0.64, "height": 1.4, "depth": 0.0 },
+      "side": "left"
+    }
+  ],
+  "controls": {
+    "steering": {
+      "max_angles": [35, 35, 0, 0],
+      "differential": [-4, 4, 0, 0]
+    },
+    "throttle": {
+      "max_values": [0.0, 0.0, 0.2, 0.2]
+    }
+  },
+  "karosseries": [
+    {
+      "name": "front",
+      "position": { "x": 0.0, "y": 1.47, "z": 0.0 },
+      "size": { "width": 0.8, "height": 0.14, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": true
+    },
+    {
+      "name": "hitch_mount",
+      "position": { "x": 0.0, "y": -1.47, "z": 0.0 },
+      "size": { "width": 0.24, "height": 0.28, "depth": 0.0 },
+      "sections": 0,
+      "has_physics": false
+    }
+  ],
+  "hitches": {
+    "rear_hitch": {
+      "position": { "x": 0.0, "y": -1.47, "z": 0.0 },
+      "size": { "width": 0.05, "height": 0.05, "depth": 0.0 }
+    }
+  },
+  "power": {
+    "name": "fuel_tank",
+    "type": "FUEL",
+    "capacity": 150.0,
+    "consumption_rate": 0.03,
+    "charge_rate": 0.0
+  }
+}

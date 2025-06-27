@@ -39,6 +39,10 @@ FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/la
 FetchContent_MakeAvailable(rerun_sdk)
 list(APPEND ext_deps rerun_sdk)
 
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+FetchContent_MakeAvailable(json)
+list(APPEND ext_deps nlohmann_json::nlohmann_json)
+
 FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
 FetchContent_MakeAvailable(spdlog)
 list(APPEND ext_deps spdlog::spdlog)
