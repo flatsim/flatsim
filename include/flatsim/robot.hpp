@@ -24,6 +24,15 @@ namespace fs {
     // Forward declaration to avoid circular dependency
     class Simulator;
     
+    // Follower capabilities structure
+    struct FollowerCapabilities {
+        bool has_steering = false;
+        bool has_throttle = false;
+        bool has_tank = false;
+        bool has_additional_hitches = false;
+        std::vector<std::string> available_master_hitches;
+    };
+    
     class Robot {
       private:
         bool pulsing = false;
@@ -46,6 +55,9 @@ namespace fs {
         std::vector<Robot*> connected_followers;
         std::vector<muli::RevoluteJoint*> connection_joints;
         Robot* master_robot = nullptr;  // Backward reference if this robot is a follower
+        
+        // Follower capabilities
+        FollowerCapabilities follower_capabilities;
 
       public:
         RobotInfo info;
@@ -118,6 +130,13 @@ namespace fs {
         Robot* get_master_robot() const { return master_robot; }
         bool is_follower() const { return master_robot != nullptr; }
         Robot* get_root_master() const;
+        
+        // Capability management
+        void update_follower_capabilities();
+        const FollowerCapabilities& get_follower_capabilities() const { return follower_capabilities; }
+        bool has_steering_capability() const { return follower_capabilities.has_steering; }
+        bool has_throttle_capability() const { return follower_capabilities.has_throttle; }
+        bool has_available_master_hitches() const { return follower_capabilities.has_additional_hitches; }
 
         // Power management
         bool has_power() const { return power.has_value(); }

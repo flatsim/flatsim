@@ -106,6 +106,9 @@ namespace fs {
                 robo.power_source->charge_rate
             );
         }
+        
+        // Initialize follower capabilities based on robot configuration
+        update_follower_capabilities();
     }
 
     void Robot::reset_controls() {
@@ -323,6 +326,11 @@ namespace fs {
                     connection_joints.push_back(new_joint);
                     other_robot->master_robot = this;
                     other_robot->role = RobotRole::FOLLOWER;  // Change slave to follower
+                    
+                    // Update capabilities for both robots
+                    update_follower_capabilities();
+                    other_robot->update_follower_capabilities();
+                    
                     spdlog::info("Connected {} to {}", info.name, other_robot->info.name);
                     return true;
                 }
@@ -352,11 +360,17 @@ namespace fs {
                 
                 // Recursively disconnect any sub-followers
                 follower->disconnect_all_followers();
+                
+                // Update capabilities after disconnection
+                follower->update_follower_capabilities();
             }
         }
         
         connected_followers.clear();
         connection_joints.clear();
+        
+        // Update our own capabilities after disconnection
+        update_follower_capabilities();
     }
 
     bool Robot::is_connected() const {
@@ -369,6 +383,60 @@ namespace fs {
             current = current->master_robot;
         }
         return const_cast<Robot*>(current);
+    }
+
+    void Robot::update_follower_capabilities() {
+        // Reset capabilities
+        follower_capabilities.has_steering = false;
+        follower_capabilities.has_throttle = false;
+        follower_capabilities.has_tank = tank.has_value();
+        follower_capabilities.has_additional_hitches = false;
+        follower_capabilities.available_master_hitches.clear();
+        
+        // Check for steering capability
+        for (const auto& max_angle : steerings_max) {
+            if (max_angle > 0) {
+                follower_capabilities.has_steering = true;
+                break;
+            }
+        }
+        
+        // Check for throttle capability
+        for (const auto& max_throttle : throttles_max) {
+            if (max_throttle > 0) {
+                follower_capabilities.has_throttle = true;
+                break;
+            }
+        }
+        
+        // Check for available master hitches (for chaining)
+        if (chassis) {
+            for (const auto& hitch : chassis->hitches) {
+                if (hitch.is_master) {
+                    // Check if this hitch is already occupied
+                    bool hitch_occupied = false;
+                    
+                    // For simplicity, assume each robot has at most one master hitch
+                    // and it's occupied if we have any followers
+                    if (!connected_followers.empty()) {
+                        hitch_occupied = true;
+                    }
+                    
+                    if (!hitch_occupied) {
+                        follower_capabilities.available_master_hitches.push_back(hitch.name);
+                        follower_capabilities.has_additional_hitches = true;
+                    }
+                }
+            }
+        }
+        
+        // Log capabilities for debugging
+        spdlog::debug("{} capabilities: steering={}, throttle={}, tank={}, master_hitches={}", 
+                     info.name, 
+                     follower_capabilities.has_steering,
+                     follower_capabilities.has_throttle, 
+                     follower_capabilities.has_tank,
+                     follower_capabilities.available_master_hitches.size());
     }
 
     // Spatial queries - delegate to simulator
@@ -471,6 +539,10 @@ namespace fs {
                             // Set backward reference
                             other_robot->master_robot = this;
                             other_robot->role = RobotRole::FOLLOWER;
+                            
+                            // Update capabilities for both robots
+                            update_follower_capabilities();
+                            other_robot->update_follower_capabilities();
                             
                             spdlog::info("Connected {} to {} (hitch distance: {:.2f}m)", 
                                         info.name, other_robot->info.name, hitch_dist);
