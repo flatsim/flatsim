@@ -73,62 +73,6 @@ namespace fs {
         }
     }
 
-    // Template implementation
-    template <typename UserLoop> void Simulator::ticktock(UserLoop user_loop, int viz_fps) {
-        std::atomic<bool> running{true};
-        const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
-
-        // Background visualization thread - reads data only
-        std::thread viz_thread([this, &running, viz_interval]() {
-            while (running.load()) {
-                auto viz_start = std::chrono::steady_clock::now();
-                this->tock(1); // Always visualize when called
-
-                // Maintain consistent frame rate
-                auto viz_end = std::chrono::steady_clock::now();
-                auto elapsed = viz_end - viz_start;
-                if (elapsed < viz_interval) {
-                    std::this_thread::sleep_for(viz_interval - elapsed);
-                }
-            }
-        });
-
-        // Main physics loop with user customization
-        auto last_time = std::chrono::steady_clock::now();
-
-        try {
-            while (true) {
-                // Calculate delta time
-                auto now = std::chrono::steady_clock::now();
-                std::chrono::duration<float> dt = now - last_time;
-                last_time = now;
-
-                // Physics tick at full speed
-                this->tick(dt.count());
-
-                // User-defined logic (input handling, control logic, etc.)
-                if (!user_loop(dt.count())) {
-                    break; // User loop returns false to exit
-                }
-
-                // Small sleep to cap CPU usage
-                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
-            }
-        } catch (...) {
-            running.store(false);
-            if (viz_thread.joinable()) {
-                viz_thread.join();
-            }
-            throw; // Re-throw the exception
-        }
-
-        // Clean shutdown
-        running.store(false);
-        if (viz_thread.joinable()) {
-            viz_thread.join();
-        }
-    }
-
 #endif
 
     void Simulator::init(concord::Datum datum, concord::Size world_size) {

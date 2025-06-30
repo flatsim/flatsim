@@ -1,12 +1,9 @@
-#include <atomic>
-#include <chrono>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <linux/joystick.h>
 #include <sys/select.h>
 #include <termios.h>
-#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -147,152 +144,120 @@ int main(int argc, char *argv[]) {
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
-    auto last_time = std::chrono::steady_clock::now();
     std::cout << "Running… (Ctrl-C to quit)\n";
     std::cout << "Keyboard: 0-9 to select robots\n";
     std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = "
                  "disconnect at pos 2\n";
 
-    // Threading setup for visualization
-    std::atomic<bool> running{true};
-
-    // Background visualization thread - reads data only, no synchronization needed
-    const int viz_fps = 30; // Adjustable visualization framerate
-    const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
-
-    std::thread viz_thread([&sim, &running, viz_interval]() {
-        while (running.load()) {
-            auto viz_start = std::chrono::steady_clock::now();
-            sim->tock(1); // Always visualize when called (rate control removed)
-
-            // Maintain consistent frame rate
-            auto viz_end = std::chrono::steady_clock::now();
-            auto elapsed = viz_end - viz_start;
-            if (elapsed < viz_interval) {
-                std::this_thread::sleep_for(viz_interval - elapsed);
-            }
-        }
-    });
-
-    // 7) Main loop: keyboard + joystick + physics tick (runs at full speed)
-    while (true) {
-        // --- Handle keyboard input for robot selection ---
-        char key;
-        if (read(STDIN_FILENO, &key, 1) == 1) {
-            if (key >= '0' && key <= '9') {
-                int robot_num = key - '0';
-                if (robot_num < sim->num_robots()) {
-                    selected_robot_idx = robot_num;
-                    auto &robot = sim->get_robot(selected_robot_idx);
-                    std::cout << "Keyboard selected robot #" << selected_robot_idx << " (" << robot.info.name << ")"
-                              << std::endl;
-                } else {
-                    std::cout << "Robot #" << robot_num << " doesn't exist (only " << sim->num_robots() << " robots)\n";
+    // 7) Main loop using ticktock() method with threading built-in
+    sim->ticktock(
+        [&](float dt) -> bool {
+            // --- Handle keyboard input for robot selection ---
+            char key;
+            if (read(STDIN_FILENO, &key, 1) == 1) {
+                if (key >= '0' && key <= '9') {
+                    int robot_num = key - '0';
+                    if (robot_num < sim->num_robots()) {
+                        selected_robot_idx = robot_num;
+                        auto &robot = sim->get_robot(selected_robot_idx);
+                        std::cout << "Keyboard selected robot #" << selected_robot_idx << " (" << robot.info.name << ")"
+                                  << std::endl;
+                    } else {
+                        std::cout << "Robot #" << robot_num << " doesn't exist (only " << sim->num_robots()
+                                  << " robots)\n";
+                    }
                 }
             }
-        }
 
-        // --- read one joystick event if available ---
-        for (int i = 0; i < sim->num_robots(); ++i) {
-            if (selected_robot_idx != i) {
-                sim->set_controls(i, 0.0f, 0.0f);
+            // --- read one joystick event if available ---
+            for (int i = 0; i < sim->num_robots(); ++i) {
+                if (selected_robot_idx != i) {
+                    sim->set_controls(i, 0.0f, 0.0f);
+                }
             }
-        }
-        if (joystk) {
-            js_event e;
-            ssize_t bytes = read(js_fd, &e, sizeof(e));
-            if (bytes == sizeof(e)) {
-                auto type = e.type & ~JS_EVENT_INIT;
-                if (type == JS_EVENT_AXIS && e.number < num_axes) {
-                    int axis = int(e.number);
-                    float value = e.value / 32767.0f;
-                    if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
-                        if (axis == 0) {
-                            float steering = value;
-                            sim->get_robot(selected_robot_idx).set_angular(steering);
-                        }
+            if (joystk) {
+                js_event e;
+                ssize_t bytes = read(js_fd, &e, sizeof(e));
+                if (bytes == sizeof(e)) {
+                    auto type = e.type & ~JS_EVENT_INIT;
+                    if (type == JS_EVENT_AXIS && e.number < num_axes) {
+                        int axis = int(e.number);
+                        float value = e.value / 32767.0f;
+                        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                            if (axis == 0) {
+                                float steering = value;
+                                sim->get_robot(selected_robot_idx).set_angular(steering);
+                            }
 
-                        if (axis == 1) {
-                            float throttle = value;
-                            throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
-                            sim->get_robot(selected_robot_idx).set_linear(throttle);
-                        }
-                    }
-                } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
-                    int button = int(e.number);
-                    bool pressed = e.value != 0;
-                    if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
-                        if ((button == 4) && pressed) {
-                            sim->get_robot(selected_robot_idx).respawn();
-                        }
-                        if (button == 9 && pressed) {
-                            sim->get_robot(selected_robot_idx).pulse();
-                        }
-                        if (button == 10 && pressed) {
-                            sim->get_robot(selected_robot_idx)
-                                .toggle_all_except_section_work("front", 2); // Toggle all except middle section
-                        }
-
-                        // Button 11 = Attach trailer (smart chaining)
-                        if ((button == 11 || button == 9) && pressed) {
-                            auto &robot = sim->get_robot(selected_robot_idx);
-                            if (robot.try_connect_from_chain_end()) {
-                                std::cout << "Connected to nearby robot!" << std::endl;
-                            } else {
-                                std::cout << "No compatible robot nearby to connect" << std::endl;
+                            if (axis == 1) {
+                                float throttle = value;
+                                throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
+                                sim->get_robot(selected_robot_idx).set_linear(throttle);
                             }
                         }
-
-                        // Button 12 = Detach last trailer in chain
-                        if ((button == 12 || button == 10) && pressed) {
-                            auto &robot = sim->get_robot(selected_robot_idx);
-                            if (robot.is_connected()) {
-                                robot.disconnect_last_follower();
-                                std::cout << "Disconnected last trailer in chain!" << std::endl;
-                            } else {
-                                std::cout << "No trailer connected to disconnect" << std::endl;
+                    } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
+                        int button = int(e.number);
+                        bool pressed = e.value != 0;
+                        if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
+                            if ((button == 4) && pressed) {
+                                sim->get_robot(selected_robot_idx).respawn();
                             }
-                        }
+                            if (button == 9 && pressed) {
+                                sim->get_robot(selected_robot_idx).pulse();
+                            }
+                            if (button == 10 && pressed) {
+                                sim->get_robot(selected_robot_idx)
+                                    .toggle_all_except_section_work("front", 2); // Toggle all except middle section
+                            }
 
-                        // Button 13 = Print chain status
-                        if (button == 13 && pressed) {
-                            auto &robot = sim->get_robot(selected_robot_idx);
-                            robot.print_chain_status();
-                        }
+                            // Button 11 = Attach trailer (smart chaining)
+                            if ((button == 11 || button == 9) && pressed) {
+                                auto &robot = sim->get_robot(selected_robot_idx);
+                                if (robot.try_connect_from_chain_end()) {
+                                    std::cout << "Connected to nearby robot!" << std::endl;
+                                } else {
+                                    std::cout << "No compatible robot nearby to connect" << std::endl;
+                                }
+                            }
 
-                        // Button 14 = Disconnect at position 2 (for testing)
-                        if (button == 14 && pressed) {
-                            auto &robot = sim->get_robot(selected_robot_idx);
-                            if (robot.get_chain_length() > 2) {
-                                robot.disconnect_at_position(2);
-                                std::cout << "Disconnected at position 2!" << std::endl;
-                            } else {
-                                std::cout << "Chain too short to disconnect at position 2" << std::endl;
+                            // Button 12 = Detach last trailer in chain
+                            if ((button == 12 || button == 10) && pressed) {
+                                auto &robot = sim->get_robot(selected_robot_idx);
+                                if (robot.is_connected()) {
+                                    robot.disconnect_last_follower();
+                                    std::cout << "Disconnected last trailer in chain!" << std::endl;
+                                } else {
+                                    std::cout << "No trailer connected to disconnect" << std::endl;
+                                }
+                            }
+
+                            // Button 13 = Print chain status
+                            if (button == 13 && pressed) {
+                                auto &robot = sim->get_robot(selected_robot_idx);
+                                robot.print_chain_status();
+                            }
+
+                            // Button 14 = Disconnect at position 2 (for testing)
+                            if (button == 14 && pressed) {
+                                auto &robot = sim->get_robot(selected_robot_idx);
+                                if (robot.get_chain_length() > 2) {
+                                    robot.disconnect_at_position(2);
+                                    std::cout << "Disconnected at position 2!" << std::endl;
+                                } else {
+                                    std::cout << "Chain too short to disconnect at position 2" << std::endl;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // --- advance your simulation by elapsed time ---
-        auto now = std::chrono::steady_clock::now();
-        std::chrono::duration<float> dt = now - last_time;
-        last_time = now;
+            // Note: dt parameter contains elapsed time, tick() called automatically
+            // Note: tock() runs in background thread automatically
 
-        // Physics tick runs at full speed - no visualization blocking
-        sim->tick(dt.count());
-        // Note: tock() now runs in background thread
-
-        // --- small sleep to cap CPU usage ---
-        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
-    }
-
-    // Cleanup: shutdown background thread
-    running.store(false);
-    if (viz_thread.joinable()) {
-        viz_thread.join();
-    }
+            return true; // Continue running
+        },
+        30); // 30 FPS visualization
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
