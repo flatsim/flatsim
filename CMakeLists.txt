@@ -34,6 +34,9 @@ if(HAS_KOKKOS)
     FetchContent_MakeAvailable(kokkos)
     list(APPEND ext_deps Kokkos::kokkos)
     add_definitions(-DHAS_KOKKOS)
+else()
+    find_package(TBB REQUIRED)
+    list(APPEND ext_deps TBB::tbb)
 endif()
 
 # Muli Physics Engine
@@ -79,11 +82,6 @@ list(APPEND ext_deps geotiv::geotiv)
 FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 0.3.0)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
-
-# TBB for parallel STL
-find_package(TBB REQUIRED)
-list(APPEND ext_deps TBB::tbb)
-
 
 
 # --------------------------------------------------------------------------------------------------

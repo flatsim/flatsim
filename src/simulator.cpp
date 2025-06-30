@@ -9,6 +9,11 @@ namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {
 #ifdef HAS_KOKKOS
         Kokkos::initialize();
+        std::cout << "Execution space: " << typeid(Kokkos::DefaultHostExecutionSpace).name() << std::endl;
+        std::cout << "Number of threads: " << Kokkos::DefaultHostExecutionSpace().concurrency() << std::endl;
+#else
+        unsigned int numThreads = std::thread::hardware_concurrency();
+        spdlog::info("Using {} threads", numThreads);
 #endif
     }
     Simulator::~Simulator() {
@@ -22,34 +27,35 @@ namespace fs {
             throw NullPointerException("world");
         }
         world->tick(dt);
+        // Process robots sequentially (rerun logging needs sequential access)
+        for (auto &robot : robots) {
+            if (!robot) continue;
+            robot->tick(dt);
+        }
 
-        Kokkos::parallel_for("robot_tick", Kokkos::RangePolicy<>(0, robots.size()), [=](int i) {
-            if (!robots[i]) {
-                throw NullPointerException("robot");
-            }
-            robots[i]->tick(dt);
-            for (auto layer : world->layers) {
-                if (!layer)
-                    continue;
-            }
-        });
+        if (!world->layers.empty()) {
+            Kokkos::parallel_for("layer_tick",
+                                 Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, world->layers.size()),
+                                 [&](int i) {
+                                     // for (auto &robot : robots) {
+                                     //     if (!robot) continue;
+                                     //     // TODO: Add complicated functionality here (robot-layer interaction)
+                                     // }
+                                 });
+        }
         Kokkos::fence();
     }
 #else
     void Simulator::tick(float dt) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
+        if (!world) throw NullPointerException("world");
         world->tick(dt);
         std::for_each(std::execution::par, robots.begin(), robots.end(), [this, dt](auto &robott) {
-            if (!robott) {
-                throw NullPointerException("robot");
-            }
+            if (!robott) return;
             robott->tick(dt);
-            for (auto layer : world->layers) {
-                if (!layer)
-                    continue;
-            }
+        });
+        std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [this, dt](auto &layer) {
+            if (!layer) return;
+            layer->tick(dt);
         });
     }
 #endif

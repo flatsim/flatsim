@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
                         }
 
                         // Button 11 = Attach trailer (smart chaining)
-                        if (button == 11 && pressed) {
+                        if ((button == 11 || button == 9) && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
                             if (robot.try_connect_from_chain_end()) {
                                 std::cout << "Connected to nearby robot!" << std::endl;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
                         }
 
                         // Button 12 = Detach last trailer in chain
-                        if (button == 12 && pressed) {
+                        if ((button == 12 || button == 10) && pressed) {
                             auto &robot = sim->get_robot(selected_robot_idx);
                             if (robot.is_connected()) {
                                 robot.disconnect_last_follower();
