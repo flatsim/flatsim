@@ -61,7 +61,7 @@
       "differential": [-2, 2, 0, 0, 4, -4]
     },
     "throttle": {
-      "max_values": [0.2, 0.2, 0.0, 0.0, 0.9, 0.9]
+      "max_values": [0.01, 0.01, 0.0, 0.0, 0.3, 0.3]
     }
   },
   "karosseries": [

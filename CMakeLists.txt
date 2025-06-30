@@ -17,6 +17,7 @@ set(params
 )
 
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
+option(HAS_KOKKOS "Enable Kokkos" OFF)
 
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
@@ -27,9 +28,13 @@ include(FetchContent)
 # External Dependencies
 set(ext_deps)
 
-FetchContent_Declare(kokkos GIT_REPOSITORY https://github.com/kokkos/kokkos.git GIT_TAG 4.6.01 GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(kokkos)
-list(APPEND ext_deps Kokkos::kokkos)
+if(HAS_KOKKOS)
+    # add this: cmake -DHAS_KOKKOS -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_THREADS=ON ..
+    FetchContent_Declare(kokkos GIT_REPOSITORY https://github.com/kokkos/kokkos.git GIT_TAG 4.6.01 GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(kokkos)
+    list(APPEND ext_deps Kokkos::kokkos)
+    add_definitions(-DHAS_KOKKOS)
+endif()
 
 # Muli Physics Engine
 set(MULI_BUILD_DEMO OFF)
@@ -74,6 +79,10 @@ list(APPEND ext_deps geotiv::geotiv)
 FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 0.3.0)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
+
+# TBB for parallel STL
+find_package(TBB REQUIRED)
+list(APPEND ext_deps TBB::tbb)
 
 
 

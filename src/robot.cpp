@@ -5,12 +5,12 @@
 
 namespace fs {
 
-Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
+    Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group)
         : rec(rec), world(world) {
         filter.group = 0;            // Use bit/mask system, not group system
         filter.bit = 1 << group;     // Each robot gets unique bit position
         filter.mask = ~(1 << group); // Exclude own bit from collision mask
-        
+
         // Initialize modular systems
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
@@ -113,53 +113,46 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
     // All control and chain methods are now delegated to ControlSystem and ChainManager
     // Core Robot methods remain here
 
-    void Robot::reset_controls() {
-        control_system->reset_controls();
-    }
+    void Robot::reset_controls() { control_system->reset_controls(); }
 
-    void Robot::set_angular(float angular) {
-        control_system->set_angular(angular);
-    }
+    void Robot::set_angular(float angular) { control_system->set_angular(angular); }
 
-    void Robot::set_linear(float linear) {
-        control_system->set_linear(linear);
-    }
+    void Robot::set_linear(float linear) { control_system->set_linear(linear); }
 
-    void Robot::set_angular_as_follower(float angular, const Robot& master) {
+    void Robot::set_angular_as_follower(float angular, const Robot &master) {
         control_system->set_angular_as_follower(angular, master);
     }
 
-    void Robot::set_linear_as_follower(float linear, const Robot& master) {
+    void Robot::set_linear_as_follower(float linear, const Robot &master) {
         control_system->set_linear_as_follower(linear, master);
     }
 
-    void Robot::teleport(concord::Pose pose) {
-        teleport(pose, true);
-    }
-    
+    void Robot::teleport(concord::Pose pose) { teleport(pose, true); }
+
     void Robot::teleport(concord::Pose pose, bool propagate) {
-        spdlog::info("Teleporting robot {} to ({:.2f}, {:.2f}) - breaking chain connections", info.name, pose.point.x, pose.point.y);
+        spdlog::info("Teleporting robot {} to ({:.2f}, {:.2f}) - breaking chain connections", info.name, pose.point.x,
+                     pose.point.y);
         control_system->reset_controls();
-        
+
         // Break all chain connections before teleporting
         if (propagate) {
             chain_manager->break_chain_for_teleport();
         }
-        
+
         chassis->teleport(pose);
     }
 
     void Robot::respawn() {
         spdlog::info("Respawning robot {} - breaking chain connections", info.name);
         control_system->reset_controls();
-        
+
         // Break all chain connections before respawning
         chain_manager->break_chain_for_teleport();
-        
+
         chassis->teleport(spawn_position);
     }
 
-    void Robot::update_color(const pigment::RGB& new_color) {
+    void Robot::update_color(const pigment::RGB &new_color) {
         info.color = new_color;
         if (chassis) {
             chassis->update_color(new_color);
@@ -172,103 +165,61 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
     }
 
     // Connection management - implement delegation methods
-    bool Robot::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>>& all_robots) {
+    bool Robot::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots) {
         return chain_manager->try_connect_nearby_slave(all_robots);
     }
 
-    bool Robot::try_connect_nearby() {
-        return chain_manager->try_connect_nearby();
-    }
+    bool Robot::try_connect_nearby() { return chain_manager->try_connect_nearby(); }
 
-    bool Robot::try_connect_from_chain_end() {
-        return chain_manager->try_connect_from_chain_end();
-    }
+    bool Robot::try_connect_from_chain_end() { return chain_manager->try_connect_from_chain_end(); }
 
-    void Robot::disconnect_trailer() {
-        chain_manager->disconnect_trailer();
-    }
+    void Robot::disconnect_trailer() { chain_manager->disconnect_trailer(); }
 
-    void Robot::disconnect_all_followers() {
-        chain_manager->disconnect_all_followers();
-    }
+    void Robot::disconnect_all_followers() { chain_manager->disconnect_all_followers(); }
 
-    void Robot::disconnect_last_follower() {
-        chain_manager->disconnect_last_follower();
-    }
+    void Robot::disconnect_last_follower() { chain_manager->disconnect_last_follower(); }
 
-    void Robot::disconnect_at_position(int position) {
-        chain_manager->disconnect_at_position(position);
-    }
+    void Robot::disconnect_at_position(int position) { chain_manager->disconnect_at_position(position); }
 
-    void Robot::disconnect_from_position(int position) {
-        chain_manager->disconnect_from_position(position);
-    }
+    void Robot::disconnect_from_position(int position) { chain_manager->disconnect_from_position(position); }
 
-    bool Robot::is_connected() const {
-        return chain_manager->is_connected();
-    }
+    bool Robot::is_connected() const { return chain_manager->is_connected(); }
 
     // Chain management - implement delegation methods
-    std::vector<Robot*> Robot::get_connected_followers() const {
-        return chain_manager->get_connected_followers();
-    }
+    std::vector<Robot *> Robot::get_connected_followers() const { return chain_manager->get_connected_followers(); }
 
-    Robot* Robot::get_master_robot() const {
-        return chain_manager->get_master_robot();
-    }
+    Robot *Robot::get_master_robot() const { return chain_manager->get_master_robot(); }
 
-    bool Robot::is_follower() const {
-        return chain_manager->is_follower();
-    }
+    bool Robot::is_follower() const { return chain_manager->is_follower(); }
 
-    Robot* Robot::get_root_master() const {
-        return chain_manager->get_root_master();
-    }
+    Robot *Robot::get_root_master() const { return chain_manager->get_root_master(); }
 
-    std::vector<Robot*> Robot::get_full_chain() const {
-        return chain_manager->get_full_chain();
-    }
+    std::vector<Robot *> Robot::get_full_chain() const { return chain_manager->get_full_chain(); }
 
-    int Robot::get_chain_length() const {
-        return chain_manager->get_chain_length();
-    }
+    int Robot::get_chain_length() const { return chain_manager->get_chain_length(); }
 
-    int Robot::get_position_in_chain() const {
-        return chain_manager->get_position_in_chain();
-    }
+    int Robot::get_position_in_chain() const { return chain_manager->get_position_in_chain(); }
 
-    void Robot::print_chain_status() const {
-        chain_manager->print_chain_status();
-    }
+    void Robot::print_chain_status() const { chain_manager->print_chain_status(); }
 
     // Capability management - implement delegation methods
-    void Robot::update_follower_capabilities() {
-        chain_manager->update_follower_capabilities();
-    }
+    void Robot::update_follower_capabilities() { chain_manager->update_follower_capabilities(); }
 
-    const FollowerCapabilities& Robot::get_follower_capabilities() const {
+    const FollowerCapabilities &Robot::get_follower_capabilities() const {
         return chain_manager->get_follower_capabilities();
     }
 
-    bool Robot::has_steering_capability() const {
-        return chain_manager->has_steering_capability();
-    }
+    bool Robot::has_steering_capability() const { return chain_manager->has_steering_capability(); }
 
-    bool Robot::has_throttle_capability() const {
-        return chain_manager->has_throttle_capability();
-    }
+    bool Robot::has_throttle_capability() const { return chain_manager->has_throttle_capability(); }
 
-    bool Robot::has_available_master_hitches() const {
-        return chain_manager->has_available_master_hitches();
-    }
+    bool Robot::has_available_master_hitches() const { return chain_manager->has_available_master_hitches(); }
 
     // Additional core Robot methods
-    void Robot::add_sensor(std::unique_ptr<Sensor> sensor) {
-        sensors.push_back(std::move(sensor));
-    }
+    void Robot::add_sensor(std::unique_ptr<Sensor> sensor) { sensors.push_back(std::move(sensor)); }
 
-    Sensor* Robot::get_sensor(const std::string& type) const {
-        for (const auto& sensor : sensors) {
+    Sensor *Robot::get_sensor(const std::string &type) const {
+        for (const auto &sensor : sensors) {
             if (!sensor) {
                 continue; // Skip null sensors
             }
@@ -280,34 +231,35 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
     }
 
     // Spatial queries - robot can find other robots
-    std::vector<Robot*> Robot::get_all_robots() const {
+    std::vector<Robot *> Robot::get_all_robots() const {
         if (!simulator) {
             return {};
         }
         return simulator->get_all_robots();
     }
 
-    Robot* Robot::get_closest_robot(float max_distance) const {
+    Robot *Robot::get_closest_robot(float max_distance) const {
         if (!simulator) {
             return nullptr;
         }
         auto all_robots = get_all_robots();
-        Robot* closest = nullptr;
+        Robot *closest = nullptr;
         float min_dist = max_distance;
-        
+
         auto my_pos = get_position().point;
-        for (Robot* other : all_robots) {
-            if (other == this) continue;
-            
+        for (Robot *other : all_robots) {
+            if (other == this)
+                continue;
+
             auto other_pos = other->get_position().point;
             float dist = std::sqrt(std::pow(my_pos.x - other_pos.x, 2) + std::pow(my_pos.y - other_pos.y, 2));
-            
+
             if (dist < min_dist) {
                 min_dist = dist;
                 closest = other;
             }
         }
-        
+
         return closest;
     }
 
@@ -316,7 +268,7 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
         if (!rec) {
             return;
         }
-        
+
         // Log initial robot state and setup
         rec->log(info.name + "/setup", rerun::TextLog("Robot " + info.name + " initialized"));
     }
@@ -329,23 +281,23 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
         // Create label with role prefix and power percentage
         std::string role_prefix;
         switch (role) {
-            case RobotRole::MASTER:
-                role_prefix = "(M)";
-                break;
-            case RobotRole::FOLLOWER:
-                role_prefix = "(F)";
-                break;
-            case RobotRole::SLAVE:
-                role_prefix = "(S)";
-                break;
+        case RobotRole::MASTER:
+            role_prefix = "(M)";
+            break;
+        case RobotRole::FOLLOWER:
+            role_prefix = "(F)";
+            break;
+        case RobotRole::SLAVE:
+            role_prefix = "(S)";
+            break;
         }
-        
+
         std::string label = role_prefix + info.name;
         if (has_power()) {
             int percentage = static_cast<int>(get_power_percentage());
             label += "(" + std::to_string(percentage) + "%)";
         }
-        
+
         // Visualize chassis (this was missing in the refactored version!)
         if (chassis) {
             chassis->visualize(label);
@@ -375,15 +327,15 @@ Robot::Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::
         if (!pulsing) {
             return;
         }
-        
+
         // Simple pulse implementation - just log basic pulse state
         if (rec) {
             auto pos = get_position();
             rec->log(info.name + "/pulse", rerun::Points2D({rerun::Position2D(pos.point.x, pos.point.y)})
-                                              .with_colors({rerun::Color(255, 255, 255, 200)})
-                                              .with_radii({2.0f}));
+                                               .with_colors({rerun::Color(255, 255, 255, 200)})
+                                               .with_radii({2.0f}));
         }
-        
+
         // Reset pulsing after some time
         pulsing = false;
     }

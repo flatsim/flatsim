@@ -1,0 +1,25 @@
+CompileFlags:
+  Add: 
+    - "-DKOKKOS_DEPENDENCE"
+    - "-DKOKKOS_ENABLE_CUDA"
+    - "-D__CUDACC__"
+    - "-D__CUDA_ARCH__=890"
+    - "-DCUDA_VERSION=12090"
+    - "-I/usr/local/cuda-12.9/include"
+    - "-I/usr/local/cuda-12.9/targets/x86_64-linux/include"
+    - "--system-header-prefix=/usr/local/cuda"
+    - "-ferror-limit=0"
+  Remove:
+    - "-arch=sm_89"
+    - "-extended-lambda"
+    - "-Wext-lambda-captures-this"
+    - "-Wunknown-cuda-version"
+    - "-Wall"
+    - "-Wextra"
+    - "-Wpedantic"
+
+Diagnostics:
+  Suppress: 
+    - "constexpr_redecl_mismatch"
+    - "pp_hash_error"
+    - "warn_unused_function"
