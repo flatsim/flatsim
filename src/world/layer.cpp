@@ -108,13 +108,7 @@ namespace fs {
         }
     }
 
-    void Layer::tick(float dt) {
-        freq++;
-        if (freq % 10 == 0) {
-            visualize();
-            freq = 0;
-        }
-    }
+    void Layer::tick(float dt) {}
 
     concord::Grid<uint8_t> Layer::get_grid_data() const {
         // Use the same size, resolution, datum and pose as the original grid:
@@ -142,7 +136,7 @@ namespace fs {
         return out;
     }
 
-    void Layer::visualize() {
+    void Layer::tock() {
         rerun::Color color(this->info.color.r, this->info.color.g, this->info.color.b);
         to_image(image);
         rec->log_static(info.name + "/image",

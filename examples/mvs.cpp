@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<float> dt = now - last_time;
         last_time = now;
-        sim->tick(dt.count());
+        sim->ticktock(dt.count());
 
         // --- small sleep to cap CPU usage ---
         std::this_thread::sleep_for(std::chrono::nanoseconds(10));

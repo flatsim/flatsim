@@ -42,11 +42,11 @@ namespace fs {
 
         void init(LayerInfo info);
         void tick(float dt);
+        void tock();
         void add_noise(bool in_polygon_only = false);
         void paint(pigment::RGB color, concord::Polygon brush);
         void color_field();
         void to_image(std::vector<uint8_t> &image);
-        void visualize();
         concord::Grid<uint8_t> get_grid_data() const;
 
         concord::Point at(uint x, uint y) const { return grid.at(x, y).first; }

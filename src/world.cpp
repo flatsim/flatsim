@@ -37,7 +37,6 @@ namespace fs {
         for (auto &layer : layers) {
             layer->tick(dt);
         }
-        visualize();
     }
 
     concord::Point World::at(std::string name, uint x, uint y) const {
@@ -63,7 +62,7 @@ namespace fs {
         world_bounds = concord::Rectangle::outer_rectangle(bounds);
     }
 
-    void World::visualize() {
+    void World::tock() {
         std::vector<std::array<float, 3>> enu_corners_;
         std::vector<rerun::LatLon> wgs_corners_;
 
@@ -91,6 +90,9 @@ namespace fs {
         //                             {{float(grid.getGrid().inradius()), float(grid.getGrid().inradius()), 0.0f}})
         //                             .with_colors(rerun::Color(110, 90, 60))
         //                             .with_radii({{0.005f}}));
+        for (auto &layer : layers) {
+            layer->tock();
+        }
     }
 
 } // namespace fs

@@ -46,17 +46,21 @@ namespace fs {
         Kokkos::fence();
     }
 #else
-    void Simulator::tick(float dt) {
+    void Simulator::ticktock(float dt) {
+        ticks++;
         if (!world) throw NullPointerException("world");
         world->tick(dt);
         std::for_each(std::execution::par, robots.begin(), robots.end(), [this, dt](auto &robott) {
             if (!robott) return;
             robott->tick(dt);
+            std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [this, dt](auto &layer) {
+                if (!layer) return;
+                layer->tick(dt);
+            });
         });
-        std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [this, dt](auto &layer) {
-            if (!layer) return;
-            layer->tick(dt);
-        });
+        if (ticks % 10 == 0) {
+            world->tock();
+        }
     }
 #endif
 

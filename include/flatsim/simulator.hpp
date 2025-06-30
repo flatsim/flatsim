@@ -21,13 +21,14 @@ namespace fs {
         bool controls_set = false;
         std::shared_ptr<muli::World> physics_world;
         int selected_robot_idx = -1;
+        uint ticks = 0;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
 
         void init(concord::Datum datum, concord::Size world_size);
-        void tick(float dt);
+        void ticktock(float dt);
 
         // ROBOT
         void add_robot(RobotInfo robot_info);

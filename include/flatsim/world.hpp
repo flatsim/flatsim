@@ -45,7 +45,7 @@ namespace fs {
 
         void init(concord::Datum datum, concord::Size world_size);
         void tick(float dt);
-        void visualize();
+        void tock();
         concord::Point at(std::string name, uint x, uint y) const;
 
         std::shared_ptr<muli::World> get_world() const { return world; }
