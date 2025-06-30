@@ -4,8 +4,8 @@ namespace fs {
     Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
         : rec(rec), world(world) {}
 
-    void Hitch::init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
-                     concord::Bound bound, muli::CollisionFilter filter, bool is_master) {
+    void Hitch::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
+                     concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
@@ -17,17 +17,14 @@ namespace fs {
 
     void Hitch::tick(float dt, concord::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
-
         pose.point.x = new_pose.point.x;
         pose.point.y = new_pose.point.y;
         pose.angle.yaw = new_pose.angle.yaw;
-
-        visualize();
     }
 
     void Hitch::teleport(concord::Pose trans_pose) { pose = trans_pose; }
 
-    void Hitch::visualize() {
+    void Hitch::tick() {
         auto k_x = pose.point.x;
         auto k_y = pose.point.y;
         auto k_th = pose.angle.yaw;

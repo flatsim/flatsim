@@ -58,8 +58,9 @@ namespace fs {
                 layer->tick(dt);
             });
         });
-        if (ticks % 10 == 0) {
+        if (ticks % 3 == 0) {
             world->tock();
+            for (auto &robot : robots) robot->tock();
         }
     }
 #endif

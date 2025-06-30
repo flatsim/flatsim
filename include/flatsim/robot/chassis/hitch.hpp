@@ -1,9 +1,9 @@
 #pragma once
 
-#include "muli/collision_filter.h"
-#include "muli/world.h"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
+#include "muli/collision_filter.h"
+#include "muli/world.h"
 
 namespace fs {
     class Hitch {
@@ -18,15 +18,16 @@ namespace fs {
         concord::Pose pose;
         pigment::RGB color;
         bool hooked = false;
-        bool is_master = true;  // true = master (can pull), false = slave (can be pulled)
+        bool is_master = true; // true = master (can pull), false = slave (can be pulled)
 
         Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
-        void init(const pigment::RGB &color, const std::string& parent_name, const std::string& name, concord::Bound parent_bound,
-                  concord::Bound bound, muli::CollisionFilter filter, bool is_master = true);
+        void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
+                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
+                  bool is_master = true);
         void tick(float dt, concord::Pose trans_pose);
+        void tick();
 
         void teleport(concord::Pose pose);
-        void visualize();
 
         void toggle_hook() { hooked = !hooked; }
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }

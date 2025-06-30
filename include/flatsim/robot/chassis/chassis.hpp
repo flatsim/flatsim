@@ -1,6 +1,5 @@
 #pragma once
 
-#include "muli/world.h"
 #include "flatsim/constants.hpp"
 #include "flatsim/exceptions.hpp"
 #include "flatsim/robot/chassis/hitch.hpp"
@@ -8,6 +7,7 @@
 #include "flatsim/robot/chassis/wheel.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
+#include "muli/world.h"
 
 #include <rerun.hpp>
 #include <spdlog/spdlog.h>
@@ -29,33 +29,32 @@ namespace fs {
         concord::Bound bound;
         concord::Pose pose;
         uint32_t group;
-        
+
       public:
         std::vector<Karosserie> karosseries;
         std::vector<Hitch> hitches;
         muli::RigidBody *body; // Owned by physics world
 
-        Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec, muli::CollisionFilter filter);
+        Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                muli::CollisionFilter filter);
 
         void init(fs::RobotInfo &robo);
 
         void tick(float dt);
-        void visualize();
-        void visualize(const std::string& label);
+        void tock(const std::string &label);
         void teleport(concord::Pose);
         void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linear_damping, float angular_damping);
         muli::Transform get_transform() const;
-        void toggle_section_work(const std::string& karosserie_name, int section_id);
-        void toggle_all_sections_work(const std::string& karosserie_name);
-        void update_color(const pigment::RGB& new_color);
-        void toggle_all_except_section_work(const std::string& karosserie_name, int except_section_id);
-        
+        void toggle_section_work(const std::string &karosserie_name, int section_id);
+        void toggle_all_sections_work(const std::string &karosserie_name);
+        void update_color(const pigment::RGB &new_color);
+        void toggle_all_except_section_work(const std::string &karosserie_name, int except_section_id);
+
         // Accessors
-        const concord::Pose& get_pose() const { return pose; }
-        const concord::Bound& get_bound() const { return bound; }
-        const std::string& get_name() const { return name; }
-        muli::RigidBody* get_body() { return body; }
-        
+        const concord::Pose &get_pose() const { return pose; }
+        const concord::Bound &get_bound() const { return bound; }
+        const std::string &get_name() const { return name; }
+        muli::RigidBody *get_body() { return body; }
     };
 } // namespace fs

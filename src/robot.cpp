@@ -64,7 +64,7 @@ namespace fs {
             tank->tick(dt, chassis->get_pose(), rec);
         }
 
-        visualize();
+        // visualize();
     }
 
     void Robot::init(concord::Datum datum, RobotInfo robo) {
@@ -248,8 +248,7 @@ namespace fs {
 
         auto my_pos = get_position().point;
         for (Robot *other : all_robots) {
-            if (other == this)
-                continue;
+            if (other == this) continue;
 
             auto other_pos = other->get_position().point;
             float dist = std::sqrt(std::pow(my_pos.x - other_pos.x, 2) + std::pow(my_pos.y - other_pos.y, 2));
@@ -263,21 +262,7 @@ namespace fs {
         return closest;
     }
 
-    void Robot::visualize_once() {
-        // Implementation for one-time visualization setup
-        if (!rec) {
-            return;
-        }
-
-        // Log initial robot state and setup
-        rec->log(info.name + "/setup", rerun::TextLog("Robot " + info.name + " initialized"));
-    }
-
-    void Robot::visualize() {
-        if (!rec) {
-            return;
-        }
-
+    void Robot::tock() {
         // Create label with role prefix and power percentage
         std::string role_prefix;
         switch (role) {
@@ -291,17 +276,9 @@ namespace fs {
             role_prefix = "(S)";
             break;
         }
-
         std::string label = role_prefix + info.name;
-        if (has_power()) {
-            int percentage = static_cast<int>(get_power_percentage());
-            label += "(" + std::to_string(percentage) + "%)";
-        }
-
-        // Visualize chassis (this was missing in the refactored version!)
-        if (chassis) {
-            chassis->visualize(label);
-        }
+        if (has_power()) label += "(" + std::to_string(static_cast<int>(get_power_percentage())) + "%)";
+        if (chassis) chassis->tock(label);
 
         auto x = this->info.bound.pose.point.x;
         auto y = this->info.bound.pose.point.y;

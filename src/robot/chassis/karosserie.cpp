@@ -19,25 +19,22 @@ namespace fs {
         if (num_sections > 0) {
             sections.clear();
             sections.reserve(num_sections);
-            
+
             // Divide the karosserie width equally among sections
             float section_width = bound.size.x / static_cast<float>(num_sections);
             float start_x = bound.pose.point.x - (bound.size.x / 2.0f) + (section_width / 2.0f);
-            
+
             for (int i = 0; i < num_sections; ++i) {
                 Section section(rec);
-                
+
                 // Calculate section position
                 float section_x = start_x + (i * section_width);
                 concord::Pose section_pose = bound.pose;
                 section_pose.point.x = section_x;
-                
+
                 // Create section bound with divided width
-                concord::Bound section_bound(
-                    section_pose,
-                    concord::Size(section_width, bound.size.y, bound.size.z)
-                );
-                
+                concord::Bound section_bound(section_pose, concord::Size(section_width, bound.size.y, bound.size.z));
+
                 section.init(color, parent_name, name + "_section", section_bound, i);
                 sections.push_back(section);
             }
@@ -64,11 +61,9 @@ namespace fs {
         pose.angle.yaw = new_pose.angle.yaw;
 
         // Update sections
-        for (auto& section : sections) {
+        for (auto &section : sections) {
             section.tick(dt, trans_pose);
         }
-
-        visualize();
     }
 
     void Karosserie::teleport(concord::Pose trans_pose) {
@@ -78,9 +73,9 @@ namespace fs {
             karosserie->SetTransform(utils::pose_to_transform(trans_pose));
             karosserie->SetSleeping(true);
         }
-        
+
         // Teleport sections
-        for (auto& section : sections) {
+        for (auto &section : sections) {
             section.teleport(trans_pose);
         }
     }
@@ -97,9 +92,11 @@ namespace fs {
         return karosserie; // Will be nullptr for compound shape karosseries
     }
 
-    void Karosserie::visualize() {
+    void Karosserie::tock() {
         // Only show karosserie if it has no sections, otherwise show individual sections
-        if (sections.empty()) {
+        if (!sections.empty()) {
+            for (auto &section : sections) section.tock();
+        } else {
             auto k_x = pose.point.x;
             auto k_y = pose.point.y;
             auto k_th = pose.angle.yaw;
@@ -115,24 +112,24 @@ namespace fs {
                 rerun::Boxes3D::from_centers_and_sizes(centers, sizes)
                     .with_radii({{0.02f}})
                     .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
-                    .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
+                    .with_rotation_axis_angles(
+                        {rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
                     .with_colors(colors_a));
         }
-        // Sections visualize themselves in their own tick method
     }
-    
+
     void Karosserie::toggle_section_work(int section_id) {
         if (section_id >= 0 && section_id < static_cast<int>(sections.size())) {
             sections[section_id].toggle_work();
         }
     }
-    
+
     void Karosserie::toggle_all_sections_work() {
-        for (auto& section : sections) {
+        for (auto &section : sections) {
             section.toggle_work();
         }
     }
-    
+
     void Karosserie::toggle_all_except_section_work(int except_section_id) {
         for (int i = 0; i < static_cast<int>(sections.size()); ++i) {
             if (i != except_section_id) {
