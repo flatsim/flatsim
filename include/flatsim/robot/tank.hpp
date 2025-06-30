@@ -76,13 +76,15 @@ public:
         this->bound = tank_bound;
     }
     
-    void tick(float dt, concord::Pose trans_pose, std::shared_ptr<rerun::RecordingStream> rec) {
+    void tick(float dt, concord::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
         
         pose.point.x = new_pose.point.x;
         pose.point.y = new_pose.point.y;
         pose.angle.yaw = new_pose.angle.yaw;
-        
+    }
+    
+    void tock(std::shared_ptr<rerun::RecordingStream> rec) {
         visualize(rec);
     }
     

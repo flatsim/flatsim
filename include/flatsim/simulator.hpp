@@ -6,8 +6,11 @@
 #include "flatsim/world.hpp"
 
 #include "muli/world.h"
+#include <atomic>
+#include <chrono>
 #include <optional>
 #include <rerun.hpp>
+#include <thread>
 
 namespace fs {
     class Simulator {
@@ -22,13 +25,18 @@ namespace fs {
         std::shared_ptr<muli::World> physics_world;
         int selected_robot_idx = -1;
         uint ticks = 0;
+        uint tocks = 0;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
         ~Simulator();
 
         void init(concord::Datum datum, concord::Size world_size);
-        void ticktock(float dt);
+        void tick(float dt);
+        void tock(int rate);
+
+        // Threading method that combines tick/tock with user loop
+        template <typename UserLoop> void ticktock(UserLoop user_loop, int viz_fps = 30);
 
         // ROBOT
         void add_robot(RobotInfo robot_info);
@@ -55,4 +63,5 @@ namespace fs {
         void reset_recording();
         void clear_all_entities();
     };
+
 } // namespace fs

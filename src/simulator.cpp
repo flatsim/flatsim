@@ -1,4 +1,5 @@
 #include "flatsim/simulator.hpp"
+#include <chrono>
 #include <cmath>
 #include <execution>
 #ifdef HAS_KOKKOS
@@ -46,23 +47,88 @@ namespace fs {
         Kokkos::fence();
     }
 #else
-    void Simulator::ticktock(float dt) {
+    void Simulator::tick(float dt) {
         ticks++;
         if (!world) throw NullPointerException("world");
+        // World tick
         world->tick(dt);
-        std::for_each(std::execution::par, robots.begin(), robots.end(), [this, dt](auto &robott) {
+        // Process robots in parallel - pure physics, thread-safe
+        std::for_each(std::execution::par, robots.begin(), robots.end(), [dt](auto &robott) {
             if (!robott) return;
             robott->tick(dt);
-            std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [this, dt](auto &layer) {
-                if (!layer) return;
-                layer->tick(dt);
-            });
         });
-        if (ticks % 3 == 0) {
+        // Process layers separately, not nested - avoid thread contention
+        std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [dt](auto &layer) {
+            if (!layer) return;
+            layer->tick(dt);
+        });
+    }
+
+    void Simulator::tock(int rate) {
+        tocks++;
+        if (tocks % rate == 0) {
             world->tock();
             for (auto &robot : robots) robot->tock();
+            tocks = 0;
         }
     }
+
+    // Template implementation
+    template <typename UserLoop> void Simulator::ticktock(UserLoop user_loop, int viz_fps) {
+        std::atomic<bool> running{true};
+        const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
+
+        // Background visualization thread - reads data only
+        std::thread viz_thread([this, &running, viz_interval]() {
+            while (running.load()) {
+                auto viz_start = std::chrono::steady_clock::now();
+                this->tock(1); // Always visualize when called
+
+                // Maintain consistent frame rate
+                auto viz_end = std::chrono::steady_clock::now();
+                auto elapsed = viz_end - viz_start;
+                if (elapsed < viz_interval) {
+                    std::this_thread::sleep_for(viz_interval - elapsed);
+                }
+            }
+        });
+
+        // Main physics loop with user customization
+        auto last_time = std::chrono::steady_clock::now();
+
+        try {
+            while (true) {
+                // Calculate delta time
+                auto now = std::chrono::steady_clock::now();
+                std::chrono::duration<float> dt = now - last_time;
+                last_time = now;
+
+                // Physics tick at full speed
+                this->tick(dt.count());
+
+                // User-defined logic (input handling, control logic, etc.)
+                if (!user_loop(dt.count())) {
+                    break; // User loop returns false to exit
+                }
+
+                // Small sleep to cap CPU usage
+                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+            }
+        } catch (...) {
+            running.store(false);
+            if (viz_thread.joinable()) {
+                viz_thread.join();
+            }
+            throw; // Re-throw the exception
+        }
+
+        // Clean shutdown
+        running.store(false);
+        if (viz_thread.joinable()) {
+            viz_thread.join();
+        }
+    }
+
 #endif
 
     void Simulator::init(concord::Datum datum, concord::Size world_size) {

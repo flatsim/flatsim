@@ -61,7 +61,7 @@ namespace fs {
 
         // Update tank if present
         if (tank.has_value()) {
-            tank->tick(dt, chassis->get_pose(), rec);
+            tank->tick(dt, chassis->get_pose());
         }
 
         // visualize();
@@ -279,6 +279,11 @@ namespace fs {
         std::string label = role_prefix + info.name;
         if (has_power()) label += "(" + std::to_string(static_cast<int>(get_power_percentage())) + "%)";
         if (chassis) chassis->tock(label);
+
+        // Visualize tank if present
+        if (tank.has_value()) {
+            tank->tock(rec);
+        }
 
         auto x = this->info.bound.pose.point.x;
         auto y = this->info.bound.pose.point.y;

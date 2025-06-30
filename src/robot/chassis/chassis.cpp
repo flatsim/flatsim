@@ -105,7 +105,7 @@ namespace fs {
     muli::Transform Chassis::get_transform() const { return body->GetTransform(); }
 
     void Chassis::tock(const std::string &label) {
-        for (uint i = 0; i < hitches.size(); ++i) hitches[i].tick();
+        for (uint i = 0; i < hitches.size(); ++i) hitches[i].tock();
         for (uint i = 0; i < wheels.size(); ++i) wheels[i].tock();
         for (uint i = 0; i < karosseries.size(); ++i) karosseries[i].tock();
 

@@ -25,7 +25,7 @@ namespace fs {
                   concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
                   bool is_master = true);
         void tick(float dt, concord::Pose trans_pose);
-        void tick();
+        void tock();
 
         void teleport(concord::Pose pose);
 

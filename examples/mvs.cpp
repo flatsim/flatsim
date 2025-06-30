@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <fcntl.h>
@@ -152,7 +153,28 @@ int main(int argc, char *argv[]) {
     std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = "
                  "disconnect at pos 2\n";
 
-    // 7) Main loop: keyboard + joystick + simulation tick
+    // Threading setup for visualization
+    std::atomic<bool> running{true};
+
+    // Background visualization thread - reads data only, no synchronization needed
+    const int viz_fps = 30; // Adjustable visualization framerate
+    const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
+
+    std::thread viz_thread([&sim, &running, viz_interval]() {
+        while (running.load()) {
+            auto viz_start = std::chrono::steady_clock::now();
+            sim->tock(1); // Always visualize when called (rate control removed)
+
+            // Maintain consistent frame rate
+            auto viz_end = std::chrono::steady_clock::now();
+            auto elapsed = viz_end - viz_start;
+            if (elapsed < viz_interval) {
+                std::this_thread::sleep_for(viz_interval - elapsed);
+            }
+        }
+    });
+
+    // 7) Main loop: keyboard + joystick + physics tick (runs at full speed)
     while (true) {
         // --- Handle keyboard input for robot selection ---
         char key;
@@ -257,10 +279,19 @@ int main(int argc, char *argv[]) {
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<float> dt = now - last_time;
         last_time = now;
-        sim->ticktock(dt.count());
+
+        // Physics tick runs at full speed - no visualization blocking
+        sim->tick(dt.count());
+        // Note: tock() now runs in background thread
 
         // --- small sleep to cap CPU usage ---
-        std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+
+    // Cleanup: shutdown background thread
+    running.store(false);
+    if (viz_thread.joinable()) {
+        viz_thread.join();
     }
 
     // Restore terminal settings
