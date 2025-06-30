@@ -32,24 +32,24 @@ namespace fs {
         // ROBOT
         void add_robot(RobotInfo robot_info);
         void set_controls(uint robot_idx, float steering, float throttle);
-        void toggle_section_work(uint robot_idx, const std::string& karosserie_name, int section_id);
-        void toggle_all_sections_work(uint robot_idx, const std::string& karosserie_name);
-        void toggle_all_except_section_work(uint robot_idx, const std::string& karosserie_name, int except_section_id);
+        void toggle_section_work(uint robot_idx, const std::string &karosserie_name, int section_id);
+        void toggle_all_sections_work(uint robot_idx, const std::string &karosserie_name);
+        void toggle_all_except_section_work(uint robot_idx, const std::string &karosserie_name, int except_section_id);
         Robot &get_robot(uint i);
-        Robot &get_robot(const std::string& uuid);
+        Robot &get_robot(const std::string &uuid);
         int num_robots() const;
-        
+
         // Spatial queries
         std::vector<std::pair<std::string, concord::Pose>> get_all_robot_poses() const;
-        std::vector<Robot*> get_all_robots() const;
-        Robot* get_closest_robot(const Robot& from_robot, float max_distance = 50.0f) const;
+        std::vector<Robot *> get_all_robots() const;
+        Robot *get_closest_robot(const Robot &from_robot, float max_distance = 50.0f) const;
         // WORLD
         concord::Datum get_datum() const;
         World &get_world() { return *world; }
         Layer &get_layer(uint i);
-        Layer &get_layer(const std::string& uuid);
+        Layer &get_layer(const std::string &uuid);
         void add_layer(LayerInfo layer_info, bool noise = false);
-        
+
         // RERUN MANAGEMENT
         void reset_recording();
         void clear_all_entities();

@@ -55,6 +55,9 @@ namespace fs {
     void World::adjust_word() {
         std::vector<concord::Bound> bounds;
         for (auto &layer : layers) {
+            if (!layer) {
+                continue;
+            }
             bounds.push_back(layer->info.bound);
         }
         world_bounds = concord::Rectangle::outer_rectangle(bounds);

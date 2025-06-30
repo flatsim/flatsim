@@ -17,6 +17,8 @@
 #include "geotiv/geotiv.hpp"
 
 int main(int argc, char *argv[]) {
+    // Initialize Kokkos at the very beginning
+
     bool joystk = false;
 
     if (argc > 1) {
@@ -62,7 +64,7 @@ int main(int argc, char *argv[]) {
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
-    concord::Size world_size{300.0f, 300.0f, 300.0f};
+    concord::Size world_size{3000.0f, 3000.0f, 300.0f};
 
     auto sim = std::make_shared<fs::Simulator>(rec);
     sim->init(world_datum, world_size);
@@ -93,19 +95,6 @@ int main(int argc, char *argv[]) {
     layer_info.resolution = 0.2f;
     layer_info.field = polygon;
     sim->add_layer(layer_info, true);
-
-    geotiv::RasterCollection rc;
-    rc.heading = concord::Euler{0.0, 0.0, 0.0};
-    rc.resolution = layer_info.resolution;
-
-    geotiv::Layer layer;
-    layer.grid = sim->get_layer(0).get_grid_data();
-    layer.samplesPerPixel = 1; // single channel
-    layer.planarConfig = 1;    // chunky
-    rc.layers.push_back(layer);
-
-    std::filesystem::path outPath = "output.tif";
-    geotiv::WriteRasterCollection(rc, outPath);
 
     // Load machines from JSON files
     std::filesystem::path machines_dir = "examples/machines";
@@ -280,5 +269,7 @@ int main(int argc, char *argv[]) {
     if (joystk) {
         close(js_fd);
     }
+
+    // Finalize Kokkos before exiting
     return 0;
 }
