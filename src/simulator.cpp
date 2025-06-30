@@ -1,11 +1,41 @@
 #include "flatsim/simulator.hpp"
 #include <cmath>
 #include <execution>
+#ifdef HAS_KOKKOS
+#include <Kokkos_Core.hpp>
+#endif
 
 namespace fs {
-    Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
-    Simulator::~Simulator() {}
+    Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {
+#ifdef HAS_KOKKOS
+        Kokkos::initialize();
+#endif
+    }
+    Simulator::~Simulator() {
+#ifdef HAS_KOKKOS
+        Kokkos::finalize();
+#endif
+    }
+#ifdef HAS_KOKKOS
+    void Simulator::tick(float dt) {
+        if (!world) {
+            throw NullPointerException("world");
+        }
+        world->tick(dt);
 
+        Kokkos::parallel_for("robot_tick", Kokkos::RangePolicy<>(0, robots.size()), [=](int i) {
+            if (!robots[i]) {
+                throw NullPointerException("robot");
+            }
+            robots[i]->tick(dt);
+            for (auto layer : world->layers) {
+                if (!layer)
+                    continue;
+            }
+        });
+        Kokkos::fence();
+    }
+#else
     void Simulator::tick(float dt) {
         if (!world) {
             throw NullPointerException("world");
@@ -22,6 +52,7 @@ namespace fs {
             }
         });
     }
+#endif
 
     void Simulator::init(concord::Datum datum, concord::Size world_size) {
         world = std::make_shared<fs::World>(rec);

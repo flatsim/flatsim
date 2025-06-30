@@ -29,7 +29,7 @@ include(FetchContent)
 set(ext_deps)
 
 if(HAS_KOKKOS)
-    # add this: cmake -DHAS_KOKKOS -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_THREADS=ON ..
+    # add this: cmake -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_THREADS=ON ..
     FetchContent_Declare(kokkos GIT_REPOSITORY https://github.com/kokkos/kokkos.git GIT_TAG 4.6.01 GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(kokkos)
     list(APPEND ext_deps Kokkos::kokkos)
