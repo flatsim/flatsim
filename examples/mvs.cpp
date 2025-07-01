@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
                     if (type == JS_EVENT_AXIS && e.number < num_axes) {
                         int axis = int(e.number);
                         float value = e.value / 32767.0f;
-                        if (selected_robot_idx >= 0 && selected_robot_idx < 4) {
+                        if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
                             if (axis == 0) {
                                 float steering = value;
                                 sim->get_robot(selected_robot_idx).set_angular(steering);
