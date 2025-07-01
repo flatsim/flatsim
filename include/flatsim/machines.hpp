@@ -38,8 +38,9 @@ namespace fs {
         std::vector<float> throttles_max = {0.2f, 0.2f, 0.0f, 0.0f, 0.9f, 0.9f};
         std::vector<float> steerings_diff = {-utils::deg2rad(2), utils::deg2rad(2), 0.0f, 0.0f,
                                              utils::deg2rad(4),  -utils::deg2rad(4)};
+        std::vector<float> throttles_diff = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // No throttle differential for oxbo
         std::vector<bool> left_side = {false, true, false, true, false, true};
-        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, throttles_diff, left_side};
 
         concord::Size k_size;
         KarosserieInfo kaross;
@@ -120,8 +121,9 @@ namespace fs {
         std::vector<float> steerings_max = {utils::deg2rad(35), utils::deg2rad(35), 0.0f, 0.0f};
         std::vector<float> throttles_max = {0.0f, 0.0f, 0.2f, 0.2f};
         std::vector<float> steerings_diff = {-utils::deg2rad(4), utils::deg2rad(4), 0.0f, 0.0f};
+        std::vector<float> throttles_diff = {0.0f, 0.0f, 0.0f, 0.0f}; // No throttle differential for tractor
         std::vector<bool> left_side = {false, true, false, true};
-        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, throttles_diff, left_side};
 
         // karosserie
         concord::Size k_size = concord::Size(width * 0.50f, height * 0.05f, 0.0f);
@@ -192,8 +194,9 @@ namespace fs {
         std::vector<float> steerings_max = {0.0f, 0.0f};
         std::vector<float> throttles_max = {0.0f, 0.0f};
         std::vector<float> steerings_diff = {0.0f, 0.0f};
+        std::vector<float> throttles_diff = {0.0f, 0.0f}; // No throttle differential for trailer
         std::vector<bool> left_side = {false, true};
-        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, throttles_diff, left_side};
 
         // Extended karosserie as towing pole
         concord::Size pole_size = concord::Size(width * 0.1f, height * 0.4f, 0.0f); // Thin pole extending forward
@@ -270,12 +273,16 @@ namespace fs {
 
         robot_info.wheels = wheels;
 
-        // control limits - front wheels steer, all wheels have throttle
-        std::vector<float> steerings_max = {utils::deg2rad(30), utils::deg2rad(30), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        // control limits - front wheels steer forward, rear wheels counter-steer
+        std::vector<float> steerings_max = {utils::deg2rad(30), utils::deg2rad(30), 0.0f, 0.0f, 
+                                          -utils::deg2rad(15), -utils::deg2rad(15), -utils::deg2rad(15), -utils::deg2rad(15)};
         std::vector<float> throttles_max = {0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f};
-        std::vector<float> steerings_diff = {-utils::deg2rad(3), utils::deg2rad(3), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+        std::vector<float> steerings_diff = {-utils::deg2rad(3), utils::deg2rad(3), 0.0f, 0.0f, 
+                                           utils::deg2rad(3), -utils::deg2rad(3), utils::deg2rad(3), -utils::deg2rad(3)};
+        // Aggressive throttle differential: all wheels participate, more aggressive toward rear
+        std::vector<float> throttles_diff = {0.15f, -0.15f, 0.25f, -0.25f, 0.6f, -0.6f, 0.8f, -0.8f};
         std::vector<bool> left_side = {false, true, false, true, false, true, false, true};
-        robot_info.controls = {steerings_max, throttles_max, steerings_diff, left_side};
+        robot_info.controls = {steerings_max, throttles_max, steerings_diff, throttles_diff, left_side};
 
         // Cabin karosserie - 1/5 of total length at front
         concord::Size cabin_size = concord::Size(width * 1.05f, cabin_height, 0.0f); // 1/5 of height

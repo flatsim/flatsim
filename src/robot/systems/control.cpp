@@ -10,6 +10,7 @@ void ControlSystem::init(const RobotInfo& robo) {
     steerings_diff = robo.controls.steerings_diff;
     throttles.resize(robo.wheels.size(), 0.0f);
     throttles_max = robo.controls.throttles_max;
+    throttles_diff = robo.controls.throttles_diff;
 }
 
 void ControlSystem::reset_controls() {
@@ -40,8 +41,21 @@ void ControlSystem::set_angular(float angular) {
 
 void ControlSystem::set_linear(float linear) {
     constexpr float in_min = -1.0f, in_max = 1.0f;
+    
+    // Calculate overall vehicle steering angle for differential control
+    float overall_steering = 0.0f;
+    for (uint i = 0; i < steerings.size(); ++i) {
+        if (std::abs(steerings[i]) > std::abs(overall_steering)) {
+            overall_steering = steerings[i];
+        }
+    }
+    
+    const float sign = (overall_steering < 0.0f ? -1.0f : 1.0f);
+    
     for (uint i = 0; i < throttles.size(); ++i) {
         auto lin_val = linear;
+        
+        // Apply differential for wheels that are actively steering (existing Ackermann logic)
         if (steerings[i] > 0.0f && robot->info.controls.left_side[i]) {
             auto proportion = utils::ackermann_scale(steerings[i], robot->info.bound.size.x);
             lin_val = linear * proportion;
@@ -49,6 +63,14 @@ void ControlSystem::set_linear(float linear) {
             auto proportion = utils::ackermann_scale(steerings[i], robot->info.bound.size.x);
             lin_val = linear * proportion;
         }
+        
+        // Apply throttle differential for ALL wheels (not just non-steering ones)
+        if (i < throttles_diff.size() && std::abs(throttles_diff[i]) > 1e-6f && std::abs(overall_steering) > 1e-6f) {
+            // Apply per-wheel throttle differential on top of any existing adjustments
+            float differential_adjustment = sign * throttles_diff[i];
+            lin_val = lin_val * (1.0f + differential_adjustment);
+        }
+        
         throttles[i] = utils::mapper(lin_val, in_min, in_max, throttles_max[i], -throttles_max[i]);
     }
     

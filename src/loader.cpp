@@ -198,6 +198,16 @@ void Loader::parse_controls(RobotInfo& info, const json& controls_json) {
     for (const auto& value : throttle["max_values"]) {
         info.controls.throttles_max.push_back(value.get<float>());
     }
+    
+    // Parse throttle differential if present
+    if (throttle.contains("differential")) {
+        for (const auto& diff : throttle["differential"]) {
+            info.controls.throttles_diff.push_back(diff.get<float>());
+        }
+    } else {
+        // Default to no throttle differential
+        info.controls.throttles_diff.resize(info.controls.throttles_max.size(), 0.0f);
+    }
 }
 
 void Loader::parse_karosseries(RobotInfo& info, const json& karos_json, pigment::RGB default_color) {
