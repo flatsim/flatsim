@@ -16,6 +16,7 @@ namespace fs {
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
         std::vector<float> steerings_diff, throttles_diff;
+        float last_steering_input = 0.0f;
 
     public:
         ControlSystem(Robot* r) : robot(r) {}

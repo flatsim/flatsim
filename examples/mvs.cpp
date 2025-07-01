@@ -130,6 +130,12 @@ int main(int argc, char *argv[]) {
         sim->add_robot(truck);
         std::cout << "Loaded truck from JSON\n";
 
+        // Load Husky differential drive robot from JSON
+        auto husky = fs::Loader::load_from_json(machines_dir / "husky.json", concord::Pose(10 * 3, 10 * 1, 0.0f),
+                                                "husky4", pigment::RGB(128, 0, 255));
+        sim->add_robot(husky);
+        std::cout << "Loaded Husky differential drive robot from JSON\n";
+
     } catch (const std::exception &e) {
         std::cerr << "Error loading machines: " << e.what() << std::endl;
         std::cerr << "Make sure JSON files exist in: " << machines_dir << std::endl;
