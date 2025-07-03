@@ -12,8 +12,6 @@
 #include "flatsim/types.hpp"
 #include "rerun/recording_stream.hpp"
 
-#include "geotiv/geotiv.hpp"
-
 int main(int argc, char *argv[]) {
     // Initialize Kokkos at the very beginning
 

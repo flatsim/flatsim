@@ -9,6 +9,56 @@
 
 namespace fs {
 
+// Helper function to calculate overlap between two rectangular hitches
+static float calculate_hitch_overlap_percentage(const Hitch& hitch1, const Hitch& hitch2) {
+    // Get the corners of both hitches in world coordinates
+    auto corners1 = hitch1.get_corners();
+    auto corners2 = hitch2.get_corners();
+    
+    // Calculate bounding boxes for both hitches
+    float min_x1 = static_cast<float>(corners1[0].x), max_x1 = static_cast<float>(corners1[0].x);
+    float min_y1 = static_cast<float>(corners1[0].y), max_y1 = static_cast<float>(corners1[0].y);
+    float min_x2 = static_cast<float>(corners2[0].x), max_x2 = static_cast<float>(corners2[0].x);
+    float min_y2 = static_cast<float>(corners2[0].y), max_y2 = static_cast<float>(corners2[0].y);
+    
+    for (const auto& corner : corners1) {
+        min_x1 = std::min(min_x1, static_cast<float>(corner.x));
+        max_x1 = std::max(max_x1, static_cast<float>(corner.x));
+        min_y1 = std::min(min_y1, static_cast<float>(corner.y));
+        max_y1 = std::max(max_y1, static_cast<float>(corner.y));
+    }
+    
+    for (const auto& corner : corners2) {
+        min_x2 = std::min(min_x2, static_cast<float>(corner.x));
+        max_x2 = std::max(max_x2, static_cast<float>(corner.x));
+        min_y2 = std::min(min_y2, static_cast<float>(corner.y));
+        max_y2 = std::max(max_y2, static_cast<float>(corner.y));
+    }
+    
+    // Calculate intersection area
+    float intersection_x1 = std::max(min_x1, min_x2);
+    float intersection_y1 = std::max(min_y1, min_y2);
+    float intersection_x2 = std::min(max_x1, max_x2);
+    float intersection_y2 = std::min(max_y1, max_y2);
+    
+    // Check if there's any intersection
+    if (intersection_x1 >= intersection_x2 || intersection_y1 >= intersection_y2) {
+        return 0.0f; // No overlap
+    }
+    
+    float intersection_area = (intersection_x2 - intersection_x1) * (intersection_y2 - intersection_y1);
+    
+    // Calculate areas of both hitches
+    float area1 = (max_x1 - min_x1) * (max_y1 - min_y1);
+    float area2 = (max_x2 - min_x2) * (max_y2 - min_y2);
+    
+    // Calculate overlap percentage relative to the smaller hitch
+    float smaller_area = std::min(area1, area2);
+    if (smaller_area <= 0.0f) return 0.0f;
+    
+    return (intersection_area / smaller_area) * 100.0f;
+}
+
 void ChainManager::add_follower(Robot* follower, muli::RevoluteJoint* joint) {
     connected_followers.push_back(follower);
     connection_joints.push_back(joint);
@@ -18,7 +68,7 @@ void ChainManager::add_follower(Robot* follower, muli::RevoluteJoint* joint) {
 
 bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>>& all_robots) {
     // Only MASTER robots can initiate connections
-    if (robot->role != RobotRole::MASTER || !robot->info.hitches.count("rear_hitch")) {
+    if (robot->role != RobotRole::MASTER || !robot->chassis) {
         return false;
     }
     
@@ -27,8 +77,7 @@ bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Ro
         return false;
     }
     
-    auto my_pos = robot->get_position().point;
-    float connection_range = 0.1f; // Hitch points must be overlapping
+    const float minimum_overlap_percentage = 50.0f; // Require at least 50% overlap
     
     for (const auto &other_robot : all_robots) {
         // Skip self and non-slaves
@@ -36,61 +85,57 @@ bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Ro
             continue;
         }
         
-        // Check if slave has front hitch
-        if (!other_robot->info.hitches.count("front_hitch")) {
+        // Skip if other robot has no chassis or hitches
+        if (!other_robot->chassis || other_robot->chassis->hitches.empty()) {
             continue;
         }
         
-        // Calculate actual world positions of hitch points
-        auto my_rear_hitch_pos = robot->info.hitches["rear_hitch"];
-        auto slave_front_hitch_pos = other_robot->info.hitches["front_hitch"];
-        auto other_pos = other_robot->get_position().point;
-        auto my_angle = robot->get_position().angle.yaw;
-        auto other_angle = other_robot->get_position().angle.yaw;
-        
-        // Transform hitch positions to world coordinates considering robot rotation
-        float my_hitch_world_x = my_pos.x + my_rear_hitch_pos.bound.pose.point.x * cos(my_angle) -
-                                 my_rear_hitch_pos.bound.pose.point.y * sin(my_angle);
-        float my_hitch_world_y = my_pos.y + my_rear_hitch_pos.bound.pose.point.x * sin(my_angle) +
-                                 my_rear_hitch_pos.bound.pose.point.y * cos(my_angle);
-        
-        float other_hitch_world_x = other_pos.x + slave_front_hitch_pos.bound.pose.point.x * cos(other_angle) -
-                                    slave_front_hitch_pos.bound.pose.point.y * sin(other_angle);
-        float other_hitch_world_y = other_pos.y + slave_front_hitch_pos.bound.pose.point.x * sin(other_angle) +
-                                    slave_front_hitch_pos.bound.pose.point.y * cos(other_angle);
-        
-        // Check if hitch points are overlapping (very close)
-        float hitch_dist = std::sqrt(std::pow(my_hitch_world_x - other_hitch_world_x, 2) +
-                                     std::pow(my_hitch_world_y - other_hitch_world_y, 2));
-        
-        if (hitch_dist <= connection_range) {
-            // Use the midpoint between the two hitch points as the joint position
-            muli::Vec2 hitch_world_pos((my_hitch_world_x + other_hitch_world_x) / 2.0f,
-                                       (my_hitch_world_y + other_hitch_world_y) / 2.0f);
-            
-            auto new_joint = robot->world->CreateRevoluteJoint(robot->chassis->get_body(), 
-                                                               other_robot->chassis->get_body(), 
-                                                               hitch_world_pos,
-                                                               20.0f, // frequency
-                                                               0.8f,  // damping
-                                                               10.0f  // joint mass
-            );
-            
-            if (new_joint) {
-                // Add to followers using new system
-                add_follower(other_robot.get(), new_joint);
-                other_robot->chain_manager->set_master_robot(robot);
-                other_robot->role = RobotRole::FOLLOWER; // Change slave to follower
+        // Try to connect my master hitches to their slave hitches
+        for (const auto &my_hitch : robot->chassis->hitches) {
+            for (const auto &other_hitch : other_robot->chassis->hitches) {
+                // Only connect master hitch to slave hitch
+                if (!my_hitch.is_master || other_hitch.is_master) {
+                    continue;
+                }
                 
-                // Follower adopts master's color
-                other_robot->update_color(robot->info.color);
+                // Calculate overlap percentage between hitches
+                float overlap_percentage = calculate_hitch_overlap_percentage(my_hitch, other_hitch);
                 
-                // Update capabilities for both robots
-                update_follower_capabilities();
-                other_robot->update_follower_capabilities();
-                
-                spdlog::info("Connected {} to {}", robot->info.name, other_robot->info.name);
-                return true;
+                if (overlap_percentage >= minimum_overlap_percentage) {
+                    // Get actual world positions of hitches (updated by tick)
+                    concord::Point my_hitch_pos = my_hitch.pose.point;
+                    concord::Point other_hitch_pos = other_hitch.pose.point;
+                    
+                    // Use the midpoint between the two hitch points as the joint position
+                    muli::Vec2 hitch_world_pos((my_hitch_pos.x + other_hitch_pos.x) / 2.0f,
+                                               (my_hitch_pos.y + other_hitch_pos.y) / 2.0f);
+                    
+                    auto new_joint = robot->world->CreateRevoluteJoint(robot->chassis->get_body(), 
+                                                                       other_robot->chassis->get_body(), 
+                                                                       hitch_world_pos,
+                                                                       20.0f, // frequency
+                                                                       0.8f,  // damping
+                                                                       10.0f  // joint mass
+                    );
+                    
+                    if (new_joint) {
+                        // Add to followers using new system
+                        add_follower(other_robot.get(), new_joint);
+                        other_robot->chain_manager->set_master_robot(robot);
+                        other_robot->role = RobotRole::FOLLOWER; // Change slave to follower
+                        
+                        // Follower adopts master's color
+                        other_robot->update_color(robot->info.color);
+                        
+                        // Update capabilities for both robots
+                        update_follower_capabilities();
+                        other_robot->update_follower_capabilities();
+                        
+                        spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name, 
+                                     other_robot->info.name, overlap_percentage);
+                        return true;
+                    }
+                }
             }
         }
     }
@@ -128,7 +173,7 @@ bool ChainManager::try_connect_nearby() {
     }
     
     auto all_robots = robot->get_all_robots();
-    float connection_range = 2.0f; // Increased range for easier connection
+    const float minimum_overlap_percentage = 50.0f; // Require at least 50% overlap
     
     for (Robot *other_robot : all_robots) {
         // Skip self and non-slaves
@@ -149,15 +194,14 @@ bool ChainManager::try_connect_nearby() {
                     continue;
                 }
                 
-                // Get actual world positions of hitches (updated by tick)
-                concord::Point my_hitch_pos = my_hitch.pose.point;
-                concord::Point other_hitch_pos = other_hitch.pose.point;
+                // Calculate overlap percentage between hitches
+                float overlap_percentage = calculate_hitch_overlap_percentage(my_hitch, other_hitch);
                 
-                // Calculate distance between hitches
-                float hitch_dist = std::sqrt(std::pow(my_hitch_pos.x - other_hitch_pos.x, 2) +
-                                             std::pow(my_hitch_pos.y - other_hitch_pos.y, 2));
-                
-                if (hitch_dist <= connection_range) {
+                if (overlap_percentage >= minimum_overlap_percentage) {
+                    // Get actual world positions of hitches (updated by tick)
+                    concord::Point my_hitch_pos = my_hitch.pose.point;
+                    concord::Point other_hitch_pos = other_hitch.pose.point;
+                    
                     // Use the midpoint between the two hitch points as the joint position
                     muli::Vec2 hitch_world_pos((my_hitch_pos.x + other_hitch_pos.x) / 2.0f,
                                                (my_hitch_pos.y + other_hitch_pos.y) / 2.0f);
@@ -185,8 +229,8 @@ bool ChainManager::try_connect_nearby() {
                         update_follower_capabilities();
                         other_robot->update_follower_capabilities();
                         
-                        spdlog::info("Connected {} to {} (hitch distance: {:.2f}m)", robot->info.name,
-                                     other_robot->info.name, hitch_dist);
+                        spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name,
+                                     other_robot->info.name, overlap_percentage);
                         return true;
                     }
                 }

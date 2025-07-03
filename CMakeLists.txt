@@ -71,17 +71,18 @@ FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(geoson GIT_REPOSITORY https://github.com/onlyhead/geoson.git GIT_TAG 1.1.0)
-FetchContent_MakeAvailable(geoson)
-list(APPEND ext_deps geoson::geoson)
-
-FetchContent_Declare(geotiv GIT_REPOSITORY https://github.com/onlyhead/geotiv.git GIT_TAG 1.0.0)
-FetchContent_MakeAvailable(geotiv)
-list(APPEND ext_deps geotiv::geotiv)
+FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 0.0.3)
+FetchContent_MakeAvailable(zoneout)
+list(APPEND ext_deps zoneout::zoneout)
 
 FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 0.3.0)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
+
+# Find libcurl for pdoc example
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CURL REQUIRED libcurl)
+list(APPEND ext_deps ${CURL_LIBRARIES})
 
 
 # --------------------------------------------------------------------------------------------------
@@ -140,7 +141,9 @@ if(${project_name_upper}_BUILD_EXAMPLES)
         target_compile_options(${exec_name} PRIVATE ${params})
         target_sources(${exec_name} PRIVATE "${lib_file}")
       endforeach()
+    target_compile_options(${exec_name} PRIVATE ${CURL_CFLAGS_OTHER})
     target_link_libraries(${exec_name} ${ext_deps})
+    target_include_directories(${exec_name} PRIVATE ${CURL_INCLUDE_DIRS})
     install(TARGETS ${exec_name} DESTINATION bin)
     list(APPEND exec_names ${exec_name})
   endforeach()
