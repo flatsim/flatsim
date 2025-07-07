@@ -14,8 +14,12 @@ int main() {
     std::cout << "Open http://localhost:8080 in your browser" << std::endl;
     std::cout << "Click to select a point, then click Done" << std::endl;
 
-    auto point = app.collectSinglePoint();
-    std::cout << "\nSelected point: " << point.lat << ", " << point.lon << std::endl;
+    app.collectSinglePoint();
+    const auto& all_points = app.getAllSinglePoints();
+    std::cout << "\nCollected " << all_points.size() << " points:" << std::endl;
+    for (size_t i = 0; i < all_points.size(); ++i) {
+        std::cout << "  Point " << (i + 1) << ": " << all_points[i].lat << ", " << all_points[i].lon << std::endl;
+    }
 
     // Wait a bit for socket to be fully released
     std::cout << "\nWaiting for socket to be released..." << std::endl;
@@ -31,11 +35,15 @@ int main() {
     std::cout << "Open http://localhost:8081 in your browser" << std::endl;
     std::cout << "Click points to draw a polygon, then click Done" << std::endl;
 
-    auto points = app.collectPoints();
+    app.collectPoints();
+    const auto& all_polygons = app.getAllPolygons();
 
-    std::cout << "\nReturned " << points.size() << " points:" << std::endl;
-    for (size_t i = 0; i < points.size(); ++i) {
-        std::cout << "  [" << i << "]: " << points[i].lat << ", " << points[i].lon << std::endl;
+    std::cout << "\nCollected " << all_polygons.size() << " polygons:" << std::endl;
+    for (size_t p = 0; p < all_polygons.size(); ++p) {
+        std::cout << "  Polygon " << (p + 1) << " with " << all_polygons[p].size() << " points:" << std::endl;
+        for (size_t i = 0; i < all_polygons[p].size(); ++i) {
+            std::cout << "    [" << i << "]: " << all_polygons[p][i].lat << ", " << all_polygons[p][i].lon << std::endl;
+        }
     }
 
     return 0;

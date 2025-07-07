@@ -26,6 +26,8 @@ namespace polygon_drawer {
       private:
         int server_fd;
         std::vector<Point> points;
+        std::vector<std::vector<Point>> all_polygons;
+        std::vector<Point> all_single_points;
         bool is_done;
         std::mutex done_mutex;
         std::condition_variable done_cv;
@@ -47,17 +49,20 @@ namespace polygon_drawer {
                                "radius:5px;z-index:1000}"
                                "button{background:#4CAF50;color:white;border:none;padding:8px "
                                "16px;border-radius:3px;cursor:pointer;margin:2px}"
-                               ".clear{background:#f44336}</style></head><body>"
+                               ".clear{background:#f44336}"
+                               "#newBtn{background:#2196F3}</style></head><body>"
                                "<div id=\"map\"></div>"
                                "<div class=\"controls\">"
                                "<button onclick=\"clearPoly()\" class=\"clear\">Clear</button>"
+                               "<button onclick=\"newPoly()\" id=\"newBtn\" disabled>New</button>"
                                "<button onclick=\"done()\">Done</button>"
                                "</div>"
                                "<script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>"
                                "<script>"
                                "var map=L.map('map').setView([52.1326,5.2913],10);"
                                "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);"
-                               "var points=[],markers=[],poly=null;"
+                               "var points=[],markers=[],poly=null,allPolys=[],allMarkers=[];"
+                               "var colors=['#FF0000','#00FF00','#0000FF','#FFFF00','#FF00FF','#00FFFF','#FFA500','#800080','#008000','#FFC0CB','#A52A2A','#808080','#000080','#FFD700','#DC143C','#32CD32','#4169E1','#FF1493','#20B2AA','#8B4513'];"
                                "if(navigator.geolocation){"
                                "navigator.geolocation.getCurrentPosition(function(p){"
                                "map.setView([p.coords.latitude,p.coords.longitude],15);"
@@ -70,7 +75,9 @@ namespace polygon_drawer {
                                "markers.push(m);"
                                "if(points.length>=3){"
                                "if(poly)map.removeLayer(poly);"
-                               "poly=L.polygon(points,{color:'red',fillOpacity:0.2}).addTo(map);"
+                               "var currentColor=colors[allPolys.length%colors.length];"
+                               "poly=L.polygon(points,{color:currentColor,fillOpacity:0.2}).addTo(map);"
+                               "document.getElementById('newBtn').disabled=false;"
                                "}"
                                "fetch('/api/addpoint',{method:'POST',headers:{'Content-Type':'application/json'},"
                                "body:JSON.stringify({lat:lat,lon:lon})});"
@@ -83,20 +90,35 @@ namespace polygon_drawer {
                                "map.removeLayer(marker);"
                                "if(poly){map.removeLayer(poly);poly=null;}"
                                "if(points.length>=3){"
-                               "poly=L.polygon(points,{color:'red',fillOpacity:0.2}).addTo(map);"
+                               "var currentColor=colors[allPolys.length%colors.length];"
+                               "poly=L.polygon(points,{color:currentColor,fillOpacity:0.2}).addTo(map);"
                                "}"
-                               "fetch('/api/clear',{method:'POST'}).then(function(){"
+                               "fetch('/api/clearcurrent',{method:'POST'}).then(function(){"
                                "points.forEach(function(p){"
                                "fetch('/api/addpoint',{method:'POST',headers:{'Content-Type':'application/json'},"
                                "body:JSON.stringify({lat:p[0],lon:p[1]})});"
                                "});"
                                "});"
                                "}}"
+                               "function newPoly(){"
+                               "if(points.length>=3){"
+                               "allPolys.push(poly);"
+                               "allMarkers.push(markers.slice());"
+                               "fetch('/api/newpolygon',{method:'POST'});"
+                               "points=[];"
+                               "markers=[];"
+                               "poly=null;"
+                               "document.getElementById('newBtn').disabled=true;"
+                               "}}"
                                "function clearPoly(){"
                                "points=[];"
                                "markers.forEach(function(m){map.removeLayer(m);});"
                                "markers=[];"
                                "if(poly){map.removeLayer(poly);poly=null;}"
+                               "allPolys.forEach(function(p){if(p)map.removeLayer(p);});"
+                               "allMarkers.forEach(function(ms){ms.forEach(function(m){map.removeLayer(m);});});"
+                               "allPolys=[];allMarkers=[];"
+                               "document.getElementById('newBtn').disabled=true;"
                                "fetch('/api/clear',{method:'POST'});"
                                "}"
                                "function done(){"
@@ -127,17 +149,19 @@ namespace polygon_drawer {
                                "radius:5px;z-index:1000}"
                                "button{background:#4CAF50;color:white;border:none;padding:8px "
                                "16px;border-radius:3px;cursor:pointer;margin:2px}"
-                               ".clear{background:#f44336}</style></head><body>"
+                               ".clear{background:#f44336}"
+                               "#newBtn{background:#2196F3}</style></head><body>"
                                "<div id=\"map\"></div>"
                                "<div class=\"controls\">"
                                "<button onclick=\"clearPoint()\" class=\"clear\">Clear</button>"
+                               "<button onclick=\"newPoint()\" id=\"newBtn\" disabled>New</button>"
                                "<button onclick=\"done()\">Done</button>"
                                "</div>"
                                "<script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>"
                                "<script>"
                                "var map=L.map('map').setView([52.1326,5.2913],10);"
                                "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);"
-                               "var marker=null;"
+                               "var marker=null,allMarkers=[];"
                                "if(navigator.geolocation){"
                                "navigator.geolocation.getCurrentPosition(function(p){"
                                "map.setView([p.coords.latitude,p.coords.longitude],15);"
@@ -147,15 +171,27 @@ namespace polygon_drawer {
                                "if(marker)map.removeLayer(marker);"
                                "marker=L.marker([lat,lon]).addTo(map);"
                                "marker.on('contextmenu',function(){removePoint();});"
+                               "document.getElementById('newBtn').disabled=false;"
                                "fetch('/api/setpoint',{method:'POST',headers:{'Content-Type':'application/json'},"
                                "body:JSON.stringify({lat:lat,lon:lon})});"
                                "});"
                                "function removePoint(){"
                                "if(marker){map.removeLayer(marker);marker=null;}"
-                               "fetch('/api/clear',{method:'POST'});"
+                               "document.getElementById('newBtn').disabled=true;"
+                               "fetch('/api/clearcurrent',{method:'POST'});"
                                "}"
+                               "function newPoint(){"
+                               "if(marker){"
+                               "allMarkers.push(marker);"
+                               "fetch('/api/newpoint',{method:'POST'});"
+                               "marker=null;"
+                               "document.getElementById('newBtn').disabled=true;"
+                               "}}"
                                "function clearPoint(){"
                                "if(marker){map.removeLayer(marker);marker=null;}"
+                               "allMarkers.forEach(function(m){map.removeLayer(m);});"
+                               "allMarkers=[];"
+                               "document.getElementById('newBtn').disabled=true;"
                                "fetch('/api/clear',{method:'POST'});"
                                "}"
                                "function done(){"
@@ -198,6 +234,12 @@ namespace polygon_drawer {
                 response = clearPoints();
             } else if (path == "/api/setpoint" && method == "POST") {
                 response = setPoint(request);
+            } else if (path == "/api/newpolygon" && method == "POST") {
+                response = newPolygon();
+            } else if (path == "/api/newpoint" && method == "POST") {
+                response = newPoint();
+            } else if (path == "/api/clearcurrent" && method == "POST") {
+                response = clearCurrentOnly();
             } else if (path == "/api/done" && method == "POST") {
                 response = handleDone();
             } else {
@@ -259,9 +301,41 @@ namespace polygon_drawer {
             }
         }
 
+        std::string newPolygon() {
+            if (points.size() >= 3) {
+                all_polygons.push_back(points);
+                std::cout << "New polygon added with " << points.size() << " points" << std::endl;
+                points.clear();
+            }
+            return "HTTP/1.1 200 OK\r\n"
+                   "Content-Type: application/json\r\n"
+                   "\r\n{\"success\":true}";
+        }
+
+        std::string newPoint() {
+            if (!points.empty()) {
+                all_single_points.push_back(points[0]);
+                std::cout << "New point added: " << points[0].lat << ", " << points[0].lon << std::endl;
+                points.clear();
+            }
+            return "HTTP/1.1 200 OK\r\n"
+                   "Content-Type: application/json\r\n"
+                   "\r\n{\"success\":true}";
+        }
+
+        std::string clearCurrentOnly() {
+            points.clear();
+            std::cout << (single_point_mode ? "Current point cleared" : "Current polygon cleared") << std::endl;
+            return "HTTP/1.1 200 OK\r\n"
+                   "Content-Type: application/json\r\n"
+                   "\r\n{\"success\":true}";
+        }
+
         std::string clearPoints() {
             points.clear();
-            std::cout << (single_point_mode ? "Point cleared" : "Polygon cleared") << std::endl;
+            all_polygons.clear();
+            all_single_points.clear();
+            std::cout << (single_point_mode ? "All points cleared" : "All polygons cleared") << std::endl;
             return "HTTP/1.1 200 OK\r\n"
                    "Content-Type: application/json\r\n"
                    "\r\n{\"success\":true}";
@@ -269,18 +343,32 @@ namespace polygon_drawer {
 
         std::string handleDone() {
             if (single_point_mode) {
-                std::cout << "\n=== POINT SELECTED ===" << std::endl;
+                // Add current point to collection if exists
                 if (!points.empty()) {
-                    std::cout << "Point: " << points[0].lat << ", " << points[0].lon << std::endl;
+                    all_single_points.push_back(points[0]);
                 }
-                std::cout << "===================\n" << std::endl;
+                
+                std::cout << "\n=== ALL POINTS SELECTED ===" << std::endl;
+                std::cout << "Total points: " << all_single_points.size() << std::endl;
+                for (size_t i = 0; i < all_single_points.size(); ++i) {
+                    std::cout << "Point " << (i + 1) << ": " << all_single_points[i].lat << ", " << all_single_points[i].lon << std::endl;
+                }
+                std::cout << "========================\n" << std::endl;
             } else {
-                std::cout << "\n=== POLYGON COMPLETE ===" << std::endl;
-                std::cout << "Total points: " << points.size() << std::endl;
-                for (size_t i = 0; i < points.size(); ++i) {
-                    std::cout << "Point " << (i + 1) << ": " << points[i].lat << ", " << points[i].lon << std::endl;
+                // Add current polygon to collection if valid
+                if (points.size() >= 3) {
+                    all_polygons.push_back(points);
                 }
-                std::cout << "=====================\n" << std::endl;
+                
+                std::cout << "\n=== ALL POLYGONS COMPLETE ===" << std::endl;
+                std::cout << "Total polygons: " << all_polygons.size() << std::endl;
+                for (size_t p = 0; p < all_polygons.size(); ++p) {
+                    std::cout << "Polygon " << (p + 1) << " (" << all_polygons[p].size() << " points):" << std::endl;
+                    for (size_t i = 0; i < all_polygons[p].size(); ++i) {
+                        std::cout << "  Point " << (i + 1) << ": " << all_polygons[p][i].lat << ", " << all_polygons[p][i].lon << std::endl;
+                    }
+                }
+                std::cout << "===========================\n" << std::endl;
             }
 
             // Signal that we're done
@@ -292,7 +380,13 @@ namespace polygon_drawer {
 
             json response;
             response["success"] = true;
-            response["pointCount"] = points.size();
+            if (single_point_mode) {
+                response["pointCount"] = all_single_points.size();
+                response["polygonCount"] = 0;
+            } else {
+                response["pointCount"] = 0;
+                response["polygonCount"] = all_polygons.size();
+            }
 
             return "HTTP/1.1 200 OK\r\n"
                    "Content-Type: application/json\r\n"
@@ -424,6 +518,8 @@ namespace polygon_drawer {
 
       public:
         const std::vector<Point> &getPoints() const { return points; }
+        const std::vector<std::vector<Point>> &getAllPolygons() const { return all_polygons; }
+        const std::vector<Point> &getAllSinglePoints() const { return all_single_points; }
     };
 
 } // namespace polygon_drawer
