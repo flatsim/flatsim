@@ -97,7 +97,7 @@ namespace fs {
                 }
             }
 
-            throttles[i] = utils::mapper(lin_val, in_min, in_max, throttles_max[i], -throttles_max[i]);
+            throttles[i] = utils::mapper(lin_val, in_min, in_max, -throttles_max[i], throttles_max[i]);
         }
 
         // Propagate to followers that have throttle capability
@@ -148,7 +148,7 @@ namespace fs {
                 auto proportion = utils::ackermann_scale(steerings[i], robot->info.bound.size.x);
                 lin_val = linear * proportion;
             }
-            throttles[i] = utils::mapper(lin_val, in_min, in_max, throttles_max[i], -throttles_max[i]);
+            throttles[i] = utils::mapper(lin_val, in_min, in_max, -throttles_max[i], throttles_max[i]);
         }
 
         // Continue propagation to any followers this robot might have

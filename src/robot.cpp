@@ -14,6 +14,7 @@ namespace fs {
         // Initialize modular systems
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
+        navigation_controller = std::make_unique<NavigationController>(this);
     }
     Robot::~Robot() {}
 
@@ -32,7 +33,15 @@ namespace fs {
 
         this->info.bound.pose.point.x = chassis->get_transform().position.x;
         this->info.bound.pose.point.y = chassis->get_transform().position.y;
+        // Physics engine gives angle 90 degrees off - correct it
+        this->info.bound.pose.angle.yaw = chassis->get_transform().rotation.GetAngle() + M_PI/2;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
+        
+        // Update navigation controller
+        if (navigation_controller) {
+            navigation_controller->update(dt);
+        }
+        
         chassis->tick(dt);
         chassis->update(control_system->get_steerings(), control_system->get_throttles(), dt);
 
@@ -91,6 +100,9 @@ namespace fs {
 
         // Initialize control system
         control_system->init(robo);
+        
+        // Initialize navigation controller
+        navigation_controller->init(robo);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
@@ -320,6 +332,59 @@ namespace fs {
 
         // Reset pulsing after some time
         pulsing = false;
+    }
+
+    // Navigation control methods
+    void Robot::set_navigation_goal(const NavigationGoal& goal) {
+        if (navigation_controller) {
+            navigation_controller->set_goal(goal);
+        }
+    }
+
+    void Robot::set_navigation_path(const PathGoal& path) {
+        if (navigation_controller) {
+            navigation_controller->set_path(path);
+        }
+    }
+
+    void Robot::clear_navigation_goal() {
+        if (navigation_controller) {
+            navigation_controller->clear_goal();
+        }
+    }
+
+    void Robot::clear_navigation_path() {
+        if (navigation_controller) {
+            navigation_controller->clear_path();
+        }
+    }
+
+    bool Robot::is_navigation_goal_reached() const {
+        return navigation_controller ? navigation_controller->is_goal_reached() : false;
+    }
+
+    bool Robot::is_navigation_path_completed() const {
+        return navigation_controller ? navigation_controller->is_path_completed() : false;
+    }
+
+    float Robot::get_distance_to_navigation_goal() const {
+        return navigation_controller ? navigation_controller->get_distance_to_goal() : std::numeric_limits<float>::infinity();
+    }
+
+    concord::Point Robot::get_current_navigation_target() const {
+        return navigation_controller ? navigation_controller->get_current_target() : concord::Point{0, 0};
+    }
+
+    void Robot::set_navigation_controller_type(ControllerType type) {
+        if (navigation_controller) {
+            navigation_controller->set_controller_type(type);
+        }
+    }
+
+    void Robot::emergency_navigation_stop() {
+        if (navigation_controller) {
+            navigation_controller->emergency_stop();
+        }
     }
 
 } // namespace fs

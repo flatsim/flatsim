@@ -8,6 +8,7 @@
 
 #include "flatsim/exceptions.hpp"
 #include "flatsim/robot/chassis/chassis.hpp"
+#include "flatsim/robot/controller.hpp"
 #include "flatsim/robot/power.hpp"
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
@@ -29,6 +30,7 @@ namespace fs {
     class Robot {
         friend class ControlSystem;
         friend class ChainManager;
+        friend class NavigationController;
 
       private:
         bool pulsing = false;
@@ -48,6 +50,7 @@ namespace fs {
         // New modular systems
         std::unique_ptr<ControlSystem> control_system;
         std::unique_ptr<ChainManager> chain_manager;
+        std::unique_ptr<NavigationController> navigation_controller;
 
       public:
         RobotInfo info;
@@ -79,13 +82,9 @@ namespace fs {
         void add_sensor(std::unique_ptr<Sensor> sensor);
         template <typename T> T *get_sensor() const {
             for (const auto &sensor : sensors) {
-                if (!sensor) {
-                    continue; // Skip null sensors
-                }
+                if (!sensor) continue;
                 T *typed_sensor = dynamic_cast<T *>(sensor.get());
-                if (typed_sensor) {
-                    return typed_sensor;
-                }
+                if (typed_sensor) return typed_sensor;
             }
             return nullptr;
         }
@@ -104,9 +103,7 @@ namespace fs {
             chassis->toggle_all_except_section_work(karosserie_name, except_section_id);
         }
         std::vector<Karosserie> *get_karosseries() {
-            if (!chassis) {
-                throw NullPointerException("chassis");
-            }
+            if (!chassis) throw NullPointerException("chassis");
             return &chassis->karosseries;
         }
 
@@ -161,6 +158,18 @@ namespace fs {
 
         // Set simulator reference (called by simulator when robot is added)
         void set_simulator(Simulator *sim) { simulator = sim; }
+
+        // Navigation control methods
+        void set_navigation_goal(const NavigationGoal &goal);
+        void set_navigation_path(const PathGoal &path);
+        void clear_navigation_goal();
+        void clear_navigation_path();
+        bool is_navigation_goal_reached() const;
+        bool is_navigation_path_completed() const;
+        float get_distance_to_navigation_goal() const;
+        concord::Point get_current_navigation_target() const;
+        void set_navigation_controller_type(ControllerType type);
+        void emergency_navigation_stop();
 
       private:
         concord::Datum datum;

@@ -84,6 +84,12 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CURL REQUIRED libcurl)
 list(APPEND ext_deps ${CURL_LIBRARIES})
 
+# Add navcon navigation controller library
+add_subdirectory(other/navcon)
+list(APPEND ext_deps navcon::navcon)
+# Explicitly include navcon headers
+include_directories(other/navcon/include)
+
 
 # --------------------------------------------------------------------------------------------------
 add_library(${project_name} INTERFACE)
