@@ -10,12 +10,6 @@ namespace fs {
     NavigationController::NavigationController(Robot *r, ControllerType type) : robot(r), controller_type(type) {}
 
     void NavigationController::init(const RobotInfo &robot_info) {
-        // Create navcon configuration from flatsim robot info
-        navcon_config = create_navcon_config(robot_info);
-
-        // Create wheel controller for low-level control
-        wheel_controller = std::make_unique<navcon::WheelController>(navcon_config);
-
         // Create the navigation controller
         create_controller();
 
@@ -23,40 +17,6 @@ namespace fs {
         rec = robot->rec;
     }
 
-    navcon::RobotConfig NavigationController::create_navcon_config(const RobotInfo &robot_info) {
-        navcon::RobotConfig config;
-
-        config.name = robot_info.name;
-        config.type = robot_info.type;
-        config.dimensions = robot_info.bound.size;
-
-        // Add wheels from flatsim configuration
-        for (size_t i = 0; i < robot_info.wheels.size(); ++i) {
-            navcon::Wheel wheel;
-            wheel.name = "wheel_" + std::to_string(i);
-            wheel.position = robot_info.wheels[i].pose.point;
-            wheel.size = robot_info.wheels[i].size;
-
-            // Set capabilities based on control limits
-            if (i < robot_info.controls.steerings_max.size()) {
-                wheel.max_steer_angle = robot_info.controls.steerings_max[i];
-                if (i < robot_info.controls.steerings_diff.size()) {
-                    wheel.steer_differential = robot_info.controls.steerings_diff[i];
-                }
-            }
-
-            if (i < robot_info.controls.throttles_max.size()) {
-                wheel.max_throttle = robot_info.controls.throttles_max[i];
-                if (i < robot_info.controls.throttles_diff.size()) {
-                    wheel.throttle_differential = robot_info.controls.throttles_diff[i];
-                }
-            }
-
-            config.wheels.push_back(wheel);
-        }
-
-        return config;
-    }
 
     void NavigationController::create_controller() {
         navcon::ControllerConfig config;
@@ -70,26 +30,28 @@ namespace fs {
             config.kp_angular = params.angular_kp;
             config.ki_angular = params.angular_ki;
             config.kd_angular = params.angular_kd;
-            velocity_controller = navcon::create_velocity_controller("pid", config);
-            std::cout << "PID controller created: " << (velocity_controller ? "success" : "failed") << std::endl;
+            controller = navcon::create_controller("pid", config);
+            std::cout << "PID controller created: " << (controller ? "success" : "failed") << std::endl;
             break;
 
         case ControllerType::PURE_PURSUIT:
             std::cout << "Creating Pure Pursuit controller..." << std::endl;
             config.lookahead_distance = params.lookahead_distance;
-            velocity_controller = navcon::create_velocity_controller("pure_pursuit", config);
-            std::cout << "Pure Pursuit controller created: " << (velocity_controller ? "success" : "failed") << std::endl;
+            controller = navcon::create_controller("pure_pursuit", config);
+            std::cout << "Pure Pursuit controller created: " << (controller ? "success" : "failed") << std::endl;
             break;
 
         case ControllerType::STANLEY:
+            std::cout << "Creating Stanley controller..." << std::endl;
             config.k_cross_track = params.cross_track_gain;
             config.k_heading = params.softening_gain;
-            velocity_controller = navcon::create_velocity_controller("stanley", config);
+            controller = navcon::create_controller("stanley", config);
+            std::cout << "Stanley controller created: " << (controller ? "success" : "failed") << std::endl;
             break;
 
         case ControllerType::CARROT:
             config.lookahead_distance = params.carrot_distance;
-            velocity_controller = navcon::create_velocity_controller("carrot", config);
+            controller = navcon::create_controller("carrot", config);
             break;
         }
     }
@@ -111,7 +73,7 @@ namespace fs {
         path_completed = false;
         
         // Convert PathGoal to navcon::Path and set it in the controller
-        if (velocity_controller) {
+        if (controller) {
             navcon::Path navcon_path;
             for (const auto& waypoint : path.waypoints) {
                 navcon::Pose wp;
@@ -120,7 +82,7 @@ namespace fs {
                 navcon_path.waypoints.push_back(wp);
             }
             navcon_path.is_closed = path.loop; // Set loop behavior
-            velocity_controller->set_path(navcon_path);
+            controller->set_path(navcon_path);
         }
     }
 
@@ -135,18 +97,17 @@ namespace fs {
         path_completed = false;
         
         // Clear path in the navcon controller
-        if (velocity_controller) {
+        if (controller) {
             navcon::Path empty_path;
-            velocity_controller->set_path(empty_path);
+            controller->set_path(empty_path);
         }
     }
 
     void NavigationController::update(float dt) {
-        if (!velocity_controller || !wheel_controller) {
+        if (!controller) {
             static bool warned = false;
             if (!warned) {
-                std::cout << "NavigationController: velocity_controller=" << (velocity_controller ? "valid" : "null")
-                          << ", wheel_controller=" << (wheel_controller ? "valid" : "null") << std::endl;
+                std::cout << "NavigationController: controller=" << (controller ? "valid" : "null") << std::endl;
                 warned = true;
             }
             return;
@@ -191,7 +152,7 @@ namespace fs {
         constraints.max_angular_velocity = 1.0f; // 1 rad/s = ~57 degrees/sec - reasonable for navigation
 
         // Compute control command
-        auto velocity_cmd = velocity_controller->compute_control(state, goal, constraints, dt);
+        auto velocity_cmd = controller->compute_control(state, goal, constraints, dt);
 
         // Debug output disabled for production
         // static int debug_count = 0;
@@ -202,7 +163,7 @@ namespace fs {
         // }
         // debug_count++;
 
-        // Apply velocity command directly (bypass wheel controller for now)
+        // Apply velocity command directly
         apply_velocity_command(velocity_cmd);
 
         // Check goal completion
@@ -234,6 +195,7 @@ namespace fs {
         // debug_state_count++;
 
         state.pose = pose;
+        
         state.velocity.linear = 0.0;  // TODO: get from robot if available
         state.velocity.angular = 0.0; // TODO: get from robot if available
         state.timestamp = 0.0;        // TODO: get actual timestamp
@@ -256,66 +218,14 @@ namespace fs {
         return goal;
     }
 
-    void NavigationController::apply_wheel_commands(const navcon::WheelCommands &commands) {
-        // For now, convert wheel commands back to linear/angular for existing control system
-        // This is a simplified approach - ideally we'd directly control individual wheels
-
-        if (commands.empty()) {
-            return;
-        }
-
-        // Calculate average throttle and steering
-        float total_throttle = 0.0f;
-        float total_steering = 0.0f;
-        int throttle_count = 0;
-        int steering_count = 0;
-
-        for (const auto &[wheel_name, wheel_cmd] : commands) {
-            total_throttle += wheel_cmd.throttle;
-            throttle_count++;
-
-            if (std::abs(wheel_cmd.steering_angle) > 1e-6) {
-                total_steering += wheel_cmd.steering_angle;
-                steering_count++;
-            }
-        }
-
-        float avg_throttle = throttle_count > 0 ? total_throttle / throttle_count : 0.0f;
-        float avg_steering = steering_count > 0 ? total_steering / steering_count : 0.0f;
-
-        // Apply to robot's existing control system
-        robot->set_linear(avg_throttle);
-        robot->set_angular(avg_steering);
-    }
 
     void NavigationController::apply_velocity_command(const navcon::VelocityCommand &cmd) {
-        // Convert navcon velocity command to flatsim control
-        // The flatsim robot expects normalized values (-1 to 1)
-
-        // Get actual robot limits from configuration
-        float max_throttle = 0.0f;
-        for (size_t i = 0; i < robot->info.controls.throttles_max.size(); ++i) {
-            max_throttle = std::max(max_throttle, robot->info.controls.throttles_max[i]);
-        }
-        float max_linear_speed = max_throttle; // Use actual throttle value: 0.2 is 0.2!
-
-        // Use a reasonable maximum angular velocity for navigation 
-        // This should be roughly 1-2 rad/s for tractors (about 60-120 degrees/sec)
-        float max_angular_speed = 1.0f; // 1 rad/s = ~57 degrees/sec - reasonable for tractor navigation
-
-        // Normalize using actual robot limits
-        float normalized_linear = std::clamp(static_cast<float>(cmd.linear_velocity) / max_linear_speed, -1.0f, 1.0f);
-        float normalized_angular =
-            std::clamp(static_cast<float>(cmd.angular_velocity) / max_angular_speed, -1.0f, 1.0f);
-
-        // Apply commands directly - coordinate system should now be fixed
-        // Scale down linear speed to reasonable values (0.2 max throttle should not be full speed)
-        float scaled_linear = normalized_linear * 0.5f; // Scale down for reasonable tractor speed
-
-        // Apply to robot's control system
+        // Simply pass through the velocity commands to the robot
+        // The robot is responsible for handling its own scaling and limits
+        
         // Debug output for angular control issues
         static int apply_debug_count = 0;
-        if (apply_debug_count % 50 == 0) { // More frequent debug output
+        if (apply_debug_count % 50 == 0) { // Debug output
             auto pos = robot->get_position();
             auto target = get_current_target();
             
@@ -341,14 +251,16 @@ namespace fs {
             std::cout << "Desired Heading: " << desired_heading << " rad (" << desired_heading_deg << " deg)" << std::endl;
             std::cout << "Heading Error: " << heading_error << " rad (" << heading_error_deg << " deg)" << std::endl;
             std::cout << "NavCon Commands: linear=" << cmd.linear_velocity << ", angular=" << cmd.angular_velocity << std::endl;
-            std::cout << "Normalized Commands: linear=" << normalized_linear << ", angular=" << normalized_angular << std::endl;
-            std::cout << "Scaled Final Linear: " << scaled_linear << std::endl;
             std::cout << "Waypoint Index: " << current_waypoint_index << " / " << (current_path.has_value() ? current_path->waypoints.size() : 0) << std::endl;
             std::cout << "=========================" << std::endl;
         }
         apply_debug_count++;
-        robot->set_linear(scaled_linear);   // Normal linear control  
-        robot->set_angular(-normalized_angular); // Invert angular control
+        
+        // Direct pass-through to robot's control methods
+        // Note: Robot uses opposite angular velocity convention (positive = CW)
+        // while navcon uses standard convention (positive = CCW)
+        robot->set_linear(cmd.linear_velocity);
+        robot->set_angular(-cmd.angular_velocity);  // Invert for robot's convention
     }
 
     void NavigationController::update_waypoint_progress() {
@@ -429,13 +341,6 @@ namespace fs {
         clear_path();
     }
 
-    navcon::Point NavigationController::to_navcon_point(const concord::Point &point) const {
-        return point; // navcon uses concord types directly
-    }
-
-    concord::Point NavigationController::to_concord_point(const navcon::Point &point) const {
-        return point; // navcon uses concord types directly
-    }
 
     void NavigationController::visualize_current_path() const {
         if (!current_path.has_value() || !rec) return;
