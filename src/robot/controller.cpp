@@ -150,6 +150,9 @@ namespace fs {
         // Use reasonable navigation limits for angular velocity
         constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians (typical tractor)
         constraints.max_angular_velocity = 1.0f;                // 1 rad/s = ~57 degrees/sec - reasonable for navigation
+        
+        // Set actual turning radius from machine configuration
+        constraints.turning_radius = robot->info.turning_radius;
 
         // Compute control command
         auto velocity_cmd = controller->compute_control(state, goal, constraints, dt);

@@ -69,5 +69,8 @@
     "capacity": 100.0,
     "consumption_rate": 0.05,
     "charge_rate": 0.0
+  },
+  "turn": {
+    "radius": 0.0
   }
 }

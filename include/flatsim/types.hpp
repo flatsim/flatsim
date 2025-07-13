@@ -76,6 +76,7 @@ namespace fs {
         std::optional<TankInfo> tank;  // Optional tank (harvesters, biners)
         std::optional<PowerInfo> power_source;  // Optional power (not all machines need power)
         RobotRole role = RobotRole::MASTER;  // Default to MASTER
+        float turning_radius = 1.0f;  // Turning radius in meters (from machine config)
     };
     
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };

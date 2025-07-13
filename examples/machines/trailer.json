@@ -77,5 +77,8 @@
     "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
     "size": { "width": 1.62, "height": 2.34, "depth": 0.0 },
     "description": "Central storage compartment"
+  },
+  "turn": {
+    "radius": 4.2
   }
 }
