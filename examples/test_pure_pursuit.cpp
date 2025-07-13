@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     try {
         auto tractor_info =
             fs::Loader::load_from_json("examples/machines/tractor.json",
-                                       concord::Pose{concord::Point{0.0f, 0.0f}, concord::Euler{0.0f, 0.0f, 0.0f}});
+                                       concord::Pose{concord::Point{-5.0f, -5.0f}, concord::Euler{0.0f, 0.0f, 0.0f}});
         simulator.add_robot(tractor_info);
     } catch (const std::exception &e) {
         std::cerr << "Failed to load tractor: " << e.what() << std::endl;
@@ -41,47 +41,47 @@ int main(int argc, char *argv[]) {
 
     // Test Pure Pursuit with a curved path
     std::cout << "\n--- Testing Pure Pursuit Controller with Curved Path ---" << std::endl;
-    
+
     // IMPORTANT: Set controller type BEFORE setting path
     std::cout << "Setting controller to Pure Pursuit..." << std::endl;
     tractor.set_navigation_controller_type(fs::ControllerType::PURE_PURSUIT);
 
     // Create a dense curved path with many waypoints for better Pure Pursuit performance
     std::vector<concord::Point> curved_path = {
-        {5.0f, 0.0f},    // Start closer to robot
-        {8.0f, 1.0f},    // Gradual start
-        {12.0f, 3.0f},   // 
-        {16.0f, 6.0f},   // 
-        {20.0f, 10.0f},  // 
-        {24.0f, 15.0f},  // 
-        {28.0f, 21.0f},  // 
-        {32.0f, 28.0f},  // 
-        {35.0f, 35.0f},  // 
-        {37.0f, 42.0f},  // 
-        {38.0f, 49.0f},  // Top of curve
-        {37.0f, 56.0f},  // Start turning back
-        {35.0f, 62.0f},  // 
-        {32.0f, 67.0f},  // 
-        {28.0f, 71.0f},  // 
-        {23.0f, 74.0f},  // 
-        {18.0f, 76.0f},  // 
-        {12.0f, 77.0f},  // 
-        {6.0f, 76.0f},   // S-curve starts
-        {1.0f, 74.0f},   // 
-        {-3.0f, 71.0f},  // 
-        {-6.0f, 67.0f},  // 
-        {-8.0f, 62.0f},  // 
-        {-9.0f, 56.0f},  // 
-        {-8.0f, 50.0f},  // Final curve
-        {-6.0f, 44.0f},  // 
-        {-3.0f, 39.0f},  // 
-        {1.0f, 35.0f},   // 
-        {6.0f, 32.0f},   // 
-        {12.0f, 30.0f}   // End point
+        {5.0f, 0.0f},   // Start closer to robot
+        {8.0f, 1.0f},   // Gradual start
+        {12.0f, 3.0f},  //
+        {16.0f, 6.0f},  //
+        {20.0f, 10.0f}, //
+        {24.0f, 15.0f}, //
+        {28.0f, 21.0f}, //
+        {32.0f, 28.0f}, //
+        {35.0f, 35.0f}, //
+        {37.0f, 42.0f}, //
+        {38.0f, 49.0f}, // Top of curve
+        {37.0f, 56.0f}, // Start turning back
+        {35.0f, 62.0f}, //
+        {32.0f, 67.0f}, //
+        {28.0f, 71.0f}, //
+        {23.0f, 74.0f}, //
+        {18.0f, 76.0f}, //
+        {12.0f, 77.0f}, //
+        {6.0f, 76.0f},  // S-curve starts
+        {1.0f, 74.0f},  //
+        {-3.0f, 71.0f}, //
+        {-6.0f, 67.0f}, //
+        {-8.0f, 62.0f}, //
+        {-9.0f, 56.0f}, //
+        {-8.0f, 50.0f}, // Final curve
+        {-6.0f, 44.0f}, //
+        {-3.0f, 39.0f}, //
+        {1.0f, 35.0f},  //
+        {6.0f, 32.0f},  //
+        {12.0f, 30.0f}  // End point
     };
 
     fs::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
-    
+
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
     tractor.set_navigation_path(path);
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
-        if (elapsed > 120) { // 2 minute timeout
+        if (elapsed > 420) { // 2 minute timeout
             std::cout << "Timeout reached!" << std::endl;
             break;
         }

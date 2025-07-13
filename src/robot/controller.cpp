@@ -17,7 +17,6 @@ namespace fs {
         rec = robot->rec;
     }
 
-
     void NavigationController::create_controller() {
         navcon::ControllerConfig config;
 
@@ -71,11 +70,11 @@ namespace fs {
         current_waypoint_index = 0;
         goal_reached = false;
         path_completed = false;
-        
+
         // Convert PathGoal to navcon::Path and set it in the controller
         if (controller) {
             navcon::Path navcon_path;
-            for (const auto& waypoint : path.waypoints) {
+            for (const auto &waypoint : path.waypoints) {
                 navcon::Pose wp;
                 wp.point = waypoint;
                 wp.angle = concord::Euler{0.0f, 0.0f, 0.0f}; // No specific heading required
@@ -95,7 +94,7 @@ namespace fs {
         current_path.reset();
         current_waypoint_index = 0;
         path_completed = false;
-        
+
         // Clear path in the navcon controller
         if (controller) {
             navcon::Path empty_path;
@@ -129,7 +128,8 @@ namespace fs {
         // Get current target goal
         // NOTE: For Pure Pursuit, pass empty goal since it uses the path directly
         navcon::Goal goal;
-        if (controller_type == ControllerType::PID || controller_type == ControllerType::STANLEY || controller_type == ControllerType::CARROT) {
+        if (controller_type == ControllerType::PID || controller_type == ControllerType::STANLEY ||
+            controller_type == ControllerType::CARROT) {
             goal = get_current_navcon_goal(); // Point-based controllers need specific targets
         }
         // Pure Pursuit uses the path set with set_path(), not individual goals
@@ -149,7 +149,7 @@ namespace fs {
 
         // Use reasonable navigation limits for angular velocity
         constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians (typical tractor)
-        constraints.max_angular_velocity = 1.0f; // 1 rad/s = ~57 degrees/sec - reasonable for navigation
+        constraints.max_angular_velocity = 1.0f;                // 1 rad/s = ~57 degrees/sec - reasonable for navigation
 
         // Compute control command
         auto velocity_cmd = controller->compute_control(state, goal, constraints, dt);
@@ -195,7 +195,7 @@ namespace fs {
         // debug_state_count++;
 
         state.pose = pose;
-        
+
         state.velocity.linear = 0.0;  // TODO: get from robot if available
         state.velocity.angular = 0.0; // TODO: get from robot if available
         state.timestamp = 0.0;        // TODO: get actual timestamp
@@ -218,26 +218,26 @@ namespace fs {
         return goal;
     }
 
-
     void NavigationController::apply_velocity_command(const navcon::VelocityCommand &cmd) {
         // Simply pass through the velocity commands to the robot
         // The robot is responsible for handling its own scaling and limits
-        
+
         // Debug output for angular control issues
         static int apply_debug_count = 0;
         if (apply_debug_count % 50 == 0) { // Debug output
             auto pos = robot->get_position();
             auto target = get_current_target();
-            
+
             // Calculate distance to target
-            double distance_to_target = std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
-            
+            double distance_to_target =
+                std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
+
             // Calculate desired heading and error
             double desired_heading = std::atan2(target.y - pos.point.y, target.x - pos.point.x);
             double heading_error = desired_heading - pos.angle.yaw;
             while (heading_error > M_PI) heading_error -= 2.0 * M_PI;
             while (heading_error < -M_PI) heading_error += 2.0 * M_PI;
-            
+
             // Convert angles to degrees for easier reading
             double current_yaw_deg = pos.angle.yaw * 180.0 / M_PI;
             double desired_heading_deg = desired_heading * 180.0 / M_PI;
@@ -248,19 +248,22 @@ namespace fs {
             std::cout << "Target Position: (" << target.x << ", " << target.y << ")" << std::endl;
             std::cout << "Distance to Target: " << distance_to_target << " meters" << std::endl;
             std::cout << "Current Yaw: " << pos.angle.yaw << " rad (" << current_yaw_deg << " deg)" << std::endl;
-            std::cout << "Desired Heading: " << desired_heading << " rad (" << desired_heading_deg << " deg)" << std::endl;
+            std::cout << "Desired Heading: " << desired_heading << " rad (" << desired_heading_deg << " deg)"
+                      << std::endl;
             std::cout << "Heading Error: " << heading_error << " rad (" << heading_error_deg << " deg)" << std::endl;
-            std::cout << "NavCon Commands: linear=" << cmd.linear_velocity << ", angular=" << cmd.angular_velocity << std::endl;
-            std::cout << "Waypoint Index: " << current_waypoint_index << " / " << (current_path.has_value() ? current_path->waypoints.size() : 0) << std::endl;
+            std::cout << "NavCon Commands: linear=" << cmd.linear_velocity << ", angular=" << cmd.angular_velocity
+                      << std::endl;
+            std::cout << "Waypoint Index: " << current_waypoint_index << " / "
+                      << (current_path.has_value() ? current_path->waypoints.size() : 0) << std::endl;
             std::cout << "=========================" << std::endl;
         }
         apply_debug_count++;
-        
+
         // Direct pass-through to robot's control methods
         // Note: Robot uses opposite angular velocity convention (positive = CW)
         // while navcon uses standard convention (positive = CCW)
         robot->set_linear(cmd.linear_velocity);
-        robot->set_angular(-cmd.angular_velocity);  // Invert for robot's convention
+        robot->set_angular(-cmd.angular_velocity); // Invert for robot's convention
     }
 
     void NavigationController::update_waypoint_progress() {
@@ -269,15 +272,14 @@ namespace fs {
         }
 
         float distance = get_distance_to_current_waypoint();
-        
+
         // Debug waypoint progression
         static int waypoint_debug_count = 0;
         if (waypoint_debug_count % 50 == 0) {
             auto robot_pos = robot->get_position().point;
             auto current_target = current_path->waypoints[current_waypoint_index];
-            std::cout << "WAYPOINT DEBUG: Index=" << current_waypoint_index 
-                      << ", Robot(" << robot_pos.x << "," << robot_pos.y << ")"
-                      << ", Target(" << current_target.x << "," << current_target.y << ")"
+            std::cout << "WAYPOINT DEBUG: Index=" << current_waypoint_index << ", Robot(" << robot_pos.x << ","
+                      << robot_pos.y << ")" << ", Target(" << current_target.x << "," << current_target.y << ")"
                       << ", Distance=" << distance << ", Tolerance=" << current_path->tolerance << std::endl;
         }
         waypoint_debug_count++;
@@ -341,7 +343,6 @@ namespace fs {
         clear_path();
     }
 
-
     void NavigationController::visualize_current_path() const {
         if (!current_path.has_value() || !rec) return;
 
@@ -357,7 +358,7 @@ namespace fs {
             rec->log_static(robot->info.name + "/navigation/planned_path",
                             rerun::LineStrips3D(path_line)
                                 .with_colors({{0, 255, 0}}) // Green for planned path
-                                .with_radii({{0.15f}}));
+                                .with_radii({{0.0375f}}));
         }
 
         // Visualize individual waypoints as green spheres
@@ -370,7 +371,7 @@ namespace fs {
             rec->log_static(robot->info.name + "/navigation/waypoints",
                             rerun::Points3D(waypoint_positions)
                                 .with_colors({{0, 255, 0}}) // Green waypoints
-                                .with_radii({{0.4f}}));
+                                .with_radii({{0.1f}}));
         }
 
         // Highlight current target waypoint in yellow
@@ -380,7 +381,7 @@ namespace fs {
                 robot->info.name + "/navigation/current_target",
                 rerun::Points3D({{static_cast<float>(current_target.x), static_cast<float>(current_target.y), 0.4f}})
                     .with_colors({{255, 255, 0}}) // Yellow for current target
-                    .with_radii({{0.6f}}));
+                    .with_radii({{0.15f}}));
         }
     }
 
@@ -393,7 +394,7 @@ namespace fs {
         rec->log_static(robot->info.name + "/navigation/goal",
                         rerun::Points3D({{static_cast<float>(target.x), static_cast<float>(target.y), 0.3f}})
                             .with_colors({{255, 0, 0}}) // Red for goal
-                            .with_radii({{0.5f}}));
+                            .with_radii({{0.125f}}));
 
         // Visualize tolerance circle around goal
         std::vector<std::array<float, 3>> tolerance_circle;
@@ -410,7 +411,7 @@ namespace fs {
             rec->log_static(robot->info.name + "/navigation/goal_tolerance",
                             rerun::LineStrips3D(tolerance_line)
                                 .with_colors({{255, 0, 0, 128}}) // Semi-transparent red
-                                .with_radii({{0.08f}}));
+                                .with_radii({{0.02f}}));
         }
     }
 
@@ -429,22 +430,7 @@ namespace fs {
         rec->log_static(robot->info.name + "/navigation/direction",
                         rerun::LineStrips3D(direction_strip)
                             .with_colors({{255, 165, 0}}) // Orange for direction
-                            .with_radii({{0.1f}}));
-
-        // Visualize robot heading as a purple arrow
-        float heading_length = 2.0f;
-        float heading_x = robot_pos.point.x + heading_length * std::cos(robot_pos.angle.yaw);
-        float heading_y = robot_pos.point.y + heading_length * std::sin(robot_pos.angle.yaw);
-
-        std::vector<std::array<float, 3>> heading_line = {
-            {static_cast<float>(robot_pos.point.x), static_cast<float>(robot_pos.point.y), 0.25f},
-            {heading_x, heading_y, 0.25f}};
-
-        auto heading_strip = rerun::components::LineStrip3D(heading_line);
-        rec->log_static(robot->info.name + "/navigation/heading",
-                        rerun::LineStrips3D(heading_strip)
-                            .with_colors({{128, 0, 128}}) // Purple for heading
-                            .with_radii({{0.12f}}));
+                            .with_radii({{0.025f}}));
     }
 
 } // namespace fs

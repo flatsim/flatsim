@@ -52,9 +52,9 @@ namespace fs {
 
         // Controller parameters
         struct ControllerParams {
-            // PID parameters - much more conservative to prevent oscillation
-            float linear_kp = 0.2f, linear_ki = 0.0f, linear_kd = 0.02f;
-            float angular_kp = 0.3f, angular_ki = 0.0f, angular_kd = 0.02f;
+            // PID parameters - increased gains for proper movement
+            float linear_kp = 2.0f, linear_ki = 0.0f, linear_kd = 0.1f;
+            float angular_kp = 1.5f, angular_ki = 0.0f, angular_kd = 0.1f;
 
             // Pure pursuit parameters
             float lookahead_distance = 2.5f; // Shorter distance to stay closer to path
