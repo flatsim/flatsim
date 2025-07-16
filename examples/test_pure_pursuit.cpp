@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "flatsim/loader.hpp"
-#include "flatsim/robot/controller.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include "rerun/recording_stream.hpp"
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     // IMPORTANT: Set controller type BEFORE setting path
     std::cout << "Setting controller to Pure Pursuit..." << std::endl;
-    tractor.set_navigation_controller_type(fs::ControllerType::PURE_PURSUIT);
+    tractor.navcon->set_controller_type(navcon::NavconControllerType::PURE_PURSUIT);
 
     // Create a dense curved path with many waypoints for better Pure Pursuit performance
     std::vector<concord::Point> curved_path = {
@@ -80,10 +79,10 @@ int main(int argc, char *argv[]) {
         {12.0f, 30.0f}  // End point
     };
 
-    fs::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
+    navcon::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
-    tractor.set_navigation_path(path);
+    tractor.navcon->set_path(path);
 
     std::cout << "Starting Pure Pursuit path following..." << std::endl;
     std::cout << "This should show smooth curved motion using lookahead points" << std::endl;
@@ -92,7 +91,7 @@ int main(int argc, char *argv[]) {
     float dt = 0.016f; // 60 FPS
 
     int step_count = 0;
-    while (!tractor.is_navigation_path_completed()) {
+    while (!tractor.navcon->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -106,7 +105,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress every 2 seconds to see path following behavior
         if (step_count % 120 == 0) { // Every ~2 seconds at 60 FPS
-            auto target = tractor.get_current_navigation_target();
+            auto target = tractor.navcon->get_current_target();
             auto pos = tractor.get_position();
             std::cout << "Step " << step_count / 60 << "s: Target(" << target.x << "," << target.y << "), Robot("
                       << pos.point.x << "," << pos.point.y << "), Yaw=" << pos.angle.yaw << std::endl;
@@ -116,7 +115,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
-    if (tractor.is_navigation_path_completed()) {
+    if (tractor.navcon->is_path_completed()) {
         std::cout << "\n✅ Pure Pursuit successfully completed the curved path!" << std::endl;
         std::cout << "Check Rerun visualization to see the smooth path following behavior." << std::endl;
     } else {

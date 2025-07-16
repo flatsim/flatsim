@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "flatsim/loader.hpp"
-#include "flatsim/robot/controller.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include "rerun/recording_stream.hpp"
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     // IMPORTANT: Set controller type BEFORE setting path
     std::cout << "Setting controller to PID..." << std::endl;
-    tractor.set_navigation_controller_type(fs::ControllerType::PID);
+    tractor.navcon->set_controller_type(navcon::NavconControllerType::PID);
 
     // Create a smooth path that tests PID's error correction capabilities
     // PID controller excels at smooth error correction with proportional, integral, and derivative terms
@@ -69,10 +68,10 @@ int main(int argc, char *argv[]) {
         {112.0f, 12.0f}  // End point
     };
 
-    fs::PathGoal path(smooth_path, 2.0f, 2.5f, false); // Moderate tolerance for PID precision
+    navcon::PathGoal path(smooth_path, 2.0f, 2.5f, false); // Moderate tolerance for PID precision
 
     std::cout << "Setting navigation path with " << smooth_path.size() << " waypoints..." << std::endl;
-    tractor.set_navigation_path(path);
+    tractor.navcon->set_path(path);
 
     std::cout << "Starting PID Controller path following..." << std::endl;
     std::cout << "PID should demonstrate smooth error correction and minimal oscillation" << std::endl;
@@ -86,7 +85,7 @@ int main(int argc, char *argv[]) {
     float total_error = 0.0f;
     int error_samples = 0;
 
-    while (!tractor.is_navigation_path_completed()) {
+    while (!tractor.navcon->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -99,7 +98,7 @@ int main(int argc, char *argv[]) {
         simulator.tock(5);
 
         // Calculate tracking error for PID performance analysis
-        auto target = tractor.get_current_navigation_target();
+        auto target = tractor.navcon->get_current_target();
         auto pos = tractor.get_position();
         float tracking_error = std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
 
@@ -119,7 +118,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
-    if (tractor.is_navigation_path_completed()) {
+    if (tractor.navcon->is_path_completed()) {
         std::cout << "\n✅ PID Controller successfully completed the smooth path!" << std::endl;
         std::cout << "Check Rerun visualization to see the smooth error correction behavior." << std::endl;
     } else {
@@ -147,8 +146,8 @@ int main(int argc, char *argv[]) {
         {final_pos.point.x + 20.0f, final_pos.point.y + 20.0f}  // Final diagonal step
     };
 
-    fs::PathGoal step_goal(step_path, 2.0f, 2.0f, false);
-    tractor.set_navigation_path(step_goal);
+    navcon::PathGoal step_goal(step_path, 2.0f, 2.0f, false);
+    tractor.navcon->set_path(step_goal);
 
     std::cout << "Testing step response with PID controller..." << std::endl;
     std::cout << "PID should show controlled response to sudden direction changes" << std::endl;
@@ -160,7 +159,7 @@ int main(int argc, char *argv[]) {
     total_error = 0.0f;
     error_samples = 0;
 
-    while (!tractor.is_navigation_path_completed()) {
+    while (!tractor.navcon->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -173,7 +172,7 @@ int main(int argc, char *argv[]) {
         simulator.tock(5);
 
         // Track PID performance during step response
-        auto target = tractor.get_current_navigation_target();
+        auto target = tractor.navcon->get_current_target();
         auto pos = tractor.get_position();
         float tracking_error = std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
 
@@ -192,7 +191,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    if (tractor.is_navigation_path_completed()) {
+    if (tractor.navcon->is_path_completed()) {
         std::cout << "\n✅ PID Controller successfully completed the step response test!" << std::endl;
         std::cout << "PID's step response should show controlled transient behavior." << std::endl;
     } else {

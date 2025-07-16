@@ -8,7 +8,6 @@
 
 #include "flatsim/exceptions.hpp"
 #include "flatsim/robot/chassis/chassis.hpp"
-#include "flatsim/robot/controller.hpp"
 #include "flatsim/robot/power.hpp"
 #include "flatsim/robot/sensor.hpp"
 #include "flatsim/robot/sensors/gps_sensor.hpp"
@@ -18,6 +17,7 @@
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
+#include "navcon.hpp"
 
 #include <memory>
 #include <optional>
@@ -30,7 +30,6 @@ namespace fs {
     class Robot {
         friend class ControlSystem;
         friend class ChainManager;
-        friend class NavigationController;
 
       private:
         bool pulsing = false;
@@ -50,12 +49,14 @@ namespace fs {
         // New modular systems
         std::unique_ptr<ControlSystem> control_system;
         std::unique_ptr<ChainManager> chain_manager;
-        std::unique_ptr<NavigationController> navigation_controller;
 
       public:
         RobotInfo info;
         OP mode = OP::IDLE;
         RobotRole role;
+
+        // Public navigation controller for direct access
+        std::unique_ptr<navcon::Navcon> navcon;
 
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
@@ -159,17 +160,8 @@ namespace fs {
         // Set simulator reference (called by simulator when robot is added)
         void set_simulator(Simulator *sim) { simulator = sim; }
 
-        // Navigation control methods
-        void set_navigation_goal(const NavigationGoal &goal);
-        void set_navigation_path(const PathGoal &path);
-        void clear_navigation_goal();
-        void clear_navigation_path();
-        bool is_navigation_goal_reached() const;
-        bool is_navigation_path_completed() const;
-        float get_distance_to_navigation_goal() const;
-        concord::Point get_current_navigation_target() const;
-        void set_navigation_controller_type(ControllerType type);
-        void emergency_navigation_stop();
+        // Simple helper method to update navigation and apply velocity commands
+        void update_navigation(float dt);
 
       private:
         concord::Datum datum;

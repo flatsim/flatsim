@@ -14,7 +14,7 @@ namespace fs {
         // Initialize modular systems
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
-        navigation_controller = std::make_unique<NavigationController>(this);
+        navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PATH_CONTROLLER);
     }
     Robot::~Robot() {}
 
@@ -38,9 +38,7 @@ namespace fs {
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
         
         // Update navigation controller
-        if (navigation_controller) {
-            navigation_controller->update(dt);
-        }
+        update_navigation(dt);
         
         chassis->tick(dt);
         chassis->update(control_system->get_steerings(), control_system->get_throttles(), dt);
@@ -101,8 +99,25 @@ namespace fs {
         // Initialize control system
         control_system->init(robo);
         
-        // Initialize navigation controller
-        navigation_controller->init(robo);
+        // Initialize navigation controller with robot constraints
+        navcon::RobotConstraints constraints;
+        constraints.wheelbase = 3.0;   // Reasonable wheelbase for tractor
+        constraints.track_width = 2.0; // Reasonable track width
+        
+        // Use actual robot throttle limits
+        float max_throttle = 0.0f;
+        for (size_t i = 0; i < robo.controls.throttles_max.size(); ++i) {
+            max_throttle = std::max(max_throttle, robo.controls.throttles_max[i]);
+        }
+        constraints.max_linear_velocity = max_throttle;
+        constraints.min_linear_velocity = -max_throttle;
+        
+        // Set reasonable navigation limits
+        constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians
+        constraints.max_angular_velocity = 1.0f;                // 1 rad/s
+        constraints.min_turning_radius = robo.turning_radius;
+        
+        navcon->init(constraints, rec);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
@@ -315,6 +330,11 @@ namespace fs {
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+        
+        // Update navigation visualization
+        if (navcon) {
+            navcon->tock();
+        }
     }
 
     void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
@@ -334,56 +354,28 @@ namespace fs {
         pulsing = false;
     }
 
-    // Navigation control methods
-    void Robot::set_navigation_goal(const NavigationGoal& goal) {
-        if (navigation_controller) {
-            navigation_controller->set_goal(goal);
+    // Navigation helper method
+    void Robot::update_navigation(float dt) {
+        if (!navcon) {
+            return;
         }
-    }
-
-    void Robot::set_navigation_path(const PathGoal& path) {
-        if (navigation_controller) {
-            navigation_controller->set_path(path);
-        }
-    }
-
-    void Robot::clear_navigation_goal() {
-        if (navigation_controller) {
-            navigation_controller->clear_goal();
-        }
-    }
-
-    void Robot::clear_navigation_path() {
-        if (navigation_controller) {
-            navigation_controller->clear_path();
-        }
-    }
-
-    bool Robot::is_navigation_goal_reached() const {
-        return navigation_controller ? navigation_controller->is_goal_reached() : false;
-    }
-
-    bool Robot::is_navigation_path_completed() const {
-        return navigation_controller ? navigation_controller->is_path_completed() : false;
-    }
-
-    float Robot::get_distance_to_navigation_goal() const {
-        return navigation_controller ? navigation_controller->get_distance_to_goal() : std::numeric_limits<float>::infinity();
-    }
-
-    concord::Point Robot::get_current_navigation_target() const {
-        return navigation_controller ? navigation_controller->get_current_target() : concord::Point{0, 0};
-    }
-
-    void Robot::set_navigation_controller_type(ControllerType type) {
-        if (navigation_controller) {
-            navigation_controller->set_controller_type(type);
-        }
-    }
-
-    void Robot::emergency_navigation_stop() {
-        if (navigation_controller) {
-            navigation_controller->emergency_stop();
+        
+        // Get current robot state
+        navcon::RobotState state;
+        state.pose = info.bound.pose;
+        state.velocity.linear = 0.0;  // TODO: get from robot if available
+        state.velocity.angular = 0.0; // TODO: get from robot if available
+        state.timestamp = 0.0;        // TODO: get actual timestamp
+        
+        // Compute control command
+        auto velocity_cmd = navcon->tick(state, dt);
+        
+        if (velocity_cmd.valid) {
+            // Apply velocity command directly
+            // Note: Robot uses opposite angular velocity convention (positive = CW)
+            // while navcon uses standard convention (positive = CCW)
+            set_linear(velocity_cmd.linear_velocity);
+            set_angular(-velocity_cmd.angular_velocity); // Invert for robot's convention
         }
     }
 
