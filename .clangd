@@ -13,6 +13,7 @@ CompileFlags:
     - "-I/usr/local/cuda-12.9/targets/x86_64-linux/include"
     - "--system-header-prefix=/usr/local/cuda"
     - "-ferror-limit=0"
+    - "-Wno-unused-but-set-variable"
   Remove:
     - "-arch=sm_89"
     - "-extended-lambda"

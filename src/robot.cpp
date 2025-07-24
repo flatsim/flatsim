@@ -34,12 +34,12 @@ namespace fs {
         this->info.bound.pose.point.x = chassis->get_transform().position.x;
         this->info.bound.pose.point.y = chassis->get_transform().position.y;
         // Physics engine gives angle 90 degrees off - correct it
-        this->info.bound.pose.angle.yaw = chassis->get_transform().rotation.GetAngle() + M_PI/2;
+        this->info.bound.pose.angle.yaw = chassis->get_transform().rotation.GetAngle() + M_PI / 2;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
-        
+
         // Update navigation controller
         update_navigation(dt);
-        
+
         chassis->tick(dt);
         chassis->update(control_system->get_steerings(), control_system->get_throttles(), dt);
 
@@ -98,12 +98,12 @@ namespace fs {
 
         // Initialize control system
         control_system->init(robo);
-        
+
         // Initialize navigation controller with robot constraints
         navcon::RobotConstraints constraints;
         constraints.wheelbase = 3.0;   // Reasonable wheelbase for tractor
         constraints.track_width = 2.0; // Reasonable track width
-        
+
         // Use actual robot throttle limits
         float max_throttle = 0.0f;
         for (size_t i = 0; i < robo.controls.throttles_max.size(); ++i) {
@@ -111,12 +111,12 @@ namespace fs {
         }
         constraints.max_linear_velocity = max_throttle;
         constraints.min_linear_velocity = -max_throttle;
-        
+
         // Set reasonable navigation limits
         constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians
         constraints.max_angular_velocity = 1.0f;                // 1 rad/s
         constraints.min_turning_radius = robo.turning_radius;
-        
+
         navcon->init(constraints, rec);
 
         // Initialize tank if present
@@ -330,7 +330,7 @@ namespace fs {
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
         rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
-        
+
         // Update navigation visualization
         if (navcon) {
             navcon->tock();
@@ -359,17 +359,17 @@ namespace fs {
         if (!navcon) {
             return;
         }
-        
+
         // Get current robot state
         navcon::RobotState state;
         state.pose = info.bound.pose;
         state.velocity.linear = 0.0;  // TODO: get from robot if available
         state.velocity.angular = 0.0; // TODO: get from robot if available
         state.timestamp = 0.0;        // TODO: get actual timestamp
-        
+
         // Compute control command
         auto velocity_cmd = navcon->tick(state, dt);
-        
+
         if (velocity_cmd.valid) {
             // Apply velocity command directly
             // Note: Robot uses opposite angular velocity convention (positive = CW)

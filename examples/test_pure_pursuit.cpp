@@ -83,6 +83,10 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
     tractor.navcon->set_path(path);
+    
+    // Smoothen the path for better Pure Pursuit performance
+    std::cout << "Smoothening path with 50cm intervals..." << std::endl;
+    tractor.navcon->smoothen(50.0f); // Add points every 50cm
 
     std::cout << "Starting Pure Pursuit path following..." << std::endl;
     std::cout << "This should show smooth curved motion using lookahead points" << std::endl;

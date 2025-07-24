@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 PROJECT_NAME := $(shell grep -Po 'set\s*\(\s*project_name\s+\K[^)]+' CMakeLists.txt)
 PROJECT_CAP  := $(shell echo $(PROJECT_NAME) | tr '[:lower:]' '[:upper:]')
 LATEST_TAG   ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
@@ -14,19 +16,19 @@ $(info ------------------------------------------)
 $(info Project: $(PROJECT_NAME))
 $(info ------------------------------------------)
 
-.PHONY: build b compile c run r test t help h clean docs release
+.PHONY: build b config c run r test t help h clean docs release
 
 
 build:
 	@if [ ! -d "$(BUILD_DIR)" ]; then \
-		echo "Build directory doesn't exist, running compile first..."; \
-		$(MAKE) compile; \
+		echo "Build directory doesn't exist, running config first..."; \
+		$(MAKE) config; \
 	fi
 	@cd $(BUILD_DIR) && set -o pipefail && make -j 2>&1 | tee >(grep "^$(TOP_DIR)" | grep -E "error:" > "$(TOP_DIR)/.quickfix")
 
 b: build
 
-compile:
+config:
 	@rm -rf $(BUILD_DIR)
 	@mkdir -p $(BUILD_DIR)
 ifeq ($(KOKKOS),ON)
@@ -37,7 +39,7 @@ else
 	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON ..
 endif
 
-c: compile
+c: config
 
 run:
 	@./build/main
@@ -55,7 +57,7 @@ help:
 	@echo
 	@echo "Available targets:"
 	@echo "  build        Build project"
-	@echo "  compile      Configure and generate build files"
+	@echo "  config       Configure and generate build files"
 	@echo "  run          Run the main executable"
 	@echo "  test         Run tests"
 	@echo "  docs         Build documentation (TYPE=mdbook|doxygen)"
