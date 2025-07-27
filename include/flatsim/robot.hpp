@@ -24,7 +24,6 @@
 #include <vector>
 
 namespace fs {
-    // Forward declaration to avoid circular dependency
     class Simulator;
 
     class Robot {
