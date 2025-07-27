@@ -22,10 +22,10 @@ int main() {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
-    LanInterface robot1("flat1", 8000);
-    LanInterface robot2("flat2", 8000);
-    LanInterface robot3("flat3", 8000);
-    LanInterface robot4("flat4", 8000);
+    LanInterface robot1("eno2", 8000);
+    LanInterface robot2("eno2", 8001);
+    LanInterface robot3("eno2", 8002);
+    LanInterface robot4("eno2", 8003);
 
     if (!robot1.start()) {
         std::cerr << "Failed to start robot1" << std::endl;

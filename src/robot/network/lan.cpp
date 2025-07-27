@@ -24,7 +24,8 @@ LanInterface::LanInterface(const std::string &interface, uint16_t port, const st
         owns_interface_ = true;
     } else {
         interface_name_ = interface;
-        owns_interface_ = true; // We want to create the named interface
+        // Check if interface already exists
+        owns_interface_ = (if_nametoindex(interface.c_str()) == 0);
     }
 
     if (ipv6_addr.empty()) {
