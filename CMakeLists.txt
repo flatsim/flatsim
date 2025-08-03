@@ -83,8 +83,11 @@ list(APPEND ext_deps farmtrax::farmtrax)
 # Add navcon navigation controller library
 add_subdirectory(other/navcon)
 list(APPEND ext_deps navcon::navcon)
-# Explicitly include navcon headers
 include_directories(other/navcon/include)
+
+add_subdirectory(other/impulse)
+list(APPEND ext_deps impulse::impulse)
+include_directories(other/impulse/include)
 
 
 # --------------------------------------------------------------------------------------------------
