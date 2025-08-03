@@ -120,7 +120,7 @@ namespace fs {
             this->name + "/chassis",
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
                 .with_radii({{0.02f}})
-                .with_labels({label})
+                // .with_labels({label})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
                 .with_colors(colors));

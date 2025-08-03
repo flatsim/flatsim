@@ -93,6 +93,11 @@ RobotInfo Loader::load_from_json(const std::filesystem::path& json_path,
         parse_capability(robot_info, j["capability"]);
     }
     
+    // Parse turning radius
+    if (j.contains("turn") && j["turn"].contains("radius")) {
+        robot_info.turning_radius = j["turn"]["radius"].get<float>();
+    }
+    
     return robot_info;
 }
 

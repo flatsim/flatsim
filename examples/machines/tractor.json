@@ -85,5 +85,8 @@
     "work_on": ["field", "crop"],
     "connect_to": ["trailer", "cultivator"],
     "unload_to": []
+  },
+  "turn": {
+    "radius": 2.4
   }
 }

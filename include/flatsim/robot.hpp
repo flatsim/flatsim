@@ -17,13 +17,13 @@
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
+#include "navcon.hpp"
 
 #include <memory>
 #include <optional>
 #include <vector>
 
 namespace fs {
-    // Forward declaration to avoid circular dependency
     class Simulator;
 
     class Robot {
@@ -54,6 +54,9 @@ namespace fs {
         OP mode = OP::IDLE;
         RobotRole role;
 
+        // Public navigation controller for direct access
+        std::unique_ptr<navcon::Navcon> navcon;
+
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
 
@@ -79,13 +82,9 @@ namespace fs {
         void add_sensor(std::unique_ptr<Sensor> sensor);
         template <typename T> T *get_sensor() const {
             for (const auto &sensor : sensors) {
-                if (!sensor) {
-                    continue; // Skip null sensors
-                }
+                if (!sensor) continue;
                 T *typed_sensor = dynamic_cast<T *>(sensor.get());
-                if (typed_sensor) {
-                    return typed_sensor;
-                }
+                if (typed_sensor) return typed_sensor;
             }
             return nullptr;
         }
@@ -104,9 +103,7 @@ namespace fs {
             chassis->toggle_all_except_section_work(karosserie_name, except_section_id);
         }
         std::vector<Karosserie> *get_karosseries() {
-            if (!chassis) {
-                throw NullPointerException("chassis");
-            }
+            if (!chassis) throw NullPointerException("chassis");
             return &chassis->karosseries;
         }
 
@@ -161,6 +158,9 @@ namespace fs {
 
         // Set simulator reference (called by simulator when robot is added)
         void set_simulator(Simulator *sim) { simulator = sim; }
+
+        // Simple helper method to update navigation and apply velocity commands
+        void update_navigation(float dt);
 
       private:
         concord::Datum datum;

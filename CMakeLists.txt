@@ -13,6 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(params
     -Wno-reorder
     -Wno-unused-variable
+    -Wno-unused-but-set-variable
     -Wno-unused-parameter
 )
 
@@ -79,10 +80,14 @@ FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtra
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-# Find libcurl for pdoc example
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(CURL REQUIRED libcurl)
-list(APPEND ext_deps ${CURL_LIBRARIES})
+# Add navcon navigation controller library
+add_subdirectory(other/navcon)
+list(APPEND ext_deps navcon::navcon)
+include_directories(other/navcon/include)
+
+add_subdirectory(other/impulse)
+list(APPEND ext_deps impulse::impulse)
+include_directories(other/impulse/include)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -130,7 +135,7 @@ file(GLOB_RECURSE internal_deps
 
 # --------------------------------------------------------------------------------------------------
 if(${project_name_upper}_BUILD_EXAMPLES)
-  file(GLOB exe examples/*.cpp)
+  file(GLOB exe CONFIGURE_DEPENDS examples/*.cpp)
   # ----------------------------------------------
   set(exec_names)
   foreach(src_file IN LISTS exe)
@@ -170,7 +175,7 @@ if(${project_name_upper}_ENABLE_TESTS)
   FetchContent_Declare(DocTest GIT_REPOSITORY "https://github.com/onqtam/doctest")
   FetchContent_MakeAvailable(DocTest)
 
-  file(GLOB test_src test/*.cpp)
+  file(GLOB test_src CONFIGURE_DEPENDS test/*.cpp)
 
   foreach(src_file IN LISTS test_src)
     get_filename_component(test_name "${src_file}" NAME_WE)
