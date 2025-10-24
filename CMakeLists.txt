@@ -80,15 +80,9 @@ FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtra
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-# Add navcon navigation controller library
-add_subdirectory(other/navcon)
+FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.2)
+FetchContent_MakeAvailable(navcon)
 list(APPEND ext_deps navcon::navcon)
-include_directories(other/navcon/include)
-
-add_subdirectory(other/impulse)
-list(APPEND ext_deps impulse::impulse)
-include_directories(other/impulse/include)
-
 
 # --------------------------------------------------------------------------------------------------
 add_library(${project_name} INTERFACE)
