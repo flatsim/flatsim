@@ -48,8 +48,15 @@ include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
 # Rerun Visualization SDK
-FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
-FetchContent_MakeAvailable(rerun_sdk)
+option(USE_LOCAL "Use locally installed libraries instead of fetching" OFF)
+
+if(USE_LOCAL)
+  find_package(rerun_sdk REQUIRED PATHS $ENV{HOME}/.local/lib/cmake/rerun_sdk)
+else()
+  FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
+  FetchContent_MakeAvailable(rerun_sdk)
+endif()
+
 list(APPEND ext_deps rerun_sdk)
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)

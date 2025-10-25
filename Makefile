@@ -16,7 +16,7 @@ $(info ------------------------------------------)
 $(info Project: $(PROJECT_NAME))
 $(info ------------------------------------------)
 
-.PHONY: build b config c run r test t help h clean docs release
+.PHONY: build b config c reconfig run r test t help h clean docs release
 
 
 build:
@@ -29,14 +29,25 @@ build:
 b: build
 
 config:
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && if [ -f Makefile ]; then make clean; fi
+ifeq ($(KOKKOS),ON)
+	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON $(if $(LOCAL),-DUSE_LOCAL=ON) .."
+	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON $(if $(LOCAL),-DUSE_LOCAL=ON) ..
+else
+	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON $(if $(LOCAL),-DUSE_LOCAL=ON) .."
+	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON $(if $(LOCAL),-DUSE_LOCAL=ON) ..
+endif
+
+reconfig:
 	@rm -rf $(BUILD_DIR)
 	@mkdir -p $(BUILD_DIR)
 ifeq ($(KOKKOS),ON)
-	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON .."
-	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON ..
+	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON $(if $(LOCAL),-DUSE_LOCAL=ON) .."
+	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON -DHAS_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_OPENMP=ON $(if $(LOCAL),-DUSE_LOCAL=ON) ..
 else
-	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON .."
-	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON ..
+	@echo "cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON $(if $(LOCAL),-DUSE_LOCAL=ON) .."
+	@cd $(BUILD_DIR) && cmake -Wno-dev -D$(PROJECT_CAP)_BUILD_EXAMPLES=ON -D$(PROJECT_CAP)_ENABLE_TESTS=ON $(if $(LOCAL),-DUSE_LOCAL=ON) ..
 endif
 
 c: config
@@ -57,7 +68,8 @@ help:
 	@echo
 	@echo "Available targets:"
 	@echo "  build        Build project"
-	@echo "  config       Configure and generate build files"
+	@echo "  config       Configure and generate build files (preserves cache)"
+	@echo "  reconfig     Full reconfigure (cleans everything including cache)"
 	@echo "  run          Run the main executable"
 	@echo "  test         Run tests"
 	@echo "  docs         Build documentation (TYPE=mdbook|doxygen)"
