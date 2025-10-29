@@ -10,7 +10,6 @@
 #include "flatsim/robot.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
-#include "flatsim/world/layer.hpp"
 
 namespace fs {
     class WorldSettings : public muli::WorldSettings {
@@ -23,8 +22,8 @@ namespace fs {
         void init(concord::Datum datum, concord::Size world_size) {
             world_datum_ = datum;
             world_size_ = world_size;
-            this->world_bounds =
-                muli::AABB(muli::Vec2(-world_size.x / 2.0f, -world_size.y / 2.0f), muli::Vec2(world_size.x / 2.0f, world_size.y / 2.0f));
+            this->world_bounds = muli::AABB(muli::Vec2(-world_size.x / 2.0f, -world_size.y / 2.0f),
+                                            muli::Vec2(world_size.x / 2.0f, world_size.y / 2.0f));
         }
         concord::Datum get_datum() const { return world_datum_; }
         concord::Size get_world_size() const { return world_size_; }
@@ -38,7 +37,6 @@ namespace fs {
         concord::Rectangle world_bounds;
 
       public:
-        std::vector<std::shared_ptr<Layer>> layers;
         World(std::shared_ptr<rerun::RecordingStream> rec);
         ~World();
         void adjust_word();
@@ -46,7 +44,6 @@ namespace fs {
         void init(concord::Datum datum, concord::Size world_size);
         void tick(float dt);
         void tock();
-        concord::Point at(std::string name, uint x, uint y) const;
 
         std::shared_ptr<muli::World> get_world() const { return world; }
         const WorldSettings &get_settings() const { return settings; }

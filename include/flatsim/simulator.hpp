@@ -55,9 +55,6 @@ namespace fs {
         // WORLD
         concord::Datum get_datum() const;
         World &get_world() { return *world; }
-        Layer &get_layer(uint i);
-        Layer &get_layer(const std::string &uuid);
-        void add_layer(LayerInfo layer_info, bool noise = false);
 
         // RERUN MANAGEMENT
         void reset_recording();

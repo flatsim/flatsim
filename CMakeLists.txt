@@ -65,7 +65,11 @@ else()
   FetchContent_MakeAvailable(zeromq)
 endif()
 
-list(APPEND ext_deps rerun_sdk)
+set(CPPZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(cppzmq GIT_REPOSITORY https://github.com/zeromq/cppzmq.git GIT_TAG v4.11.0)
+FetchContent_MakeAvailable(cppzmq)
+
+list(APPEND ext_deps rerun_sdk zeromq cppzmq)
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(json)

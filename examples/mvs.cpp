@@ -65,33 +65,6 @@ int main(int argc, char *argv[]) {
     auto sim = std::make_shared<fs::Simulator>(rec);
     sim->init(world_datum, world_size);
 
-    std::vector<concord::WGS> coordinates;
-    coordinates.push_back(concord::WGS(51.98765392402663, 5.660072928621929, 0.0));
-    coordinates.push_back(concord::WGS(51.98816428304869, 5.661754957062072, 0.0));
-    coordinates.push_back(concord::WGS(51.989850316694316, 5.660416700858434, 0.0));
-    coordinates.push_back(concord::WGS(51.990417354104295, 5.662166255987472, 0.0));
-    coordinates.push_back(concord::WGS(51.991078888673854, 5.660969191951295, 0.0));
-    coordinates.push_back(concord::WGS(51.989479848375254, 5.656874619070777, 0.0));
-    coordinates.push_back(concord::WGS(51.988156722216644, 5.657715633290422, 0.0));
-    coordinates.push_back(concord::WGS(51.98765392402663, 5.660072928621929, 0.0));
-
-    concord::Polygon polygon;
-    for (const auto &wgs_coord : coordinates) {
-        auto enu_coord = wgs_coord.toENU(world_datum);
-        polygon.addPoint(concord::Point{enu_coord.x, enu_coord.y, enu_coord.z});
-    }
-
-    fs::LayerInfo layer_info;
-    layer_info.name = "grid";
-    layer_info.uuid = "grid";
-    layer_info.type = "field";
-    layer_info.can_accept = {"pea"};
-    layer_info.color = pigment::RGB(rand() % 255, rand() % 255, rand() % 255);
-    layer_info.bound = polygon.get_obb();
-    layer_info.resolution = 0.2f;
-    layer_info.field = polygon;
-    sim->add_layer(layer_info, true);
-
     // Load machines from JSON files
     std::filesystem::path machines_dir = "../examples/machines";
 

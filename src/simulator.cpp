@@ -34,16 +34,6 @@ namespace fs {
             robot->tick(dt);
         }
 
-        if (!world->layers.empty()) {
-            Kokkos::parallel_for("layer_tick",
-                                 Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, world->layers.size()),
-                                 [&](int i) {
-                                     // for (auto &robot : robots) {
-                                     //     if (!robot) continue;
-                                     //     // TODO: Add complicated functionality here (robot-layer interaction)
-                                     // }
-                                 });
-        }
         Kokkos::fence();
     }
 #else
@@ -56,11 +46,6 @@ namespace fs {
         std::for_each(std::execution::par, robots.begin(), robots.end(), [dt](auto &robott) {
             if (!robott) return;
             robott->tick(dt);
-        });
-        // Process layers separately, not nested - avoid thread contention
-        std::for_each(std::execution::par, world->layers.begin(), world->layers.end(), [dt](auto &layer) {
-            if (!layer) return;
-            layer->tick(dt);
         });
     }
 
@@ -233,65 +218,12 @@ namespace fs {
         return closest;
     }
 
-    // WORLD
-    void Simulator::add_layer(LayerInfo layer_info, bool noise) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
-
-        for (auto &layer : world->layers) {
-            if (layer && layer->info.uuid == layer_info.uuid) {
-                spdlog::warn("Layer with uuid {} already exists, skipping", layer_info.uuid);
-                return;
-            }
-        }
-
-        auto layer = std::make_shared<Layer>(rec, world_datum);
-        layer->init(layer_info);
-        world->layers.push_back(layer);
-        if (noise) {
-            layer->add_noise();
-        }
-        layer->color_field();
-        world->adjust_word();
-    }
     concord::Datum Simulator::get_datum() const {
         if (!world_datum.is_set()) {
             throw InitializationException("Datum not set");
         }
         return world_datum;
     }
-    Layer &Simulator::get_layer(uint i) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
-
-        if (i >= world->layers.size()) {
-            throw IndexOutOfRangeException("layer index " + std::to_string(i) +
-                                           " >= " + std::to_string(world->layers.size()));
-        }
-
-        if (!world->layers[i]) {
-            throw NullPointerException("layer at index " + std::to_string(i));
-        }
-
-        return *world->layers[i];
-    }
-    Layer &Simulator::get_layer(const std::string &uuid) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
-
-        for (auto &layer : world->layers) {
-            if (!layer) {
-                continue; // Skip null layers
-            }
-            if (layer->info.uuid == uuid) {
-                return *layer;
-            }
-        }
-        throw EntityNotFoundException("Layer", uuid);
-    };
 
     // RERUN MANAGEMENT
     void Simulator::reset_recording() {

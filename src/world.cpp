@@ -31,35 +31,10 @@ namespace fs {
         });
     }
 
-    void World::tick(float dt) {
-        world->Step(dt);
-        // grid.tick(dt);
-        for (auto &layer : layers) {
-            layer->tick(dt);
-        }
-    }
-
-    concord::Point World::at(std::string name, uint x, uint y) const {
-        for (auto &layer : layers) {
-            if (!layer) {
-                continue; // Skip null layers
-            }
-            if (layer->info.name == name) {
-                return layer->at(x, y);
-            }
-        }
-        throw EntityNotFoundException("Layer", name);
-    }
+    void World::tick(float dt) { world->Step(dt); }
 
     void World::adjust_word() {
-        std::vector<concord::Bound> bounds;
-        for (auto &layer : layers) {
-            if (!layer) {
-                continue;
-            }
-            bounds.push_back(layer->info.bound);
-        }
-        world_bounds = concord::Rectangle::outer_rectangle(bounds);
+        // No layers to adjust world bounds
     }
 
     void World::tock() {
@@ -90,9 +65,6 @@ namespace fs {
         //                             {{float(grid.getGrid().inradius()), float(grid.getGrid().inradius()), 0.0f}})
         //                             .with_colors(rerun::Color(110, 90, 60))
         //                             .with_radii({{0.005f}}));
-        for (auto &layer : layers) {
-            layer->tock();
-        }
     }
 
 } // namespace fs
