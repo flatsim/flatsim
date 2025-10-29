@@ -22,7 +22,7 @@ $(info ------------------------------------------)
 build:
 	@if [ ! -d "$(BUILD_DIR)" ]; then \
 		echo "Build directory doesn't exist, running config first..."; \
-		$(MAKE) config; \
+		$(MAKE) reconfig KOKKOS=OFF LOCAL=1; \
 	fi
 	@cd $(BUILD_DIR) && set -o pipefail && make -j 2>&1 | tee >(grep "^$(TOP_DIR)" | grep -E "error:" > "$(TOP_DIR)/.quickfix")
 

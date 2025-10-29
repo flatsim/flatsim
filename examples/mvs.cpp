@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     sim->add_layer(layer_info, true);
 
     // Load machines from JSON files
-    std::filesystem::path machines_dir = "examples/machines";
+    std::filesystem::path machines_dir = "../examples/machines";
 
     try {
         // Load tractor from JSON
