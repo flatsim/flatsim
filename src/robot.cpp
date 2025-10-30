@@ -1,4 +1,7 @@
 #include "flatsim/robot.hpp"
+#include "flatsim/network/interfaces/canbus_interface.hpp"
+#include "flatsim/network/interfaces/wifi_interface.hpp"
+#include "flatsim/network/interfaces/zenoh_interface.hpp"
 #include "flatsim/simulator.hpp"
 #include <algorithm>
 #include <cmath>
@@ -14,9 +17,15 @@ namespace fs {
         // Initialize modular systems
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
+        network = std::make_unique<Network>();
         navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PATH_CONTROLLER);
     }
-    Robot::~Robot() {}
+    Robot::~Robot() {
+        // Cleanup network interfaces
+        if (network) {
+            network->cleanup();
+        }
+    }
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
@@ -39,6 +48,11 @@ namespace fs {
 
         // Update navigation controller
         update_navigation(dt);
+
+        // Update network interfaces
+        if (network) {
+            network->tick(dt);
+        }
 
         chassis->tick(dt);
         chassis->update(control_system->get_steerings(), control_system->get_throttles(), dt);
@@ -135,6 +149,29 @@ namespace fs {
 
         // Initialize follower capabilities based on robot configuration
         chain_manager->update_follower_capabilities();
+
+        // Configure network interfaces based on robot role
+        if (network) {
+            switch (role) {
+            case RobotRole::MASTER:
+                // MASTER robots have Zenoh + WiFi interfaces for maximum connectivity
+                network->add_interface(std::make_unique<fs::network::ZenohInterface>());
+                network->add_interface(std::make_unique<fs::network::WiFiInterface>());
+                break;
+            case RobotRole::FOLLOWER:
+                // FOLLOWER robots have Zenoh + CAN-bus interfaces
+                network->add_interface(std::make_unique<fs::network::ZenohInterface>());
+                network->add_interface(std::make_unique<fs::network::CANBusInterface>());
+                break;
+            case RobotRole::SLAVE:
+                // SLAVE robots have CAN-bus only (no network interfaces for autonomy)
+                network->add_interface(std::make_unique<fs::network::CANBusInterface>());
+                break;
+            }
+
+            // Initialize network with robot UUID
+            network->init(info.uuid);
+        }
     }
 
     // All control and chain methods are now delegated to ControlSystem and ChainManager

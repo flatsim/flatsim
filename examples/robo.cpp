@@ -119,9 +119,9 @@ int main(int argc, char *argv[]) {
                 //          << physics_state->pose.point.y << std::endl;
             }
 
-            // Simple control: move forward in a circle
-            throttle = 0.5f; // Forward
-            steering = 0.3f; // Slight turn
+            // Default control: stationary (no movement)
+            throttle = 0.0f; // No forward/backward movement
+            steering = 0.0f; // No turning
 
             // Send control command to simulator
             fs::messages::ControlCommand cmd(client.get_uuid(), 0.0, steering, throttle);
