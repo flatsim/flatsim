@@ -122,7 +122,7 @@ namespace fs {
         // Initialize tank if present
         if (robo.tank.has_value()) {
             tank = Tank(robo.tank->name, Tank::Type::HARVEST, robo.tank->capacity, 0.0f, 0.0f);
-            tank->init(info.color, info.name, robo.tank->bound);
+            tank->init(info.color, info.seqid, robo.tank->bound);
         }
 
         // Initialize power source if present

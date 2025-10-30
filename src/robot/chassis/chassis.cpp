@@ -13,7 +13,7 @@ namespace fs {
     void Chassis::init(fs::RobotInfo &robo) {
         this->bound = robo.bound;
         this->color = robo.color;
-        this->name = robo.name;
+        this->name = robo.seqid;
 
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w

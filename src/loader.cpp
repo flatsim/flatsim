@@ -1,12 +1,47 @@
 #include "flatsim/loader.hpp"
 #include "flatsim/utils.hpp"
 #include <fstream>
+#include <iomanip>
 #include <nlohmann/json.hpp>
+#include <random>
 #include <spdlog/spdlog.h>
+#include <sstream>
 
 namespace fs {
 
     using json = nlohmann::json;
+
+    // Generate a proper UUID (UUID v4 format)
+    static std::string generate_uuid() {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<> dis(0, 15);
+        static std::uniform_int_distribution<> dis2(8, 11);
+
+        std::stringstream ss;
+        ss << std::hex;
+        for (int i = 0; i < 8; i++) {
+            ss << dis(gen);
+        }
+        ss << "-";
+        for (int i = 0; i < 4; i++) {
+            ss << dis(gen);
+        }
+        ss << "-4"; // UUID version 4
+        for (int i = 0; i < 3; i++) {
+            ss << dis(gen);
+        }
+        ss << "-";
+        ss << dis2(gen); // UUID variant
+        for (int i = 0; i < 3; i++) {
+            ss << dis(gen);
+        }
+        ss << "-";
+        for (int i = 0; i < 12; i++) {
+            ss << dis(gen);
+        }
+        return ss.str();
+    }
 
     RobotInfo Loader::load_from_json(const std::filesystem::path &json_path, concord::Pose spawn_pose,
                                      const std::string &name, std::optional<pigment::RGB> color) {
@@ -30,9 +65,9 @@ namespace fs {
         std::string default_name = info["name"].get<std::string>();
         robot_info.name = name.empty() ? default_name : name;
 
-        // Use original name from JSON as default UUID if UUID is empty
+        // Generate proper UUID if not provided or empty
         std::string uuid_str = info.value("uuid", "");
-        robot_info.uuid = uuid_str.empty() ? default_name + "_" + std::to_string(std::rand()) : uuid_str;
+        robot_info.uuid = (uuid_str.empty() || uuid_str == "") ? generate_uuid() : uuid_str;
         robot_info.RCI = info["rci"];
 
         // Parse works_on array
