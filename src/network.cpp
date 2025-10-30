@@ -157,4 +157,66 @@ namespace fs {
         return all_peers;
     }
 
+    void Network::send_all(const std::vector<uint8_t> &data) {
+        if (!initialized) {
+            return;
+        }
+
+        // Send via all interfaces
+        for (auto &iface : interfaces) {
+            if (iface) {
+                iface->send_bytes(data);
+            }
+        }
+    }
+
+    void Network::send_via(const std::string &interface_type, const std::vector<uint8_t> &data) {
+        if (!initialized) {
+            return;
+        }
+
+        // Find interface by type and send
+        for (auto &iface : interfaces) {
+            if (iface && iface->get_type() == interface_type) {
+                iface->send_bytes(data);
+                return;
+            }
+        }
+    }
+
+    void Network::send_to_peer(const std::string &peer_uuid, const std::vector<uint8_t> &data) {
+        if (!initialized) {
+            return;
+        }
+
+        // Find which interface has this peer connected and use that one
+        for (auto &iface : interfaces) {
+            if (iface) {
+                auto peers = iface->get_connected_peers();
+                if (std::find(peers.begin(), peers.end(), peer_uuid) != peers.end()) {
+                    iface->send_bytes_to_peer(peer_uuid, data);
+                    return;
+                }
+            }
+        }
+    }
+
+    std::vector<std::vector<uint8_t>> Network::receive() {
+        std::vector<std::vector<uint8_t>> all_data;
+
+        if (!initialized) {
+            return all_data;
+        }
+
+        // Aggregate received data from all interfaces
+        for (auto &iface : interfaces) {
+            if (iface) {
+                auto iface_data = iface->receive_bytes();
+                all_data.insert(all_data.end(), iface_data.begin(), iface_data.end());
+            }
+        }
+
+        return all_data;
+    }
+
 } // namespace fs

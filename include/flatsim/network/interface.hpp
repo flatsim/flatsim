@@ -90,6 +90,25 @@ namespace fs::network {
          * @return Vector of received control commands
          */
         virtual std::vector<messages::ControlCommand> receive_control_commands() = 0;
+
+        /**
+         * @brief Send raw bytes via this interface (broadcast to all peers)
+         * @param data Raw byte data to send
+         */
+        virtual void send_bytes(const std::vector<uint8_t> &data) = 0;
+
+        /**
+         * @brief Send raw bytes to specific peer via this interface
+         * @param peer_uuid UUID of target peer
+         * @param data Raw byte data to send
+         */
+        virtual void send_bytes_to_peer(const std::string &peer_uuid, const std::vector<uint8_t> &data) = 0;
+
+        /**
+         * @brief Receive raw bytes from this interface
+         * @return Vector of received byte arrays
+         */
+        virtual std::vector<std::vector<uint8_t>> receive_bytes() = 0;
     };
 
 } // namespace fs::network

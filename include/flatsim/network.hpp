@@ -43,6 +43,12 @@ namespace fs {
         bool connect_to_peer(const std::string &peer_uuid);
         void disconnect_from_peer(const std::string &peer_uuid);
         std::vector<std::string> get_connected_peers() const;
+
+        // Communication - Generic byte-level methods
+        void send_all(const std::vector<uint8_t> &data);
+        void send_via(const std::string &interface_type, const std::vector<uint8_t> &data);
+        void send_to_peer(const std::string &peer_uuid, const std::vector<uint8_t> &data);
+        std::vector<std::vector<uint8_t>> receive();
     };
 
 } // namespace fs
