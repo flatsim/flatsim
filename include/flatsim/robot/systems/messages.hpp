@@ -18,6 +18,10 @@ namespace fs::messages {
         // Constructor
         PositionMessage(const std::string &uuid, double ts, const concord::Pose &p)
             : sender_uuid(uuid), timestamp(ts), pose(p) {}
+
+        // Serialization
+        std::string serialize() const;
+        static PositionMessage deserialize(const std::string &data);
     };
 
     // Control command message (for future process separation)
@@ -33,6 +37,10 @@ namespace fs::messages {
         // Constructor
         ControlCommand(const std::string &uuid, double ts, float s, float t)
             : robot_uuid(uuid), timestamp(ts), steering(s), throttle(t) {}
+
+        // Serialization
+        std::string serialize() const;
+        static ControlCommand deserialize(const std::string &data);
     };
 
     // Physics state message (for future process separation)
@@ -54,6 +62,10 @@ namespace fs::messages {
             velocity.linear = 0.0f;
             velocity.angular = 0.0f;
         }
+
+        // Serialization
+        std::string serialize() const;
+        static PhysicsState deserialize(const std::string &data);
     };
 
     // Registration messages for robot-simulator handshake
@@ -66,6 +78,10 @@ namespace fs::messages {
 
         // Constructor
         RegistrationRequest(const std::string &uuid, double ts) : robot_uuid(uuid), timestamp(ts) {}
+
+        // Serialization
+        std::string serialize() const;
+        static RegistrationRequest deserialize(const std::string &data);
     };
 
     struct RegistrationReply {
@@ -79,6 +95,10 @@ namespace fs::messages {
         // Constructor
         RegistrationReply(const std::string &uuid, const std::string &endpoint, bool s)
             : robot_uuid(uuid), assigned_endpoint(endpoint), success(s) {}
+
+        // Serialization
+        std::string serialize() const;
+        static RegistrationReply deserialize(const std::string &data);
     };
 
     // RobotInfo message for serialization/deserialization
@@ -140,6 +160,10 @@ namespace fs::messages {
             info.turning_radius = turning_radius;
             return info;
         }
+
+        // Serialization
+        std::string serialize() const;
+        static RobotInfoMessage deserialize(const std::string &data);
     };
 
 } // namespace fs::messages
