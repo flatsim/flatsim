@@ -65,13 +65,51 @@ namespace fs {
             messages::SpawnRobotReply reply;
             reply.robot_uuid = spawn_req.robot_info.uuid;
 
-            // TODO: Actually spawn the robot in simulator
-            // For now, just send success response
-            reply.success = true;
-            reply.error_message = "";
+            try {
+                // Convert RobotInfoMessage to RobotInfo
+                RobotInfo robot_info = spawn_req.robot_info.to_robot_info();
 
-            // Register robot (placeholder until we actually create it)
-            // robots[spawn_req.robot_info.uuid] = created_robot;
+                // Generate unique seqid: type + "_" + index
+                std::string seqid = robot_info.type + "_" + std::to_string(robots.size());
+                robot_info.seqid = seqid;
+
+                std::cout << "[Dispatcher] Spawning robot with seqid: " << seqid << std::endl;
+
+                // Spawn the robot in simulator
+                if (simulator) {
+                    simulator->add_robot(robot_info);
+
+                    // Register robot in our registry
+                    // Find the robot that was just added
+                    Robot *spawned_robot = nullptr;
+                    for (auto &robot : simulator->robots) {
+                        if (robot && robot->info.uuid == robot_info.uuid) {
+                            spawned_robot = robot.get();
+                            break;
+                        }
+                    }
+
+                    if (spawned_robot) {
+                        robots[robot_info.uuid] = spawned_robot;
+                        reply.success = true;
+                        reply.error_message = "";
+                        std::cout << "[Dispatcher] Robot spawned successfully: " << robot_info.uuid << std::endl;
+                    } else {
+                        reply.success = false;
+                        reply.error_message = "Robot spawned but not found in simulator";
+                        std::cerr << "[Dispatcher] " << reply.error_message << std::endl;
+                    }
+                } else {
+                    reply.success = false;
+                    reply.error_message = "Simulator not initialized";
+                    std::cerr << "[Dispatcher] " << reply.error_message << std::endl;
+                }
+
+            } catch (const std::exception &e) {
+                reply.success = false;
+                reply.error_message = std::string("Failed to spawn robot: ") + e.what();
+                std::cerr << "[Dispatcher] " << reply.error_message << std::endl;
+            }
 
             // Send reply
             std::string reply_str = reply.serialize();
