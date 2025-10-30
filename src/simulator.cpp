@@ -40,6 +40,25 @@ namespace fs {
     void Simulator::tick(float dt) {
         ticks++;
         if (!world) throw NullPointerException("world");
+
+        // Process dispatcher if enabled
+        if (dispatcher && dispatcher->is_ready()) {
+            // Process spawn requests
+            dispatcher->process_spawn_requests();
+
+            // Receive control commands from robot processes
+            auto commands = dispatcher->receive_commands();
+            for (const auto &cmd : commands) {
+                // Apply control commands to robots
+                for (auto &robot : robots) {
+                    if (robot && robot->info.uuid == cmd.robot_uuid) {
+                        robot->update(cmd.steering, cmd.throttle);
+                        break;
+                    }
+                }
+            }
+        }
+
         // World tick
         world->tick(dt);
         // Process robots in parallel - pure physics, thread-safe
@@ -47,6 +66,11 @@ namespace fs {
             if (!robott) return;
             robott->tick(dt);
         });
+
+        // Send physics states to robot processes
+        if (dispatcher && dispatcher->is_ready()) {
+            dispatcher->send_states();
+        }
     }
 
     void Simulator::tock(int rate) {
@@ -253,4 +277,31 @@ namespace fs {
         // Reset timeline
         rec->reset_time();
     }
+
+    // DISPATCHER
+    void Simulator::enable_dispatcher() {
+        if (dispatcher) {
+            std::cout << "[Simulator] Dispatcher already enabled" << std::endl;
+            return;
+        }
+
+        dispatcher = std::make_unique<Dispatcher>();
+        if (dispatcher->init(this)) {
+            std::cout << "[Simulator] Dispatcher enabled successfully" << std::endl;
+        } else {
+            std::cerr << "[Simulator] Failed to enable dispatcher" << std::endl;
+            dispatcher.reset();
+        }
+    }
+
+    void Simulator::disable_dispatcher() {
+        if (!dispatcher) {
+            return;
+        }
+
+        dispatcher->cleanup();
+        dispatcher.reset();
+        std::cout << "[Simulator] Dispatcher disabled" << std::endl;
+    }
+
 } // namespace fs

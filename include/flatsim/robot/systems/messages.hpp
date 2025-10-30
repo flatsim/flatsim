@@ -166,6 +166,39 @@ namespace fs::messages {
         static RobotInfoMessage deserialize(const std::string &data);
     };
 
+    // Spawn robot messages for process separation
+    struct SpawnRobotRequest {
+        RobotInfoMessage robot_info;
+        double timestamp;
+
+        // Default constructor
+        SpawnRobotRequest() = default;
+
+        // Constructor
+        SpawnRobotRequest(const RobotInfoMessage &info, double ts) : robot_info(info), timestamp(ts) {}
+
+        // Serialization
+        std::string serialize() const;
+        static SpawnRobotRequest deserialize(const std::string &data);
+    };
+
+    struct SpawnRobotReply {
+        std::string robot_uuid;
+        bool success;
+        std::string error_message;
+
+        // Default constructor
+        SpawnRobotReply() : success(false) {}
+
+        // Constructor
+        SpawnRobotReply(const std::string &uuid, bool s, const std::string &err = "")
+            : robot_uuid(uuid), success(s), error_message(err) {}
+
+        // Serialization
+        std::string serialize() const;
+        static SpawnRobotReply deserialize(const std::string &data);
+    };
+
 } // namespace fs::messages
 
 // JSON serialization for all RobotInfoMessage subtypes

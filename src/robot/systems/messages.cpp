@@ -110,4 +110,38 @@ namespace fs::messages {
         return j.get<RobotInfoMessage>();
     }
 
+    // SpawnRobotRequest serialization
+    std::string SpawnRobotRequest::serialize() const {
+        json j;
+        j["robot_info"] = robot_info;
+        j["timestamp"] = timestamp;
+        return j.dump();
+    }
+
+    SpawnRobotRequest SpawnRobotRequest::deserialize(const std::string &data) {
+        json j = json::parse(data);
+        SpawnRobotRequest msg;
+        msg.robot_info = j.value("robot_info", RobotInfoMessage{});
+        msg.timestamp = j.value("timestamp", 0.0);
+        return msg;
+    }
+
+    // SpawnRobotReply serialization
+    std::string SpawnRobotReply::serialize() const {
+        json j;
+        j["robot_uuid"] = robot_uuid;
+        j["success"] = success;
+        j["error_message"] = error_message;
+        return j.dump();
+    }
+
+    SpawnRobotReply SpawnRobotReply::deserialize(const std::string &data) {
+        json j = json::parse(data);
+        SpawnRobotReply msg;
+        msg.robot_uuid = j.value("robot_uuid", "");
+        msg.success = j.value("success", false);
+        msg.error_message = j.value("error_message", "");
+        return msg;
+    }
+
 } // namespace fs::messages
