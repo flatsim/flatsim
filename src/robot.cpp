@@ -303,7 +303,7 @@ namespace fs {
             role_prefix = "(S)";
             break;
         }
-        std::string label = role_prefix + info.name;
+        std::string label = role_prefix + info.seqid;
         if (has_power()) label += "(" + std::to_string(static_cast<int>(get_power_percentage())) + "%)";
         if (chassis) chassis->tock(label);
 
@@ -321,7 +321,7 @@ namespace fs {
         // 3D position visualization
         std::vector<rerun::components::Position3D> positions = {
             rerun::components::Position3D(float(x), float(y), 0.1f)};
-        rec->log_static(this->info.name + "/pose", rerun::Points3D(positions).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose", rerun::Points3D(positions).with_colors(colors));
 
         // GPS coordinates visualization
         auto wgs_coords = this->info.bound.pose.point.toWGS(datum);
@@ -329,7 +329,7 @@ namespace fs {
         auto lon = float(wgs_coords.lon);
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
-        rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
         // Update navigation visualization
         if (navcon) {
@@ -345,9 +345,9 @@ namespace fs {
         // Simple pulse implementation - just log basic pulse state
         if (rec) {
             auto pos = get_position();
-            rec->log(info.name + "/pulse", rerun::Points2D({rerun::Position2D(pos.point.x, pos.point.y)})
-                                               .with_colors({rerun::Color(255, 255, 255, 200)})
-                                               .with_radii({2.0f}));
+            rec->log(info.seqid + "/pulse", rerun::Points2D({rerun::Position2D(pos.point.x, pos.point.y)})
+                                                .with_colors({rerun::Color(255, 255, 255, 200)})
+                                                .with_radii({2.0f}));
         }
 
         // Reset pulsing after some time
