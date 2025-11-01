@@ -28,3 +28,4 @@ Diagnostics:
     - "constexpr_redecl_mismatch"
     - "pp_hash_error"
     - "warn_unused_function"
+    - "invalid_consteval_call"

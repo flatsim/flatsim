@@ -13,8 +13,6 @@
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {
-    // Initialize Kokkos at the very beginning
-
     bool joystk = false;
 
     if (argc > 1) {
@@ -243,6 +241,5 @@ int main(int argc, char *argv[]) {
         close(js_fd);
     }
 
-    // Finalize Kokkos before exiting
     return 0;
 }

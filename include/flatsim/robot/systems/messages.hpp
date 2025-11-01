@@ -371,26 +371,31 @@ namespace nlohmann {
     // Main RobotInfoMessage serialization
     template <> struct adl_serializer<fs::messages::RobotInfoMessage> {
         static void to_json(json &j, const fs::messages::RobotInfoMessage &info) {
-            j = json{{"RCI", info.RCI},
-                     {"group", info.group},
-                     {"slave", info.slave},
-                     {"name", info.name},
-                     {"uuid", info.uuid},
-                     {"type", info.type},
-                     {"seqid", info.seqid},
-                     {"works_on", info.works_on},
-                     {"capability", info.capability},
-                     {"color", info.color},
-                     {"bound", info.bound},
-                     {"outline", info.outline},
-                     {"wheels", info.wheels},
-                     {"controls", info.controls},
-                     {"hitches", info.hitches},
-                     {"karos", info.karos},
-                     {"tank", info.tank},
-                     {"power_source", info.power_source},
-                     {"role", static_cast<int>(info.role)},
-                     {"turning_radius", info.turning_radius}};
+            j = json::object();
+            j["RCI"] = info.RCI;
+            j["group"] = info.group;
+            j["slave"] = info.slave;
+            j["name"] = info.name;
+            j["uuid"] = info.uuid;
+            j["type"] = info.type;
+            j["seqid"] = info.seqid;
+            j["works_on"] = info.works_on;
+            j["capability"] = info.capability;
+            j["color"] = info.color;
+            j["bound"] = info.bound;
+            j["outline"] = info.outline;
+            j["wheels"] = info.wheels;
+            j["controls"] = info.controls;
+            j["hitches"] = info.hitches;
+            j["karos"] = info.karos;
+            if (info.tank.has_value()) {
+                j["tank"] = info.tank.value();
+            }
+            if (info.power_source.has_value()) {
+                j["power_source"] = info.power_source.value();
+            }
+            j["role"] = static_cast<int>(info.role);
+            j["turning_radius"] = info.turning_radius;
         }
 
         static void from_json(const json &j, fs::messages::RobotInfoMessage &info) {

@@ -2,41 +2,14 @@
 #include <chrono>
 #include <cmath>
 #include <execution>
-#ifdef HAS_KOKKOS
-#include <Kokkos_Core.hpp>
-#endif
 
 namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {
-#ifdef HAS_KOKKOS
-        Kokkos::initialize();
-        std::cout << "Execution space: " << typeid(Kokkos::DefaultHostExecutionSpace).name() << std::endl;
-        std::cout << "Number of threads: " << Kokkos::DefaultHostExecutionSpace().concurrency() << std::endl;
-#else
         unsigned int numThreads = std::thread::hardware_concurrency();
         spdlog::info("Using {} threads", numThreads);
-#endif
     }
-    Simulator::~Simulator() {
-#ifdef HAS_KOKKOS
-        Kokkos::finalize();
-#endif
-    }
-#ifdef HAS_KOKKOS
-    void Simulator::tick(float dt) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
-        world->tick(dt);
-        // Process robots sequentially (rerun logging needs sequential access)
-        for (auto &robot : robots) {
-            if (!robot) continue;
-            robot->tick(dt);
-        }
+    Simulator::~Simulator() {}
 
-        Kokkos::fence();
-    }
-#else
     void Simulator::tick(float dt) {
         ticks++;
         if (!world) throw NullPointerException("world");
@@ -81,8 +54,6 @@ namespace fs {
             tocks = 0;
         }
     }
-
-#endif
 
     void Simulator::init(concord::Datum datum, concord::Size world_size) {
         world = std::make_shared<fs::World>(rec);
