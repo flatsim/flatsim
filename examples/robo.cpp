@@ -5,7 +5,6 @@
 #include <chrono>
 #include <filesystem>
 #include <spdlog/spdlog.h>
-#include <sstream>
 #include <thread>
 
 // Parse position argument "x,y,r"

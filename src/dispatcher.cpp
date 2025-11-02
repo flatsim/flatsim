@@ -8,31 +8,24 @@ namespace fs {
 
     Dispatcher::~Dispatcher() { cleanup(); }
 
-    bool Dispatcher::init(Simulator *sim) {
+    bool Dispatcher::init(Simulator *sim, bool use_tcp) {
         if (initialized) {
             std::cerr << "[Dispatcher] Already initialized" << std::endl;
             return false;
         }
 
         simulator = sim;
+        this->use_tcp = use_tcp;
 
         try {
-            // Create REP socket for spawn requests
+            // Create REP socket for spawn requests (shared endpoint)
             spawn_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::rep);
             spawn_socket->bind("ipc:///tmp/flatsim_spawn");
+            spawn_socket->bind("tcp://*:5555");
             spawn_socket->set(zmq::sockopt::rcvtimeo, 0); // Non-blocking
 
-            // Create PULL socket for control commands
-            command_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::pull);
-            command_socket->bind("ipc:///tmp/flatsim_commands");
-            command_socket->set(zmq::sockopt::rcvtimeo, 0); // Non-blocking
-
-            // Create PUB socket for physics states
-            state_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::pub);
-            state_socket->bind("ipc:///tmp/flatsim_state");
-
             initialized = true;
-            std::cout << "[Dispatcher] Initialized successfully" << std::endl;
+            std::cout << "[Dispatcher] Initialized successfully (" << (use_tcp ? "TCP" : "IPC") << ")" << std::endl;
             return true;
 
         } catch (const zmq::error_t &e) {
@@ -111,6 +104,52 @@ namespace fs {
                 std::cerr << "[Dispatcher] " << reply.error_message << std::endl;
             }
 
+            // Create dedicated endpoints for this robot if spawn succeeded
+            if (reply.success) {
+                std::string uuid = reply.robot_uuid;
+                std::string cmd_endpoint, state_endpoint;
+
+                try {
+                    if (use_tcp) {
+                        int robot_base_port = next_tcp_port;
+
+                        cmd_endpoint = "tcp://*:" + std::to_string(robot_base_port);
+                        reply.command_endpoint = "tcp://127.0.0.1:" + std::to_string(robot_base_port);
+
+                        state_endpoint = "tcp://*:" + std::to_string(robot_base_port + 1);
+                        reply.state_endpoint = "tcp://127.0.0.1:" + std::to_string(robot_base_port + 1);
+
+                        next_tcp_port += 10;
+                    } else {
+                        cmd_endpoint = "ipc:///tmp/flatsim_cmd_" + uuid;
+                        reply.command_endpoint = cmd_endpoint;
+
+                        state_endpoint = "ipc:///tmp/flatsim_state_" + uuid;
+                        reply.state_endpoint = state_endpoint;
+                    }
+
+                    // Create PULL socket for this robot's commands
+                    auto cmd_sock = std::make_unique<zmq::socket_t>(context, zmq::socket_type::pull);
+                    cmd_sock->bind(cmd_endpoint);
+                    cmd_sock->set(zmq::sockopt::rcvtimeo, 0);
+                    robot_command_sockets[uuid] = std::move(cmd_sock);
+
+                    // Create PUB socket for this robot's state
+                    auto state_sock = std::make_unique<zmq::socket_t>(context, zmq::socket_type::pub);
+                    state_sock->bind(state_endpoint);
+                    robot_state_sockets[uuid] = std::move(state_sock);
+
+                    std::cout << "[Dispatcher] Created endpoints for " << uuid << std::endl;
+                    std::cout << "[Dispatcher]   Commands: " << reply.command_endpoint << std::endl;
+                    std::cout << "[Dispatcher]   State: " << reply.state_endpoint << std::endl;
+
+                } catch (const zmq::error_t &e) {
+                    std::cerr << "[Dispatcher] Failed to create robot endpoints: " << e.what() << std::endl;
+                    reply.success = false;
+                    reply.error_message = "Failed to create endpoints: " + std::string(e.what());
+                }
+            }
+
             // Send reply
             std::string reply_str = reply.serialize();
             zmq::message_t response(reply_str.size());
@@ -134,20 +173,20 @@ namespace fs {
         }
 
         try {
-            // Receive all available control commands
-            while (true) {
-                zmq::message_t message;
-                auto result = command_socket->recv(message, zmq::recv_flags::dontwait);
+            // Receive commands from all robot-specific sockets
+            for (auto &[uuid, socket] : robot_command_sockets) {
+                while (true) {
+                    zmq::message_t message;
+                    auto result = socket->recv(message, zmq::recv_flags::dontwait);
 
-                if (!result) {
-                    // No more messages
-                    break;
+                    if (!result) {
+                        break;
+                    }
+
+                    std::string msg_str(static_cast<char *>(message.data()), message.size());
+                    auto cmd = messages::ControlCommand::deserialize(msg_str);
+                    commands.push_back(cmd);
                 }
-
-                // Deserialize control command
-                std::string msg_str(static_cast<char *>(message.data()), message.size());
-                auto cmd = messages::ControlCommand::deserialize(msg_str);
-                commands.push_back(cmd);
             }
 
         } catch (const zmq::error_t &e) {
@@ -165,11 +204,17 @@ namespace fs {
         }
 
         try {
+            // Find robot-specific state socket
+            auto it = robot_state_sockets.find(uuid);
+            if (it == robot_state_sockets.end()) {
+                return;
+            }
+
             // Serialize and send physics state
             std::string state_str = state.serialize();
             zmq::message_t message(state_str.size());
             memcpy(message.data(), state_str.c_str(), state_str.size());
-            state_socket->send(message, zmq::send_flags::none);
+            it->second->send(message, zmq::send_flags::none);
 
         } catch (const zmq::error_t &e) {
             std::cerr << "[Dispatcher] Error sending physics state for robot " << uuid << ": " << e.what() << std::endl;
@@ -203,8 +248,17 @@ namespace fs {
 
         try {
             spawn_socket->close();
-            command_socket->close();
-            state_socket->close();
+
+            for (auto &[uuid, socket] : robot_command_sockets) {
+                socket->close();
+            }
+            robot_command_sockets.clear();
+
+            for (auto &[uuid, socket] : robot_state_sockets) {
+                socket->close();
+            }
+            robot_state_sockets.clear();
+
             context.close();
             initialized = false;
             robots.clear();

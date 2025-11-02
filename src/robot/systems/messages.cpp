@@ -132,6 +132,8 @@ namespace fs::messages {
         j["robot_uuid"] = robot_uuid;
         j["success"] = success;
         j["error_message"] = error_message;
+        j["command_endpoint"] = command_endpoint;
+        j["state_endpoint"] = state_endpoint;
         return j.dump();
     }
 
@@ -141,6 +143,8 @@ namespace fs::messages {
         msg.robot_uuid = j.value("robot_uuid", "");
         msg.success = j.value("success", false);
         msg.error_message = j.value("error_message", "");
+        msg.command_endpoint = j.value("command_endpoint", "");
+        msg.state_endpoint = j.value("state_endpoint", "");
         return msg;
     }
 

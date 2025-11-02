@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
     // Set up world and simulator
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
-    concord::Size world_size{3000.0f, 3000.0f, 300.0f};
+    concord::Size world_size{10000.0f, 10000.0f, 300.0f};
 
     auto sim = std::make_shared<fs::Simulator>(rec);
     sim->init(world_datum, world_size);

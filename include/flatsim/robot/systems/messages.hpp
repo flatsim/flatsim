@@ -186,6 +186,8 @@ namespace fs::messages {
         std::string robot_uuid;
         bool success;
         std::string error_message;
+        std::string command_endpoint;
+        std::string state_endpoint;
 
         // Default constructor
         SpawnRobotReply() : success(false) {}

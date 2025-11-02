@@ -22,8 +22,12 @@ namespace fs {
       private:
         zmq::context_t context;
         std::unique_ptr<zmq::socket_t> spawn_socket;   // REP socket for spawn requests
-        std::unique_ptr<zmq::socket_t> command_socket; // PULL socket for control commands
-        std::unique_ptr<zmq::socket_t> state_socket;   // PUB socket for physics states
+        std::unique_ptr<zmq::socket_t> command_socket; // PULL socket for control commands (DEPRECATED)
+        std::unique_ptr<zmq::socket_t> state_socket;   // PUB socket for physics states (DEPRECATED)
+
+        // Per-robot sockets
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> robot_command_sockets; // PULL per robot
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> robot_state_sockets;   // PUB per robot
 
         // Robot registry: UUID -> Robot pointer
         std::map<std::string, Robot *> robots;
@@ -32,6 +36,8 @@ namespace fs {
         class Simulator *simulator;
 
         bool initialized = false;
+        bool use_tcp = false;
+        int next_tcp_port = 6000;
 
       public:
         Dispatcher();
@@ -40,9 +46,10 @@ namespace fs {
         /**
          * @brief Initialize ZMQ sockets and context
          * @param sim Pointer to simulator for robot spawning
+         * @param use_tcp If true, use TCP transport instead of IPC
          * @return true if initialization successful
          */
-        bool init(Simulator *sim);
+        bool init(Simulator *sim, bool use_tcp = false);
 
         /**
          * @brief Process incoming spawn requests from robot processes

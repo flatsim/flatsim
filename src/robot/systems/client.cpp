@@ -8,29 +8,32 @@ namespace fs {
 
     Client::~Client() { cleanup(); }
 
-    bool Client::init() {
+    bool Client::init(bool use_tcp, const std::string &host) {
         if (initialized) {
             std::cerr << "[Client] Already initialized" << std::endl;
             return false;
         }
 
+        this->use_tcp = use_tcp;
+        this->tcp_host = host;
+
         try {
-            // Create REQ socket for spawn requests
+            // Create REQ socket for spawn requests (only connect to spawn endpoint)
             spawn_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::req);
-            spawn_socket->connect("ipc:///tmp/flatsim_spawn");
+            if (use_tcp) {
+                spawn_socket->connect("tcp://" + host + ":5555");
+            } else {
+                spawn_socket->connect("ipc:///tmp/flatsim_spawn");
+            }
 
-            // Create PUSH socket for control commands
+            // Create sockets but don't connect yet - will connect after spawn
             command_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::push);
-            command_socket->connect("ipc:///tmp/flatsim_commands");
-
-            // Create SUB socket for physics states
             state_socket = std::make_unique<zmq::socket_t>(context, zmq::socket_type::sub);
-            state_socket->connect("ipc:///tmp/flatsim_state");
-            state_socket->set(zmq::sockopt::subscribe, ""); // Subscribe to all messages
-            state_socket->set(zmq::sockopt::rcvtimeo, 0);   // Non-blocking
+            state_socket->set(zmq::sockopt::subscribe, "");
+            state_socket->set(zmq::sockopt::rcvtimeo, 0);
 
             initialized = true;
-            std::cout << "[Client] Initialized successfully" << std::endl;
+            std::cout << "[Client] Initialized successfully (" << (use_tcp ? "TCP" : "IPC") << ")" << std::endl;
             return true;
 
         } catch (const zmq::error_t &e) {
@@ -78,12 +81,21 @@ namespace fs {
             auto spawn_reply = messages::SpawnRobotReply::deserialize(reply_str);
 
             if (spawn_reply.success) {
-                robot_uuid = spawn_reply.robot_uuid;
                 spawned = true;
+                robot_uuid = spawn_reply.robot_uuid;
+
+                // Connect to assigned endpoints
+                std::cout << "[Client] Connecting to assigned endpoints..." << std::endl;
+                std::cout << "[Client]   Commands: " << spawn_reply.command_endpoint << std::endl;
+                std::cout << "[Client]   State: " << spawn_reply.state_endpoint << std::endl;
+
+                command_socket->connect(spawn_reply.command_endpoint);
+                state_socket->connect(spawn_reply.state_endpoint);
+
                 std::cout << "[Client] Robot spawned successfully: " << robot_uuid << std::endl;
                 return true;
             } else {
-                std::cerr << "[Client] Spawn failed: " << spawn_reply.error_message << std::endl;
+                std::cerr << "[Client] Failed to spawn robot: " << spawn_reply.error_message << std::endl;
                 return false;
             }
 
@@ -131,12 +143,8 @@ namespace fs {
             std::string state_str(static_cast<char *>(message.data()), message.size());
             auto state = messages::PhysicsState::deserialize(state_str);
 
-            // Only return state for our robot
-            if (state.robot_uuid == robot_uuid) {
-                return state;
-            }
-
-            return std::nullopt;
+            // Since we have dedicated socket, this is always our state
+            return state;
 
         } catch (const zmq::error_t &e) {
             std::cerr << "[Client] Error receiving physics state: " << e.what() << std::endl;

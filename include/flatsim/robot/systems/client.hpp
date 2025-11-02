@@ -26,6 +26,8 @@ namespace fs {
         std::string robot_uuid;
         bool initialized = false;
         bool spawned = false;
+        bool use_tcp = false;
+        std::string tcp_host = "127.0.0.1";
 
       public:
         Client();
@@ -33,9 +35,11 @@ namespace fs {
 
         /**
          * @brief Initialize ZMQ sockets and context
+         * @param use_tcp If true, use TCP transport instead of IPC
+         * @param host Host address for TCP connection (default: 127.0.0.1)
          * @return true if initialization successful
          */
-        bool init();
+        bool init(bool use_tcp = false, const std::string &host = "127.0.0.1");
 
         /**
          * @brief Spawn robot in simulator
