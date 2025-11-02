@@ -1,10 +1,10 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include <nlohmann/json.hpp>
+#include <boost/json.hpp>
 #include <filesystem>
-#include <string>
 #include <optional>
+#include <string>
 
 namespace fs {
 
@@ -17,16 +17,17 @@ namespace fs {
         static bool validate_json(const std::filesystem::path &json_path);
 
       private:
-        static pigment::RGB parse_color(const nlohmann::json &color_json);
-        static concord::Pose parse_pose(const nlohmann::json &pos_json);
-        static concord::Size parse_size(const nlohmann::json &size_json);
-        static void parse_wheels(RobotInfo &info, const nlohmann::json &wheels_json);
-        static void parse_controls(RobotInfo &info, const nlohmann::json &controls_json);
-        static void parse_karosseries(RobotInfo &info, const nlohmann::json &karos_json, pigment::RGB default_color);
-        static void parse_hitches(RobotInfo &info, const nlohmann::json &hitches_json);
-        static void parse_tank(RobotInfo &info, const nlohmann::json &tank_json);
-        static void parse_power(RobotInfo &info, const nlohmann::json &power_json);
-        static void parse_capability(RobotInfo &info, const nlohmann::json &capability_json);
+        static pigment::RGB parse_color(const boost::json::object &color_json);
+        static concord::Pose parse_pose(const boost::json::object &pos_json);
+        static concord::Size parse_size(const boost::json::object &size_json);
+        static void parse_wheels(RobotInfo &info, const boost::json::array &wheels_json);
+        static void parse_controls(RobotInfo &info, const boost::json::object &controls_json);
+        static void parse_karosseries(RobotInfo &info, const boost::json::array &karos_json,
+                                      pigment::RGB default_color);
+        static void parse_hitches(RobotInfo &info, const boost::json::object &hitches_json);
+        static void parse_tank(RobotInfo &info, const boost::json::object &tank_json);
+        static void parse_power(RobotInfo &info, const boost::json::object &power_json);
+        static void parse_capability(RobotInfo &info, const boost::json::object &capability_json);
     };
 
 } // namespace fs

@@ -1,15 +1,23 @@
 #include "flatsim/loader.hpp"
 #include "flatsim/utils.hpp"
+#include <boost/json.hpp>
 #include <fstream>
 #include <iomanip>
-#include <nlohmann/json.hpp>
 #include <random>
 #include <spdlog/spdlog.h>
 #include <sstream>
 
 namespace fs {
 
-    using json = nlohmann::json;
+    // Helper functions for Boost.JSON
+    template <typename T> static T get_value(const boost::json::value &v) { return boost::json::value_to<T>(v); }
+
+    template <typename T> static T get_value_or(const boost::json::object &obj, const char *key, T default_val) {
+        if (obj.contains(key)) {
+            return boost::json::value_to<T>(obj.at(key));
+        }
+        return default_val;
+    }
 
     // Generate a proper UUID (UUID v4 format)
     static std::string generate_uuid() {
@@ -53,30 +61,33 @@ namespace fs {
             throw std::runtime_error("Cannot open machine file: " + json_path.string());
         }
 
-        json j;
-        file >> j;
+        std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         file.close();
+
+        boost::json::value jv = boost::json::parse(json_str);
+        boost::json::object const &j = jv.as_object();
 
         RobotInfo robot_info;
 
         // Parse basic info
-        auto &info = j["info"];
-        robot_info.type = info["type"];
-        std::string default_name = info["name"].get<std::string>();
+        boost::json::object const &info = j.at("info").as_object();
+        robot_info.type = get_value<std::string>(info.at("type"));
+        std::string default_name = get_value<std::string>(info.at("name"));
         robot_info.name = name.empty() ? default_name : name;
 
         // Generate proper UUID if not provided or empty
-        std::string uuid_str = info.value("uuid", "");
+        std::string uuid_str = get_value_or(info, "uuid", std::string(""));
         robot_info.uuid = (uuid_str.empty() || uuid_str == "") ? generate_uuid() : uuid_str;
-        robot_info.RCI = info["rci"];
+        robot_info.RCI = get_value<uint>(info.at("rci"));
 
         // Parse works_on array
-        for (const auto &work : info["works_on"]) {
-            robot_info.works_on.push_back(work);
+        boost::json::array const &works_on = info.at("works_on").as_array();
+        for (const auto &work : works_on) {
+            robot_info.works_on.push_back(get_value<std::string>(work));
         }
 
         // Parse role
-        std::string role_str = info.value("role", "MASTER");
+        std::string role_str = get_value_or(info, "role", std::string("MASTER"));
         if (role_str == "SLAVE") {
             robot_info.role = RobotRole::SLAVE;
         } else if (role_str == "FOLLOWER") {
@@ -86,49 +97,52 @@ namespace fs {
         }
 
         // Parse dimensions
-        auto &dims = j["dimensions"];
-        float width = dims["width"];
-        float height = dims["height"];
+        boost::json::object const &dims = j.at("dimensions").as_object();
+        float width = get_value<float>(dims.at("width"));
+        float height = get_value<float>(dims.at("height"));
         robot_info.bound = concord::Bound(spawn_pose, concord::Size(width, height, 0.0f));
 
         // Parse color (use override if provided)
-        pigment::RGB robot_color = color.value_or(parse_color(j["color"]));
+        pigment::RGB robot_color = color.value_or(parse_color(j.at("color").as_object()));
         robot_info.color = robot_color;
 
         // Parse wheels
-        parse_wheels(robot_info, j["wheels"]);
+        parse_wheels(robot_info, j.at("wheels").as_array());
 
         // Parse controls
-        parse_controls(robot_info, j["controls"]);
+        parse_controls(robot_info, j.at("controls").as_object());
 
         // Parse karosseries
         if (j.contains("karosseries")) {
-            parse_karosseries(robot_info, j["karosseries"], robot_color);
+            parse_karosseries(robot_info, j.at("karosseries").as_array(), robot_color);
         }
 
         // Parse hitches
         if (j.contains("hitches")) {
-            parse_hitches(robot_info, j["hitches"]);
+            parse_hitches(robot_info, j.at("hitches").as_object());
         }
 
         // Parse tank
         if (j.contains("tank")) {
-            parse_tank(robot_info, j["tank"]);
+            parse_tank(robot_info, j.at("tank").as_object());
         }
 
         // Parse power
         if (j.contains("power")) {
-            parse_power(robot_info, j["power"]);
+            parse_power(robot_info, j.at("power").as_object());
         }
 
         // Parse capability
         if (j.contains("capability")) {
-            parse_capability(robot_info, j["capability"]);
+            parse_capability(robot_info, j.at("capability").as_object());
         }
 
         // Parse turning radius
-        if (j.contains("turn") && j["turn"].contains("radius")) {
-            robot_info.turning_radius = j["turn"]["radius"].get<float>();
+        if (j.contains("turn")) {
+            boost::json::object const &turn = j.at("turn").as_object();
+            if (turn.contains("radius")) {
+                robot_info.turning_radius = get_value<float>(turn.at("radius"));
+            }
         }
 
         return robot_info;
@@ -158,8 +172,9 @@ namespace fs {
                 return false;
             }
 
-            json j;
-            file >> j;
+            std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            boost::json::value jv = boost::json::parse(json_str);
+            boost::json::object const &j = jv.as_object();
 
             // Check required fields
             if (!j.contains("info") || !j.contains("dimensions") || !j.contains("color") || !j.contains("wheels") ||
@@ -168,7 +183,7 @@ namespace fs {
             }
 
             // Check info fields
-            auto &info = j["info"];
+            boost::json::object const &info = j.at("info").as_object();
             if (!info.contains("type") || !info.contains("name") || !info.contains("rci") ||
                 !info.contains("works_on")) {
                 return false;
@@ -181,34 +196,36 @@ namespace fs {
         }
     }
 
-    pigment::RGB Loader::parse_color(const json &color_json) {
-        return pigment::RGB(color_json["r"].get<int>(), color_json["g"].get<int>(), color_json["b"].get<int>());
+    pigment::RGB Loader::parse_color(const boost::json::object &color_json) {
+        return pigment::RGB(get_value<int>(color_json.at("r")), get_value<int>(color_json.at("g")),
+                            get_value<int>(color_json.at("b")));
     }
 
-    concord::Pose Loader::parse_pose(const json &pos_json) {
-        float x = pos_json["x"];
-        float y = pos_json["y"];
-        float yaw = pos_json.value("yaw", 0.0f);
+    concord::Pose Loader::parse_pose(const boost::json::object &pos_json) {
+        float x = get_value<float>(pos_json.at("x"));
+        float y = get_value<float>(pos_json.at("y"));
+        float yaw = get_value_or(pos_json, "yaw", 0.0f);
         return concord::Pose(x, y, yaw);
     }
 
-    concord::Size Loader::parse_size(const json &size_json) {
-        float width = size_json["width"];
-        float height = size_json["height"];
-        float depth = size_json.value("depth", 0.0f);
+    concord::Size Loader::parse_size(const boost::json::object &size_json) {
+        float width = get_value<float>(size_json.at("width"));
+        float height = get_value<float>(size_json.at("height"));
+        float depth = get_value_or(size_json, "depth", 0.0f);
         return concord::Size(width, height, depth);
     }
 
-    void Loader::parse_wheels(RobotInfo &info, const json &wheels_json) {
+    void Loader::parse_wheels(RobotInfo &info, const boost::json::array &wheels_json) {
         std::vector<concord::Bound> wheels;
         std::vector<bool> left_side;
 
-        for (const auto &wheel : wheels_json) {
-            concord::Pose wheel_pose = parse_pose(wheel["position"]);
-            concord::Size wheel_size = parse_size(wheel["size"]);
+        for (const auto &wheel_val : wheels_json) {
+            boost::json::object const &wheel = wheel_val.as_object();
+            concord::Pose wheel_pose = parse_pose(wheel.at("position").as_object());
+            concord::Size wheel_size = parse_size(wheel.at("size").as_object());
             wheels.push_back(concord::Bound(wheel_pose, wheel_size));
 
-            std::string side = wheel["side"];
+            std::string side = get_value<std::string>(wheel.at("side"));
             left_side.push_back(side == "left");
         }
 
@@ -216,26 +233,30 @@ namespace fs {
         info.controls.left_side = left_side;
     }
 
-    void Loader::parse_controls(RobotInfo &info, const json &controls_json) {
-        auto &steering = controls_json["steering"];
-        auto &throttle = controls_json["throttle"];
+    void Loader::parse_controls(RobotInfo &info, const boost::json::object &controls_json) {
+        boost::json::object const &steering = controls_json.at("steering").as_object();
+        boost::json::object const &throttle = controls_json.at("throttle").as_object();
 
-        for (const auto &angle : steering["max_angles"]) {
-            info.controls.steerings_max.push_back(utils::deg2rad(angle.get<float>()));
+        boost::json::array const &max_angles = steering.at("max_angles").as_array();
+        for (const auto &angle : max_angles) {
+            info.controls.steerings_max.push_back(utils::deg2rad(get_value<float>(angle)));
         }
 
-        for (const auto &diff : steering["differential"]) {
-            info.controls.steerings_diff.push_back(utils::deg2rad(diff.get<float>()));
+        boost::json::array const &differential = steering.at("differential").as_array();
+        for (const auto &diff : differential) {
+            info.controls.steerings_diff.push_back(utils::deg2rad(get_value<float>(diff)));
         }
 
-        for (const auto &value : throttle["max_values"]) {
-            info.controls.throttles_max.push_back(value.get<float>());
+        boost::json::array const &max_values = throttle.at("max_values").as_array();
+        for (const auto &value : max_values) {
+            info.controls.throttles_max.push_back(get_value<float>(value));
         }
 
         // Parse throttle differential if present
         if (throttle.contains("differential")) {
-            for (const auto &diff : throttle["differential"]) {
-                info.controls.throttles_diff.push_back(diff.get<float>());
+            boost::json::array const &throttle_diff = throttle.at("differential").as_array();
+            for (const auto &diff : throttle_diff) {
+                info.controls.throttles_diff.push_back(get_value<float>(diff));
             }
         } else {
             // Default to no throttle differential
@@ -243,24 +264,29 @@ namespace fs {
         }
     }
 
-    void Loader::parse_karosseries(RobotInfo &info, const json &karos_json, pigment::RGB default_color) {
-        for (const auto &karo : karos_json) {
+    void Loader::parse_karosseries(RobotInfo &info, const boost::json::array &karos_json, pigment::RGB default_color) {
+        for (const auto &karo_val : karos_json) {
+            boost::json::object const &karo = karo_val.as_object();
             KarosserieInfo kaross;
-            kaross.name = karo["name"];
-            kaross.bound = concord::Bound(parse_pose(karo["position"]), parse_size(karo["size"]));
-            kaross.color = karo.contains("color") ? parse_color(karo["color"]) : default_color;
-            kaross.sections = karo.value("sections", 0);
-            kaross.has_physics = karo.value("has_physics", true);
+            kaross.name = get_value<std::string>(karo.at("name"));
+            kaross.bound =
+                concord::Bound(parse_pose(karo.at("position").as_object()), parse_size(karo.at("size").as_object()));
+            kaross.color = karo.contains("color") ? parse_color(karo.at("color").as_object()) : default_color;
+            kaross.sections = get_value_or(karo, "sections", 0);
+            kaross.has_physics = get_value_or(karo, "has_physics", true);
 
             info.karos.push_back(kaross);
         }
     }
 
-    void Loader::parse_hitches(RobotInfo &info, const json &hitches_json) {
-        for (auto &[name, hitch] : hitches_json.items()) {
-            concord::Pose hitch_pose = parse_pose(hitch["position"]);
-            concord::Size hitch_size = parse_size(hitch["size"]);
-            bool is_master = hitch.value("is_master", true); // Default to master
+    void Loader::parse_hitches(RobotInfo &info, const boost::json::object &hitches_json) {
+        for (auto const &item : hitches_json) {
+            std::string name = std::string(item.key());
+            boost::json::object const &hitch = item.value().as_object();
+
+            concord::Pose hitch_pose = parse_pose(hitch.at("position").as_object());
+            concord::Size hitch_size = parse_size(hitch.at("size").as_object());
+            bool is_master = get_value_or(hitch, "is_master", true);
 
             HitchInfo hitch_info;
             hitch_info.bound = concord::Bound(hitch_pose, hitch_size);
@@ -270,45 +296,49 @@ namespace fs {
         }
     }
 
-    void Loader::parse_tank(RobotInfo &info, const json &tank_json) {
+    void Loader::parse_tank(RobotInfo &info, const boost::json::object &tank_json) {
         TankInfo tank;
-        tank.name = tank_json["name"];
-        tank.capacity = tank_json["capacity"];
-        tank.bound = concord::Bound(parse_pose(tank_json["position"]), parse_size(tank_json["size"]));
+        tank.name = get_value<std::string>(tank_json.at("name"));
+        tank.capacity = get_value<float>(tank_json.at("capacity"));
+        tank.bound = concord::Bound(parse_pose(tank_json.at("position").as_object()),
+                                    parse_size(tank_json.at("size").as_object()));
 
         info.tank = tank;
     }
 
-    void Loader::parse_power(RobotInfo &info, const json &power_json) {
+    void Loader::parse_power(RobotInfo &info, const boost::json::object &power_json) {
         PowerInfo power;
-        power.name = power_json["name"];
+        power.name = get_value<std::string>(power_json.at("name"));
 
-        std::string type_str = power_json["type"];
+        std::string type_str = get_value<std::string>(power_json.at("type"));
         power.type = (type_str == "BATTERY") ? PowerType::BATTERY : PowerType::FUEL;
 
-        power.capacity = power_json["capacity"];
-        power.consumption_rate = power_json["consumption_rate"];
-        power.charge_rate = power_json.value("charge_rate", 0.0f);
+        power.capacity = get_value<float>(power_json.at("capacity"));
+        power.consumption_rate = get_value<float>(power_json.at("consumption_rate"));
+        power.charge_rate = get_value_or(power_json, "charge_rate", 0.0f);
 
         info.power_source = power;
     }
 
-    void Loader::parse_capability(RobotInfo &info, const json &capability_json) {
+    void Loader::parse_capability(RobotInfo &info, const boost::json::object &capability_json) {
         if (capability_json.contains("work_on")) {
-            for (const auto &work : capability_json["work_on"]) {
-                info.capability.work_on.push_back(work.get<std::string>());
+            boost::json::array const &work_on = capability_json.at("work_on").as_array();
+            for (const auto &work : work_on) {
+                info.capability.work_on.push_back(get_value<std::string>(work));
             }
         }
 
         if (capability_json.contains("connect_to")) {
-            for (const auto &connect : capability_json["connect_to"]) {
-                info.capability.connect_to.push_back(connect.get<std::string>());
+            boost::json::array const &connect_to = capability_json.at("connect_to").as_array();
+            for (const auto &connect : connect_to) {
+                info.capability.connect_to.push_back(get_value<std::string>(connect));
             }
         }
 
         if (capability_json.contains("unload_to")) {
-            for (const auto &unload : capability_json["unload_to"]) {
-                info.capability.unload_to.push_back(unload.get<std::string>());
+            boost::json::array const &unload_to = capability_json.at("unload_to").as_array();
+            for (const auto &unload : unload_to) {
+                info.capability.unload_to.push_back(get_value<std::string>(unload));
             }
         }
     }

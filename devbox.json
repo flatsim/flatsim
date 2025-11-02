@@ -4,14 +4,24 @@
     "cmake@latest",
     "clang@latest",
     "clang-tools@latest",
+    "gcc@latest",
+    "gcc.cc.lib",
     "stdenv@latest",
     "boost@latest",
+    "boost.dev",
     "arrow-cpp@latest",
     "zeromq@latest",
     "cppzmq@latest",
     "rerun@latest",
     "tbb@latest",
-    "spdlog@latest"
+    "spdlog@latest",
+    "spdlog.dev",
+    "fmt@latest",
+    "fmt.dev",
+    "libstdcxx5@latest",
+    "tbb.dev",
+    "cli11@latest",
+    "libsodium@latest"
   ],
   "shell": {
     "init_hook": [
