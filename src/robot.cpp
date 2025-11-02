@@ -131,7 +131,7 @@ namespace fs {
         constraints.max_angular_velocity = 1.0f;                // 1 rad/s
         constraints.min_turning_radius = robo.turning_radius;
 
-        navcon->init(constraints, rec);
+        navcon->init(constraints, rec, robo.seqid);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
