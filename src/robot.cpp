@@ -1,4 +1,7 @@
 #include "flatsim/robot.hpp"
+#include "flatsim/network/interfaces/canbus_interface.hpp"
+#include "flatsim/network/interfaces/wifi_interface.hpp"
+#include "flatsim/network/interfaces/zenoh_interface.hpp"
 #include "flatsim/simulator.hpp"
 #include <algorithm>
 #include <cmath>
@@ -14,9 +17,15 @@ namespace fs {
         // Initialize modular systems
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
+        network = std::make_unique<Network>();
         navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PATH_CONTROLLER);
     }
-    Robot::~Robot() {}
+    Robot::~Robot() {
+        // Cleanup network interfaces
+        if (network) {
+            network->cleanup();
+        }
+    }
 
     void Robot::tick(float dt) {
         for (auto &sensor : sensors) {
@@ -39,6 +48,11 @@ namespace fs {
 
         // Update navigation controller
         update_navigation(dt);
+
+        // Update network interfaces
+        if (network) {
+            network->tick(dt);
+        }
 
         chassis->tick(dt);
         chassis->update(control_system->get_steerings(), control_system->get_throttles(), dt);
@@ -117,12 +131,12 @@ namespace fs {
         constraints.max_angular_velocity = 1.0f;                // 1 rad/s
         constraints.min_turning_radius = robo.turning_radius;
 
-        navcon->init(constraints, rec);
+        navcon->init(constraints, rec, robo.seqid);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
             tank = Tank(robo.tank->name, Tank::Type::HARVEST, robo.tank->capacity, 0.0f, 0.0f);
-            tank->init(info.color, info.name, robo.tank->bound);
+            tank->init(info.color, info.seqid, robo.tank->bound);
         }
 
         // Initialize power source if present
@@ -135,6 +149,29 @@ namespace fs {
 
         // Initialize follower capabilities based on robot configuration
         chain_manager->update_follower_capabilities();
+
+        // Configure network interfaces based on robot role
+        if (network) {
+            switch (role) {
+            case RobotRole::MASTER:
+                // MASTER robots have Zenoh + WiFi interfaces for maximum connectivity
+                network->add_interface(std::make_unique<fs::network::ZenohInterface>());
+                network->add_interface(std::make_unique<fs::network::WiFiInterface>());
+                break;
+            case RobotRole::FOLLOWER:
+                // FOLLOWER robots have Zenoh + CAN-bus interfaces
+                network->add_interface(std::make_unique<fs::network::ZenohInterface>());
+                network->add_interface(std::make_unique<fs::network::CANBusInterface>());
+                break;
+            case RobotRole::SLAVE:
+                // SLAVE robots have CAN-bus only (no network interfaces for autonomy)
+                network->add_interface(std::make_unique<fs::network::CANBusInterface>());
+                break;
+            }
+
+            // Initialize network with robot UUID
+            network->init(info.uuid);
+        }
     }
 
     // All control and chain methods are now delegated to ControlSystem and ChainManager
@@ -303,7 +340,7 @@ namespace fs {
             role_prefix = "(S)";
             break;
         }
-        std::string label = role_prefix + info.name;
+        std::string label = role_prefix + info.seqid;
         if (has_power()) label += "(" + std::to_string(static_cast<int>(get_power_percentage())) + "%)";
         if (chassis) chassis->tock(label);
 
@@ -321,7 +358,7 @@ namespace fs {
         // 3D position visualization
         std::vector<rerun::components::Position3D> positions = {
             rerun::components::Position3D(float(x), float(y), 0.1f)};
-        rec->log_static(this->info.name + "/pose", rerun::Points3D(positions).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose", rerun::Points3D(positions).with_colors(colors));
 
         // GPS coordinates visualization
         auto wgs_coords = this->info.bound.pose.point.toWGS(datum);
@@ -329,7 +366,7 @@ namespace fs {
         auto lon = float(wgs_coords.lon);
         std::vector<rerun::LatLon> locators;
         locators.push_back(rerun::LatLon(lat, lon));
-        rec->log_static(this->info.name + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
         // Update navigation visualization
         if (navcon) {
@@ -345,9 +382,9 @@ namespace fs {
         // Simple pulse implementation - just log basic pulse state
         if (rec) {
             auto pos = get_position();
-            rec->log(info.name + "/pulse", rerun::Points2D({rerun::Position2D(pos.point.x, pos.point.y)})
-                                               .with_colors({rerun::Color(255, 255, 255, 200)})
-                                               .with_radii({2.0f}));
+            rec->log(info.seqid + "/pulse", rerun::Points2D({rerun::Position2D(pos.point.x, pos.point.y)})
+                                                .with_colors({rerun::Color(255, 255, 255, 200)})
+                                                .with_radii({2.0f}));
         }
 
         // Reset pulsing after some time

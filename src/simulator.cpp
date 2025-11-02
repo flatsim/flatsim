@@ -2,44 +2,36 @@
 #include <chrono>
 #include <cmath>
 #include <execution>
-#ifdef HAS_KOKKOS
-#include <Kokkos_Core.hpp>
-#endif
 
 namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {
-#ifdef HAS_KOKKOS
-        Kokkos::initialize();
-        std::cout << "Execution space: " << typeid(Kokkos::DefaultHostExecutionSpace).name() << std::endl;
-        std::cout << "Number of threads: " << Kokkos::DefaultHostExecutionSpace().concurrency() << std::endl;
-#else
         unsigned int numThreads = std::thread::hardware_concurrency();
         spdlog::info("Using {} threads", numThreads);
-#endif
     }
-    Simulator::~Simulator() {
-#ifdef HAS_KOKKOS
-        Kokkos::finalize();
-#endif
-    }
-#ifdef HAS_KOKKOS
-    void Simulator::tick(float dt) {
-        if (!world) {
-            throw NullPointerException("world");
-        }
-        world->tick(dt);
-        // Process robots sequentially (rerun logging needs sequential access)
-        for (auto &robot : robots) {
-            if (!robot) continue;
-            robot->tick(dt);
-        }
+    Simulator::~Simulator() {}
 
-        Kokkos::fence();
-    }
-#else
     void Simulator::tick(float dt) {
         ticks++;
         if (!world) throw NullPointerException("world");
+
+        // Process dispatcher if enabled
+        if (dispatcher && dispatcher->is_ready()) {
+            // Process spawn requests
+            dispatcher->process_spawn_requests();
+
+            // Receive control commands from robot processes
+            auto commands = dispatcher->receive_commands();
+            for (const auto &cmd : commands) {
+                // Apply control commands to robots
+                for (auto &robot : robots) {
+                    if (robot && robot->info.uuid == cmd.robot_uuid) {
+                        robot->update(cmd.steering, cmd.throttle);
+                        break;
+                    }
+                }
+            }
+        }
+
         // World tick
         world->tick(dt);
         // Process robots in parallel - pure physics, thread-safe
@@ -47,6 +39,11 @@ namespace fs {
             if (!robott) return;
             robott->tick(dt);
         });
+
+        // Send physics states to robot processes
+        if (dispatcher && dispatcher->is_ready()) {
+            dispatcher->send_states();
+        }
     }
 
     void Simulator::tock(int rate) {
@@ -57,8 +54,6 @@ namespace fs {
             tocks = 0;
         }
     }
-
-#endif
 
     void Simulator::init(concord::Datum datum, concord::Size world_size) {
         world = std::make_shared<fs::World>(rec);
@@ -253,4 +248,31 @@ namespace fs {
         // Reset timeline
         rec->reset_time();
     }
+
+    // DISPATCHER
+    void Simulator::enable_dispatcher() {
+        if (dispatcher) {
+            std::cout << "[Simulator] Dispatcher already enabled" << std::endl;
+            return;
+        }
+
+        dispatcher = std::make_unique<Dispatcher>();
+        if (dispatcher->init(this)) {
+            std::cout << "[Simulator] Dispatcher enabled successfully" << std::endl;
+        } else {
+            std::cerr << "[Simulator] Failed to enable dispatcher" << std::endl;
+            dispatcher.reset();
+        }
+    }
+
+    void Simulator::disable_dispatcher() {
+        if (!dispatcher) {
+            return;
+        }
+
+        dispatcher->cleanup();
+        dispatcher.reset();
+        std::cout << "[Simulator] Dispatcher disabled" << std::endl;
+    }
+
 } // namespace fs

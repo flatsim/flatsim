@@ -7,6 +7,7 @@
 #include "muli/world.h"
 
 #include "flatsim/exceptions.hpp"
+#include "flatsim/network.hpp"
 #include "flatsim/robot/chassis/chassis.hpp"
 #include "flatsim/robot/power.hpp"
 #include "flatsim/robot/sensor.hpp"
@@ -48,6 +49,7 @@ namespace fs {
         // New modular systems
         std::unique_ptr<ControlSystem> control_system;
         std::unique_ptr<ChainManager> chain_manager;
+        std::unique_ptr<Network> network;
 
       public:
         RobotInfo info;

@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Use GCC 13 for compatibility
+set(CMAKE_C_COMPILER gcc-13)
+set(CMAKE_CXX_COMPILER g++-13)
+
 set(project_name flatsim)
 project(${project_name} VERSION 0.1.0 LANGUAGES CXX)
 
@@ -18,7 +22,6 @@ set(params
 )
 
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
-option(HAS_KOKKOS "Enable Kokkos" OFF)
 
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
@@ -29,17 +32,6 @@ include(FetchContent)
 # External Dependencies
 set(ext_deps)
 
-if(HAS_KOKKOS)
-    # add this: cmake -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_ADA89=ON -DKokkos_ENABLE_THREADS=ON ..
-    FetchContent_Declare(kokkos GIT_REPOSITORY https://github.com/kokkos/kokkos.git GIT_TAG 4.6.01 GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(kokkos)
-    list(APPEND ext_deps Kokkos::kokkos)
-    add_definitions(-DHAS_KOKKOS)
-else()
-    find_package(TBB REQUIRED)
-    list(APPEND ext_deps TBB::tbb)
-endif()
-
 # Muli Physics Engine
 set(MULI_BUILD_DEMO OFF)
 FetchContent_Declare(muli GIT_REPOSITORY https://github.com/Sopiro/Muli GIT_SHALLOW TRUE)
@@ -47,39 +39,24 @@ FetchContent_MakeAvailable(muli)
 include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
-# Rerun Visualization SDK
-option(USE_LOCAL "Use locally installed libraries instead of fetching" OFF)
-
-if(USE_LOCAL)
-  find_package(rerun_sdk REQUIRED PATHS $ENV{HOME}/.local/lib/cmake/rerun_sdk)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(ZMQ REQUIRED libzmq)
-  add_library(zeromq INTERFACE)
-  target_link_libraries(zeromq INTERFACE ${ZMQ_LIBRARIES})
-  target_include_directories(zeromq INTERFACE ${ZMQ_INCLUDE_DIRS})
-  target_compile_options(zeromq INTERFACE ${ZMQ_CFLAGS_OTHER})
-else()
-  FetchContent_Declare(rerun_sdk URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
-  FetchContent_MakeAvailable(rerun_sdk)
-  FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG v4.11.0)
-  FetchContent_MakeAvailable(zeromq)
-endif()
-
+find_package(rerun_sdk REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ZMQ REQUIRED libzmq)
+add_library(zeromq INTERFACE)
+target_link_libraries(zeromq INTERFACE ${ZMQ_LIBRARIES})
+target_include_directories(zeromq INTERFACE ${ZMQ_INCLUDE_DIRS})
+target_compile_options(zeromq INTERFACE ${ZMQ_CFLAGS_OTHER})
 set(CPPZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(cppzmq GIT_REPOSITORY https://github.com/zeromq/cppzmq.git GIT_TAG v4.11.0)
-FetchContent_MakeAvailable(cppzmq)
+add_library(cppzmq INTERFACE)
+pkg_check_modules(TBB REQUIRED tbb)
+add_library(tbb_interface INTERFACE)
+target_link_libraries(tbb_interface INTERFACE ${TBB_LIBRARIES})
+target_include_directories(tbb_interface INTERFACE ${TBB_INCLUDE_DIRS})
+target_compile_options(tbb_interface INTERFACE ${TBB_CFLAGS_OTHER})
+find_package(spdlog REQUIRED)
+list(APPEND ext_deps rerun_sdk zeromq cppzmq tbb_interface spdlog::spdlog)
 
-list(APPEND ext_deps rerun_sdk zeromq cppzmq)
-
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
-FetchContent_MakeAvailable(json)
-list(APPEND ext_deps nlohmann_json::nlohmann_json)
-
-FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
-FetchContent_MakeAvailable(spdlog)
-list(APPEND ext_deps spdlog::spdlog)
-
-FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.0.2)
+FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
 FetchContent_MakeAvailable(concord)
 list(APPEND ext_deps concord::concord)
 
@@ -87,20 +64,21 @@ FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/onlyhead/pigment.
 FetchContent_MakeAvailable(pigment)
 list(APPEND ext_deps pigment::pigment)
 
-FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.git GIT_TAG 0.1.0)
+FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.git GIT_TAG 1.0.0)
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 0.0.3)
+FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 1.0.0)
 FetchContent_MakeAvailable(zoneout)
 list(APPEND ext_deps zoneout::zoneout)
 
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 0.3.0)
+FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 1.0.1)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.4)
+FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.6)
 FetchContent_MakeAvailable(navcon)
+# add_subdirectory(xtra/navcon navcon)
 list(APPEND ext_deps navcon::navcon)
 
 # --------------------------------------------------------------------------------------------------
@@ -150,6 +128,10 @@ file(GLOB_RECURSE internal_deps
 if(${project_name_upper}_BUILD_EXAMPLES)
   file(GLOB exe CONFIGURE_DEPENDS examples/*.cpp)
   # ----------------------------------------------
+  FetchContent_Declare(cli11 GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git GIT_TAG v2.5.0)
+  FetchContent_MakeAvailable(cli11)
+  list(APPEND ext_deps CLI11::CLI11)
+
   set(exec_names)
   foreach(src_file IN LISTS exe)
     get_filename_component(exec_name "${src_file}" NAME_WE)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "flatsim/dispatcher.hpp"
 #include "flatsim/exceptions.hpp"
 #include "flatsim/robot.hpp"
 #include "flatsim/types.hpp"
@@ -8,6 +9,7 @@
 #include "muli/world.h"
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <rerun.hpp>
 #include <thread>
@@ -26,6 +28,7 @@ namespace fs {
         int selected_robot_idx = -1;
         uint ticks = 0;
         uint tocks = 0;
+        std::unique_ptr<Dispatcher> dispatcher;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
@@ -59,6 +62,11 @@ namespace fs {
         // RERUN MANAGEMENT
         void reset_recording();
         void clear_all_entities();
+
+        // DISPATCHER (ZMQ Process Separation)
+        void enable_dispatcher();
+        void disable_dispatcher();
+        bool is_dispatcher_enabled() const { return dispatcher != nullptr; }
     };
 
     // Template implementation
