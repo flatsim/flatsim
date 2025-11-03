@@ -1,13 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Use GCC 13 for compatibility
-set(CMAKE_C_COMPILER gcc-13)
-set(CMAKE_CXX_COMPILER g++-13)
-
-# # Force use of system linker instead of Nix linker
-set(CMAKE_LINKER /usr/bin/ld)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -B/usr/bin")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -B/usr/bin")
+# set(CMAKE_C_COMPILER gcc-13)
+# set(CMAKE_CXX_COMPILER g++-13)
 
 set(project_name flatsim)
 project(${project_name} VERSION 0.1.0 LANGUAGES CXX)
@@ -29,6 +23,10 @@ set(params
     -Wno-unused-variable
     -Wno-unused-but-set-variable
     -Wno-unused-parameter
+)
+
+set(link_options
+    "LINKER:--no-as-needed"
 )
 
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
@@ -146,6 +144,7 @@ if(${project_name_upper}_BUILD_EXAMPLES)
       endforeach()
     target_compile_options(${exec_name} PRIVATE ${CURL_CFLAGS_OTHER})
     target_link_libraries(${exec_name} ${ext_deps})
+    target_link_options(${exec_name} PRIVATE ${link_options})
     target_include_directories(${exec_name} PRIVATE ${CURL_INCLUDE_DIRS})
     install(TARGETS ${exec_name} DESTINATION bin)
     list(APPEND exec_names ${exec_name})
@@ -183,6 +182,7 @@ if(${project_name_upper}_ENABLE_TESTS)
         target_sources(${test_name} PRIVATE "${lib_file}")
       endforeach()
     target_link_libraries(${test_name} ${ext_deps} doctest_with_main)
+    target_link_options(${test_name} PRIVATE ${link_options})
     add_test(NAME ${test_name} COMMAND ${test_name})
   endforeach()
 endif()

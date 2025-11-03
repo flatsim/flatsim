@@ -4,7 +4,7 @@
     "cmake@latest",
     "clang@latest",
     "clang-tools@latest",
-    "gcc@latest",
+    "gcc@13.3",
     "gcc.cc.lib",
     "stdenv@latest",
     "boost@latest",
@@ -18,7 +18,6 @@
     "spdlog.dev",
     "fmt@latest",
     "fmt.dev",
-    "libstdcxx5@latest",
     "tbb.dev",
     "cli11@latest",
     "libsodium@latest"
