@@ -170,14 +170,14 @@ namespace fs::messages {
     struct SpawnRobotRequest {
         RobotInfoMessage robot_info;
         double timestamp;
-        bool use_tcp = false;
+        std::string use_tcp = ""; // Empty = IPC, non-empty = TCP with client's connected IP
 
         // Default constructor
         SpawnRobotRequest() = default;
 
         // Constructor
-        SpawnRobotRequest(const RobotInfoMessage &info, double ts, bool tcp = false)
-            : robot_info(info), timestamp(ts), use_tcp(tcp) {}
+        SpawnRobotRequest(const RobotInfoMessage &info, double ts, const std::string &tcp_ip = "")
+            : robot_info(info), timestamp(ts), use_tcp(tcp_ip) {}
 
         // Serialization
         std::string serialize() const;

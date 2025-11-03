@@ -56,7 +56,9 @@ namespace fs {
         try {
             // Create spawn request
             messages::RobotInfoMessage info_msg(robot_info);
-            messages::SpawnRobotRequest request(info_msg, 0.0, use_tcp); // Pass transport preference
+            // Pass the IP the client connected to (empty string for IPC)
+            std::string tcp_ip = use_tcp ? tcp_host : "";
+            messages::SpawnRobotRequest request(info_msg, 0.0, tcp_ip);
 
             // Serialize and send request
             std::string request_str = request.serialize();

@@ -255,15 +255,15 @@ namespace fs {
     }
 
     // DISPATCHER
-    void Simulator::enable_dispatcher() {
+    void Simulator::enable_dispatcher(const std::string &server_host) {
         if (dispatcher) {
             std::cout << "[Simulator] Dispatcher already enabled" << std::endl;
             return;
         }
 
         dispatcher = std::make_unique<Dispatcher>();
-        if (dispatcher->init(this)) {
-            std::cout << "[Simulator] Dispatcher enabled successfully" << std::endl;
+        if (dispatcher->init(this, true, server_host)) {
+            std::cout << "[Simulator] Dispatcher enabled successfully (host: " << server_host << ")" << std::endl;
         } else {
             std::cerr << "[Simulator] Failed to enable dispatcher" << std::endl;
             dispatcher.reset();

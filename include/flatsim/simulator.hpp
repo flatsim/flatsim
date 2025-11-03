@@ -64,7 +64,7 @@ namespace fs {
         void clear_all_entities();
 
         // DISPATCHER (ZMQ Process Separation)
-        void enable_dispatcher();
+        void enable_dispatcher(const std::string &server_host = "0.0.0.0");
         void disable_dispatcher();
         bool is_dispatcher_enabled() const { return dispatcher != nullptr; }
     };

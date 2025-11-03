@@ -8,7 +8,7 @@ namespace fs {
 
     Dispatcher::~Dispatcher() { cleanup(); }
 
-    bool Dispatcher::init(Simulator *sim, bool use_tcp) {
+    bool Dispatcher::init(Simulator *sim, bool use_tcp, const std::string &server_host) {
         if (initialized) {
             std::cerr << "[Dispatcher] Already initialized" << std::endl;
             return false;
@@ -16,6 +16,7 @@ namespace fs {
 
         simulator = sim;
         this->use_tcp = use_tcp;
+        this->server_host = server_host;
 
         try {
             // Create REP socket for spawn requests (shared endpoint)
@@ -110,17 +111,30 @@ namespace fs {
                 std::string cmd_endpoint, state_endpoint;
 
                 try {
-                    // Use the client's transport preference from the spawn request
-                    bool client_wants_tcp = spawn_req.use_tcp;
+                    // Check if client wants TCP (use_tcp is now a string: empty=IPC, non-empty=TCP with IP)
+                    bool client_wants_tcp = !spawn_req.use_tcp.empty();
 
                     if (client_wants_tcp) {
                         int robot_base_port = next_tcp_port;
 
+                        // Determine the advertised host
+                        std::string advertised_host;
+
+                        if (server_host == "0.0.0.0") {
+                            // Server allows any interface - use the IP the client connected to
+                            advertised_host = spawn_req.use_tcp;
+                            std::cout << "[Dispatcher] Using client's connection IP: " << advertised_host << std::endl;
+                        } else {
+                            // Server has a specific IP configured - use that
+                            advertised_host = server_host;
+                            std::cout << "[Dispatcher] Using configured server IP: " << advertised_host << std::endl;
+                        }
+
                         cmd_endpoint = "tcp://*:" + std::to_string(robot_base_port);
-                        reply.command_endpoint = "tcp://127.0.0.1:" + std::to_string(robot_base_port);
+                        reply.command_endpoint = "tcp://" + advertised_host + ":" + std::to_string(robot_base_port);
 
                         state_endpoint = "tcp://*:" + std::to_string(robot_base_port + 1);
-                        reply.state_endpoint = "tcp://127.0.0.1:" + std::to_string(robot_base_port + 1);
+                        reply.state_endpoint = "tcp://" + advertised_host + ":" + std::to_string(robot_base_port + 1);
 
                         next_tcp_port += 10;
                     } else {

@@ -38,6 +38,7 @@ namespace fs {
         bool initialized = false;
         bool use_tcp = false;
         int next_tcp_port = 6000;
+        std::string server_host = "0.0.0.0"; // Host address for TCP connections (0.0.0.0 = use client's IP)
 
       public:
         Dispatcher();
@@ -47,9 +48,10 @@ namespace fs {
          * @brief Initialize ZMQ sockets and context
          * @param sim Pointer to simulator for robot spawning
          * @param use_tcp If true, use TCP transport instead of IPC
+         * @param server_host Host address to advertise (default: 0.0.0.0 = use client's IP)
          * @return true if initialization successful
          */
-        bool init(Simulator *sim, bool use_tcp = false);
+        bool init(Simulator *sim, bool use_tcp = false, const std::string &server_host = "0.0.0.0");
 
         /**
          * @brief Process incoming spawn requests from robot processes

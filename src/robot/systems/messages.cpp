@@ -454,8 +454,17 @@ namespace fs::messages {
         SpawnRobotRequest msg;
         msg.robot_info = RobotInfoMessage::deserialize(boost::json::value_to<std::string>(j.at("robot_info")));
         msg.timestamp = boost::json::value_to<double>(j.at("timestamp"));
-        // Default to false for backward compatibility
-        msg.use_tcp = j.contains("use_tcp") ? boost::json::value_to<bool>(j.at("use_tcp")) : false;
+        // Handle both old bool format and new string format for backward compatibility
+        if (j.contains("use_tcp")) {
+            if (j.at("use_tcp").is_bool()) {
+                // Old format: convert bool to empty string (IPC) or "127.0.0.1" (TCP fallback)
+                msg.use_tcp = boost::json::value_to<bool>(j.at("use_tcp")) ? "127.0.0.1" : "";
+            } else {
+                msg.use_tcp = boost::json::value_to<std::string>(j.at("use_tcp"));
+            }
+        } else {
+            msg.use_tcp = ""; // Default to IPC
+        }
         return msg;
     }
 
