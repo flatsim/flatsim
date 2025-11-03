@@ -71,7 +71,7 @@ FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 1.0.0)
+FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 1.1.0)
 FetchContent_MakeAvailable(zoneout)
 list(APPEND ext_deps zoneout::zoneout)
 
