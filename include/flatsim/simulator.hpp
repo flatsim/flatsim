@@ -107,8 +107,8 @@ namespace fs {
                     break; // User loop returns false to exit
                 }
 
-                // Small sleep to cap CPU usage
-                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                // Small sleep to cap CPU usage and reduce power consumption
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         } catch (...) {
             running.store(false);

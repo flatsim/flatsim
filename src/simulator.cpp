@@ -202,10 +202,13 @@ namespace fs {
             }
 
             concord::Point to_pos = robot->info.bound.pose.point;
-            float distance = std::sqrt(std::pow(to_pos.x - from_pos.x, 2) + std::pow(to_pos.y - from_pos.y, 2));
+            float dx = to_pos.x - from_pos.x;
+            float dy = to_pos.y - from_pos.y;
+            float distance_sq = dx * dx + dy * dy;
+            float min_distance_sq = min_distance * min_distance;
 
-            if (distance < min_distance) {
-                min_distance = distance;
+            if (distance_sq < min_distance_sq) {
+                min_distance = std::sqrt(distance_sq);
                 closest = robot.get();
             }
         }

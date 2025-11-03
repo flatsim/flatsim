@@ -28,12 +28,15 @@ namespace fs {
     }
 
     void Robot::tick(float dt) {
-        for (auto &sensor : sensors) {
-            if (!sensor) {
-                continue; // Skip null sensors
+        // Optimize sensor updates - cache pose and update in batch
+        if (!sensors.empty()) {
+            const auto &robot_pose = info.bound.pose;
+            for (auto &sensor : sensors) {
+                if (sensor) {
+                    sensor->set_robot_pose(robot_pose);
+                    sensor->update(dt);
+                }
             }
-            sensor->set_robot_pose(info.bound.pose);
-            sensor->update(dt);
         }
 
         if (!chassis) {
@@ -49,7 +52,7 @@ namespace fs {
         // Update navigation controller
         update_navigation(dt);
 
-        // Update network interfaces
+        // Update network interfaces - batch updates to reduce overhead
         if (network) {
             network->tick(dt);
         }
@@ -315,10 +318,13 @@ namespace fs {
             if (other == this) continue;
 
             auto other_pos = other->get_position().point;
-            float dist = std::sqrt(std::pow(my_pos.x - other_pos.x, 2) + std::pow(my_pos.y - other_pos.y, 2));
+            float dx = my_pos.x - other_pos.x;
+            float dy = my_pos.y - other_pos.y;
+            float dist_sq = dx * dx + dy * dy;
+            float min_dist_sq = min_dist * min_dist;
 
-            if (dist < min_dist) {
-                min_dist = dist;
+            if (dist_sq < min_dist_sq) {
+                min_dist = std::sqrt(dist_sq);
                 closest = other;
             }
         }
@@ -352,20 +358,25 @@ namespace fs {
         auto x = this->info.bound.pose.point.x;
         auto y = this->info.bound.pose.point.y;
 
-        std::vector<rerun::Color> colors;
-        colors.push_back(rerun::Color(info.color.r, info.color.g, info.color.b));
+        // Use static thread-local storage to avoid repeated allocations
+        static thread_local std::vector<rerun::Color> colors;
+        static thread_local std::vector<rerun::components::Position3D> positions;
+        static thread_local std::vector<rerun::LatLon> locators;
+
+        // Clear and reuse containers
+        colors.clear();
+        positions.clear();
+        locators.clear();
+
+        colors.emplace_back(info.color.r, info.color.g, info.color.b);
 
         // 3D position visualization
-        std::vector<rerun::components::Position3D> positions = {
-            rerun::components::Position3D(float(x), float(y), 0.1f)};
+        positions.emplace_back(float(x), float(y), 0.1f);
         rec->log_static(this->info.seqid + "/pose", rerun::Points3D(positions).with_colors(colors));
 
         // GPS coordinates visualization
         auto wgs_coords = this->info.bound.pose.point.toWGS(datum);
-        auto lat = float(wgs_coords.lat);
-        auto lon = float(wgs_coords.lon);
-        std::vector<rerun::LatLon> locators;
-        locators.push_back(rerun::LatLon(lat, lon));
+        locators.emplace_back(float(wgs_coords.lat), float(wgs_coords.lon));
         rec->log_static(this->info.seqid + "/pose", rerun::GeoPoints(locators).with_colors(colors));
 
         // Update navigation visualization

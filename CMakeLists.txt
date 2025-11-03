@@ -4,6 +4,11 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_C_COMPILER gcc-13)
 set(CMAKE_CXX_COMPILER g++-13)
 
+# # Force use of system linker instead of Nix linker
+set(CMAKE_LINKER /usr/bin/ld)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -B/usr/bin")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -B/usr/bin")
+
 set(project_name flatsim)
 project(${project_name} VERSION 0.1.0 LANGUAGES CXX)
 
@@ -14,6 +19,11 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Performance optimizations
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math -flto" CACHE STRING "Release flags")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math -flto" CACHE STRING "Release flags")
 set(params
     -Wno-reorder
     -Wno-unused-variable
@@ -40,21 +50,6 @@ include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
 find_package(rerun_sdk REQUIRED)
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(ZMQ REQUIRED libzmq)
-# add_library(zeromq INTERFACE)
-# target_link_libraries(zeromq INTERFACE ${ZMQ_LIBRARIES})
-# target_include_directories(zeromq INTERFACE ${ZMQ_INCLUDE_DIRS})
-# target_compile_options(zeromq INTERFACE ${ZMQ_CFLAGS_OTHER})
-# set(CPPZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-# add_library(cppzmq INTERFACE)
-# pkg_check_modules(TBB REQUIRED tbb)
-# add_library(tbb_interface INTERFACE)
-# target_link_libraries(tbb_interface INTERFACE ${TBB_LIBRARIES})
-# target_include_directories(tbb_interface INTERFACE ${TBB_INCLUDE_DIRS})
-# target_compile_options(tbb_interface INTERFACE ${TBB_CFLAGS_OTHER})
-
-
 find_package(TBB REQUIRED)
 find_package(ZeroMQ REQUIRED)
 find_package(cppzmq REQUIRED)
