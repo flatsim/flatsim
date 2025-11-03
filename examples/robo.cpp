@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
     std::string color_str;
     std::string custom_uuid;
     bool use_joystick = false;
+    std::string tcp_host;
 
     app.add_option("--config", config_file, "Path to configuration file")->required()->check(CLI::ExistingFile);
 
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
     app.add_option("--color", color_str, "Robot color in format: r,g,b");
     app.add_option("--uuid", custom_uuid, "Custom UUID for the robot");
     app.add_flag("--joystick", use_joystick, "Enable joystick control");
+    app.add_option("--tcp", tcp_host, "Use TCP transport with specified host (e.g., 127.0.0.1 or 192.168.1.10)");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -59,6 +61,11 @@ int main(int argc, char *argv[]) {
     spdlog::info("Position: " + position_str);
     if (!color_str.empty()) {
         spdlog::info("Color: " + color_str);
+    }
+    if (!tcp_host.empty()) {
+        spdlog::info("Transport: TCP (host: " + tcp_host + ")");
+    } else {
+        spdlog::info("Transport: IPC");
     }
     if (use_joystick) {
         spdlog::info("Joystick control: ENABLED");
@@ -114,7 +121,8 @@ int main(int argc, char *argv[]) {
 
         // Create ZMQ client
         fs::Client client;
-        if (!client.init()) {
+        bool use_tcp = !tcp_host.empty();
+        if (!client.init(use_tcp, tcp_host.empty() ? "127.0.0.1" : tcp_host)) {
             spdlog::error("Failed to initialize client");
             return 1;
         }

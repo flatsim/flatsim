@@ -110,7 +110,10 @@ namespace fs {
                 std::string cmd_endpoint, state_endpoint;
 
                 try {
-                    if (use_tcp) {
+                    // Use the client's transport preference from the spawn request
+                    bool client_wants_tcp = spawn_req.use_tcp;
+
+                    if (client_wants_tcp) {
                         int robot_base_port = next_tcp_port;
 
                         cmd_endpoint = "tcp://*:" + std::to_string(robot_base_port);

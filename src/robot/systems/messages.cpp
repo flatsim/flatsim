@@ -443,6 +443,7 @@ namespace fs::messages {
         boost::json::object j;
         j["robot_info"] = robot_info.serialize();
         j["timestamp"] = timestamp;
+        j["use_tcp"] = use_tcp;
         return boost::json::serialize(j);
     }
 
@@ -453,6 +454,8 @@ namespace fs::messages {
         SpawnRobotRequest msg;
         msg.robot_info = RobotInfoMessage::deserialize(boost::json::value_to<std::string>(j.at("robot_info")));
         msg.timestamp = boost::json::value_to<double>(j.at("timestamp"));
+        // Default to false for backward compatibility
+        msg.use_tcp = j.contains("use_tcp") ? boost::json::value_to<bool>(j.at("use_tcp")) : false;
         return msg;
     }
 

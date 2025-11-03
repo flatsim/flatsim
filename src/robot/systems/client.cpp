@@ -56,7 +56,7 @@ namespace fs {
         try {
             // Create spawn request
             messages::RobotInfoMessage info_msg(robot_info);
-            messages::SpawnRobotRequest request(info_msg, 0.0); // TODO: Add timestamp
+            messages::SpawnRobotRequest request(info_msg, 0.0, use_tcp); // Pass transport preference
 
             // Serialize and send request
             std::string request_str = request.serialize();

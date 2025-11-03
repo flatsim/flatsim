@@ -170,12 +170,14 @@ namespace fs::messages {
     struct SpawnRobotRequest {
         RobotInfoMessage robot_info;
         double timestamp;
+        bool use_tcp = false;
 
         // Default constructor
         SpawnRobotRequest() = default;
 
         // Constructor
-        SpawnRobotRequest(const RobotInfoMessage &info, double ts) : robot_info(info), timestamp(ts) {}
+        SpawnRobotRequest(const RobotInfoMessage &info, double ts, bool tcp = false)
+            : robot_info(info), timestamp(ts), use_tcp(tcp) {}
 
         // Serialization
         std::string serialize() const;
