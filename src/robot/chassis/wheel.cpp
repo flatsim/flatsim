@@ -94,16 +94,13 @@ namespace fs {
         auto y = wheel->GetPosition().y;
         auto th = wheel->GetRotation().GetAngle();
 
-        std::vector<rerun::Color> colors;
-        colors.push_back(rerun::Color(color.r, color.g, color.b));
-
         rec->log_static(
             this->parent_name + "/chassis/wheel/" + this->name,
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
-                .with_colors(colors));
+                .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
 
     void Wheel::configure_physics_for_size() {

@@ -38,21 +38,32 @@ namespace fs {
     }
 
     void World::tock() {
-        std::vector<std::array<float, 3>> enu_corners_;
-        std::vector<rerun::LatLon> wgs_corners_;
+        // World boundaries are static, so use thread-local cache to avoid repeated allocations
+        static thread_local std::vector<std::array<float, 3>> enu_corners_;
+        static thread_local std::vector<rerun::LatLon> wgs_corners_;
+        static thread_local bool initialized = false;
 
-        for (auto corner : world_bounds.get_corners()) {
-            float x = static_cast<float>(corner.x);
-            float y = static_cast<float>(corner.y);
-            float z = static_cast<float>(corner.z);
-            enu_corners_.push_back({x, y, z});
-            auto wgs_coords = corner.toWGS(settings.get_datum());
-            float lat = static_cast<float>(wgs_coords.lat);
-            float lon = static_cast<float>(wgs_coords.lon);
-            wgs_corners_.push_back({lat, lon});
+        // Only compute corners once since world boundaries don't change
+        if (!initialized) {
+            enu_corners_.clear();
+            wgs_corners_.clear();
+            enu_corners_.reserve(5); // 4 corners + closing point
+            wgs_corners_.reserve(5);
+
+            for (auto corner : world_bounds.get_corners()) {
+                float x = static_cast<float>(corner.x);
+                float y = static_cast<float>(corner.y);
+                float z = static_cast<float>(corner.z);
+                enu_corners_.push_back({x, y, z});
+                auto wgs_coords = corner.toWGS(settings.get_datum());
+                float lat = static_cast<float>(wgs_coords.lat);
+                float lon = static_cast<float>(wgs_coords.lon);
+                wgs_corners_.push_back({lat, lon});
+            }
+            enu_corners_.push_back(enu_corners_[0]);
+            wgs_corners_.push_back(wgs_corners_[0]);
+            initialized = true;
         }
-        enu_corners_.push_back(enu_corners_[0]);
-        wgs_corners_.push_back(wgs_corners_[0]);
 
         auto border__ = rerun::components::LineStrip3D(enu_corners_);
         rec->log_static("border", rerun::LineStrips3D(border__).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));

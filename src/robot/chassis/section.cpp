@@ -31,19 +31,12 @@ namespace fs {
         auto s_w = float(bound.size.x);
         auto s_h = float(bound.size.y);
 
-        std::vector<rerun::Color> colors_a;
-        colors_a.push_back(rerun::Color(color.r, color.g, color.b));
-
-        std::vector<rerun::components::PoseTranslation3D> centers = {
-            rerun::components::PoseTranslation3D(float(s_x), float(s_y), 0.1f)};
-        std::vector<rerun::datatypes::Vec3D> sizes = {rerun::datatypes::Vec3D(float(s_w), float(s_h), 0.0f)};
-
         rec->log_static(
             this->parent_name + "/chassis/karosserie/" + name + "/section_" + std::to_string(section_id),
-            rerun::Boxes3D::from_centers_and_sizes(centers, sizes)
+            rerun::Boxes3D::from_centers_and_sizes({{float(s_x), float(s_y), 0.1f}}, {{float(s_w), float(s_h), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(s_th))})
-                .with_colors(colors_a));
+                .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
 } // namespace fs

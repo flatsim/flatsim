@@ -112,8 +112,6 @@ namespace fs {
         auto x = body->GetPosition().x;
         auto y = body->GetPosition().y;
         auto th = body->GetRotation().GetAngle();
-        std::vector<rerun::Color> colors;
-        colors.push_back(rerun::Color(color.r, color.g, color.b));
         auto w = float(bound.size.x);
         auto h = float(bound.size.y);
         rec->log_static(
@@ -123,7 +121,7 @@ namespace fs {
                 // .with_labels({label})
                 // .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
-                .with_colors(colors));
+                .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
 
     void Chassis::update(std::vector<float> steering, std::vector<float> throttle, float dt) {

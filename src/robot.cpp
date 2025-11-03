@@ -358,26 +358,16 @@ namespace fs {
         auto x = this->info.bound.pose.point.x;
         auto y = this->info.bound.pose.point.y;
 
-        // Use static thread-local storage to avoid repeated allocations
-        static thread_local std::vector<rerun::Color> colors;
-        static thread_local std::vector<rerun::components::Position3D> positions;
-        static thread_local std::vector<rerun::LatLon> locators;
-
-        // Clear and reuse containers
-        colors.clear();
-        positions.clear();
-        locators.clear();
-
-        colors.emplace_back(info.color.r, info.color.g, info.color.b);
+        // Use direct initialization - no heap allocations for single-element arrays
+        rerun::Color color(info.color.r, info.color.g, info.color.b);
 
         // 3D position visualization
-        positions.emplace_back(float(x), float(y), 0.1f);
-        rec->log_static(this->info.seqid + "/pose", rerun::Points3D(positions).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose", rerun::Points3D({{float(x), float(y), 0.1f}}).with_colors({color}));
 
         // GPS coordinates visualization
         auto wgs_coords = this->info.bound.pose.point.toWGS(datum);
-        locators.emplace_back(float(wgs_coords.lat), float(wgs_coords.lon));
-        rec->log_static(this->info.seqid + "/pose", rerun::GeoPoints(locators).with_colors(colors));
+        rec->log_static(this->info.seqid + "/pose",
+                        rerun::GeoPoints({{float(wgs_coords.lat), float(wgs_coords.lon)}}).with_colors({color}));
 
         // Update navigation visualization
         if (navcon) {
