@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
                             steering = value;
                         } else if (axis == 1) {
                             // Axis 1 = Throttle (NOT inverted, use raw value like mvs.cpp)
-                            throttle = value;
+                            throttle = -value;
                             // Apply deadzone
                             throttle = (std::fabs(throttle) < 0.05f) ? 0.0f : throttle;
                         }

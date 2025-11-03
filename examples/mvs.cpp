@@ -22,8 +22,11 @@ int main(int argc, char *argv[]) {
     }
 
     int selected_robot_idx = 0;
-    int js_fd;
+    int js_fd = -1;
     unsigned char num_axes = 0, num_buttons = 0;
+    std::vector<int> axis_states;
+    std::vector<char> button_states;
+
     if (joystk) {
         // 1) Open joystick device
         const char *js_device = "/dev/input/js0";
@@ -38,8 +41,8 @@ int main(int argc, char *argv[]) {
         ioctl(js_fd, JSIOCGBUTTONS, &num_buttons);
 
         // 3) Prepare state storage
-        std::vector<int> axis_states(num_axes, 0);
-        std::vector<char> button_states(num_buttons, 0);
+        axis_states.resize(num_axes, 0);
+        button_states.resize(num_buttons, 0);
 
         // 4) (Optional) Print joystick name
         char js_name[128] = "Unknown";
@@ -144,31 +147,19 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            // --- read one joystick event if available ---
-            for (int i = 0; i < sim->num_robots(); ++i) {
-                if (selected_robot_idx != i) {
-                    sim->set_controls(i, 0.0f, 0.0f);
-                }
-            }
+            // --- read joystick events and update control state ---
             if (joystk) {
                 js_event e;
-                ssize_t bytes = read(js_fd, &e, sizeof(e));
-                if (bytes == sizeof(e)) {
+                while (read(js_fd, &e, sizeof(e)) == sizeof(e)) {
                     auto type = e.type & ~JS_EVENT_INIT;
                     if (type == JS_EVENT_AXIS && e.number < num_axes) {
                         int axis = int(e.number);
                         float value = e.value / 32767.0f;
-                        if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
-                            if (axis == 0 || axis == 3) {
-                                float steering = value;
-                                sim->get_robot(selected_robot_idx).set_angular(steering);
-                            }
-
-                            if (axis == 1 || axis == 4) {
-                                float throttle = value;
-                                throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
-                                sim->get_robot(selected_robot_idx).set_linear(throttle);
-                            }
+                        if (axis == 0) {
+                            current_steering = value;
+                        } else if (axis == 1) {
+                            current_throttle = value;
+                            current_throttle = (fabs(current_throttle) < 0.05f) ? 0.0f : current_throttle;
                         }
                     } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
                         int button = int(e.number);
