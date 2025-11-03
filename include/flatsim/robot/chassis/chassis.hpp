@@ -29,6 +29,8 @@ namespace fs {
         concord::Bound bound;
         concord::Pose pose;
         uint32_t group;
+        RobotInfo *robot_info = nullptr;
+        RobotState *robot_state = nullptr;
 
       public:
         std::vector<Karosserie> karosseries;
@@ -36,7 +38,7 @@ namespace fs {
         muli::RigidBody *body; // Owned by physics world
 
         Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                muli::CollisionFilter filter);
+                muli::CollisionFilter filter, RobotInfo *robot_info, RobotState *robot_state);
 
         void init(fs::RobotInfo &robo);
 

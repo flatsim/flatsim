@@ -19,6 +19,8 @@ namespace fs {
         concord::Bound bound;
         concord::Pose pose;
         muli::CollisionFilter filter;
+        RobotInfo *robot_info = nullptr;
+        RobotState *robot_state = nullptr;
 
         muli::RigidBody *wheel; // Owned by physics world
         muli::Vec2 forward, normal;
@@ -32,7 +34,7 @@ namespace fs {
       public:
         Wheel() = default;
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-              muli::CollisionFilter filter);
+              muli::CollisionFilter filter, RobotInfo *robot_info, RobotState *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                   concord::Bound bound, concord::Bound parent_bound, float _force, float _friction, float _maxImpulse,
                   float _brake, float _drag, float throttle_max, float steering_max);

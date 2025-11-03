@@ -7,8 +7,8 @@ namespace fs {
     }
 
     Chassis::Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                     muli::CollisionFilter filter)
-        : world(world), rec(rec), filter(filter) {}
+                     muli::CollisionFilter filter, RobotInfo *robot_info, RobotState *robot_state)
+        : world(world), rec(rec), filter(filter), robot_info(robot_info), robot_state(robot_state) {}
 
     void Chassis::init(fs::RobotInfo &robo) {
         this->bound = robo.bound;
@@ -47,7 +47,7 @@ namespace fs {
         float jm = body->GetMass();
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
-            Wheel wheel(world, rec, filter);
+            Wheel wheel(world, rec, filter, robot_info, robot_state);
             wheel.init(color, name, std::to_string(i), bound, robo.wheels[i], fs::constants::force,
                        fs::constants::friction, fs::constants::maxImpulse, fs::constants::brake, fs::constants::drag,
                        robo.controls.throttles_max[i], robo.controls.steerings_max[i]);
@@ -64,7 +64,7 @@ namespace fs {
         wheel_damping(fs::constants::linearDamping, fs::constants::angularDamping);
 
         for (auto const &k : robo.karos) {
-            Karosserie karosserie(rec, world);
+            Karosserie karosserie(rec, world, robot_info, robot_state);
             karosserie.init(color, name, k.name, bound, k.bound, filter, k.sections, k.has_physics);
             karosseries.push_back(karosserie);
 
@@ -83,7 +83,7 @@ namespace fs {
         }
 
         for (auto const &h : robo.hitches) {
-            Hitch hitch(rec, world);
+            Hitch hitch(rec, world, robot_info, robot_state);
             hitch.init(color, name, h.first, bound, h.second.bound, filter, h.second.is_master);
             hitches.push_back(hitch);
         }
@@ -115,7 +115,7 @@ namespace fs {
         auto w = float(bound.size.x);
         auto h = float(bound.size.y);
         rec->log_static(
-            this->name + "/chassis",
+            robot_info->seqid + "/chassis",
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
                 .with_radii({{0.02f}})
                 // .with_labels({label})

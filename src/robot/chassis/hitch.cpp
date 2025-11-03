@@ -1,8 +1,9 @@
 #include "flatsim/robot/chassis/hitch.hpp"
 
 namespace fs {
-    Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
-        : rec(rec), world(world) {}
+    Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, RobotInfo *robot_info,
+                 RobotState *robot_state)
+        : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
 
     void Hitch::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                      concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master) {
@@ -31,7 +32,7 @@ namespace fs {
         auto k_w = float(bound.size.x);
         auto k_h = float(bound.size.y);
         rec->log_static(
-            this->parent_name + "/chassis/hitch/" + name,
+            robot_info->seqid + "/chassis/hitch/" + name,
             rerun::Boxes3D::from_centers_and_sizes({{float(k_x), float(k_y), 0.1f}}, {{float(k_w), float(k_h), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

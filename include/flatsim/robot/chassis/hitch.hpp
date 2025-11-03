@@ -11,6 +11,8 @@ namespace fs {
         std::shared_ptr<muli::World> world;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
+        RobotInfo *robot_info = nullptr;
+        RobotState *robot_state = nullptr;
 
       public:
         std::string name;
@@ -20,10 +22,10 @@ namespace fs {
         bool hooked = false;
         bool is_master = true; // true = master (can pull), false = slave (can be pulled)
 
-        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, RobotInfo *robot_info,
+              RobotState *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
-                  bool is_master = true);
+                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master);
         void tick(float dt, concord::Pose trans_pose);
         void tock();
 

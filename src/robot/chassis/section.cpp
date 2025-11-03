@@ -2,7 +2,8 @@
 #include "flatsim/utils.hpp"
 
 namespace fs {
-    Section::Section(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
+    Section::Section(std::shared_ptr<rerun::RecordingStream> rec, RobotInfo *robot_info, RobotState *robot_state)
+        : rec(rec), robot_info(robot_info), robot_state(robot_state) {}
 
     void Section::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                        concord::Bound section_bound, int id) {
@@ -32,7 +33,7 @@ namespace fs {
         auto s_h = float(bound.size.y);
 
         rec->log_static(
-            this->parent_name + "/chassis/karosserie/" + name + "/section_" + std::to_string(section_id),
+            robot_info->seqid + "/chassis/karosserie/" + name + "/section_" + std::to_string(section_id),
             rerun::Boxes3D::from_centers_and_sizes({{float(s_x), float(s_y), 0.1f}}, {{float(s_w), float(s_h), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

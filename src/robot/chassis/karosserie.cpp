@@ -1,8 +1,9 @@
 #include "flatsim/robot/chassis/karosserie.hpp"
 
 namespace fs {
-    Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world)
-        : rec(rec), world(world) {}
+    Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+                           RobotInfo *robot_info, RobotState *robot_state)
+        : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
 
     void Karosserie::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                           concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
@@ -25,7 +26,7 @@ namespace fs {
             float start_x = bound.pose.point.x - (bound.size.x / 2.0f) + (section_width / 2.0f);
 
             for (int i = 0; i < num_sections; ++i) {
-                Section section(rec);
+                Section section(rec, robot_info, robot_state);
 
                 // Calculate section position
                 float section_x = start_x + (i * section_width);
@@ -103,7 +104,7 @@ namespace fs {
             auto k_w = float(bound.size.x);
             auto k_h = float(bound.size.y);
             rec->log_static(
-                this->parent_name + "/chassis/karosserie/" + name,
+                robot_info->seqid + "/chassis/karosserie/" + name,
                 rerun::Boxes3D::from_centers_and_sizes({{float(k_x), float(k_y), 0.1f}},
                                                        {{float(k_w), float(k_h), 0.0f}})
                     .with_radii({{0.02f}})

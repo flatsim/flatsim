@@ -77,6 +77,10 @@ namespace fs {
         std::string seqid = name;
     };
 
+    struct RobotState {
+        bool online = true;
+    };
+
     enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
 
 } // namespace fs

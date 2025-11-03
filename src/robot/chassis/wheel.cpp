@@ -4,8 +4,8 @@
 namespace fs {
 
     Wheel::Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                 muli::CollisionFilter filter)
-        : world(world), rec(rec), filter(filter) {}
+                 muli::CollisionFilter filter, RobotInfo *robot_info, RobotState *robot_state)
+        : world(world), rec(rec), filter(filter), robot_info(robot_info), robot_state(robot_state) {}
 
     void Wheel::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                      concord::Bound parent_bound, concord::Bound bound, float _force, float _friction,
@@ -95,7 +95,7 @@ namespace fs {
         auto th = wheel->GetRotation().GetAngle();
 
         rec->log_static(
-            this->parent_name + "/chassis/wheel/" + this->name,
+            robot_info->seqid + "/chassis/wheel/" + this->name,
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)

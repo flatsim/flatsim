@@ -53,6 +53,7 @@ namespace fs {
 
       public:
         RobotInfo info;
+        RobotState state;
         OP mode = OP::IDLE;
         RobotRole role;
 

@@ -107,7 +107,7 @@ namespace fs {
             throw NullPointerException("recording stream");
         }
 
-        chassis = std::make_unique<Chassis>(world, rec, filter);
+        chassis = std::make_unique<Chassis>(world, rec, filter, &info, &state);
         if (!chassis) {
             throw InitializationException("chassis creation failed");
         }

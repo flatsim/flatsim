@@ -14,6 +14,8 @@ namespace fs {
         muli::RigidBody *parent;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
+        RobotInfo *robot_info = nullptr;
+        RobotState *robot_state = nullptr;
 
       public:
         std::string name;
@@ -24,10 +26,11 @@ namespace fs {
         bool has_physics = true;
         std::vector<Section> sections;
 
-        Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world);
+        Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+                   RobotInfo *robot_info, RobotState *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, int num_sections = 0,
-                  bool has_physics = true);
+                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, int num_sections,
+                  bool has_physics);
         void tick(float dt, concord::Pose trans_pose);
         void tock();
 

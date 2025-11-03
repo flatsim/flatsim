@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concord/concord.hpp"
+#include "flatsim/types.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 
@@ -9,6 +10,8 @@ namespace fs {
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
+        RobotInfo *robot_info = nullptr;
+        RobotState *robot_state = nullptr;
 
       public:
         std::string name;
@@ -18,7 +21,7 @@ namespace fs {
         bool working = false;
         int section_id;
 
-        Section(std::shared_ptr<rerun::RecordingStream> rec);
+        Section(std::shared_ptr<rerun::RecordingStream> rec, RobotInfo *robot_info, RobotState *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                   concord::Bound section_bound, int id);
         void tick(float dt, concord::Pose trans_pose);
