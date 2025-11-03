@@ -110,7 +110,7 @@ namespace fs {
 
     void ControlSystem::set_angular_as_follower(float angular, const Robot &master) {
         // Only apply if this robot has steering capability and is actually a follower
-        if (!robot->has_steering_capability() || robot->role != RobotRole::FOLLOWER) {
+        if (!robot->has_steering_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;
         }
 
@@ -133,7 +133,7 @@ namespace fs {
 
     void ControlSystem::set_linear_as_follower(float linear, const Robot &master) {
         // Only apply if this robot has throttle capability and is actually a follower
-        if (!robot->has_throttle_capability() || robot->role != RobotRole::FOLLOWER) {
+        if (!robot->has_throttle_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;
         }
 

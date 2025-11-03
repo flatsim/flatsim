@@ -26,6 +26,8 @@ namespace fs {
     void Hitch::teleport(concord::Pose trans_pose) { pose = trans_pose; }
 
     void Hitch::tock() {
+        if (!robot_state->online) return;
+
         auto k_x = pose.point.x;
         auto k_y = pose.point.y;
         auto k_th = pose.angle.yaw;

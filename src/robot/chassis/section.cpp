@@ -26,6 +26,8 @@ namespace fs {
     void Section::teleport(concord::Pose trans_pose) { pose = trans_pose; }
 
     void Section::tock() {
+        if (!robot_state->online) return;
+
         auto s_x = pose.point.x;
         auto s_y = pose.point.y;
         auto s_th = pose.angle.yaw;

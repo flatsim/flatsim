@@ -54,8 +54,6 @@ namespace fs {
       public:
         RobotInfo info;
         RobotState state;
-        OP mode = OP::IDLE;
-        RobotRole role;
 
         // Public navigation controller for direct access
         std::unique_ptr<navcon::Navcon> navcon;

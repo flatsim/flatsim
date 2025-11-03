@@ -90,6 +90,8 @@ namespace fs {
     }
 
     void Wheel::tock() {
+        if (!robot_state->online) return;
+
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;
         auto th = wheel->GetRotation().GetAngle();

@@ -63,7 +63,7 @@ namespace fs {
         // Update power consumption based on operation mode
         if (power && *power && is_powered()) {
             float consumption_multiplier = 1.0f;
-            switch (mode) {
+            switch (state.mode) {
             case OP::IDLE:
                 consumption_multiplier = 0.1f; // Minimal consumption when idle
                 break;
@@ -95,7 +95,6 @@ namespace fs {
         spdlog::info("Initializing robot {}...", robo.name);
         this->datum = datum;
         this->info = robo;
-        this->role = robo.role; // Set role from RobotInfo
         this->spawn_position = robo.bound.pose;
         this->original_color = robo.color; // Store original color
 
@@ -155,7 +154,7 @@ namespace fs {
 
         // Configure network interfaces based on robot role
         if (network) {
-            switch (role) {
+            switch (info.role) {
             case RobotRole::MASTER:
                 // MASTER robots have Zenoh + WiFi interfaces for maximum connectivity
                 network->add_interface(std::make_unique<fs::network::ZenohInterface>());
@@ -333,9 +332,12 @@ namespace fs {
     }
 
     void Robot::tock() {
+        if (!state.online) {
+            return;
+        }
         // Create label with role prefix and power percentage
         std::string role_prefix;
-        switch (role) {
+        switch (state.role) {
         case RobotRole::MASTER:
             role_prefix = "(M)";
             break;

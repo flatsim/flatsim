@@ -94,6 +94,8 @@ namespace fs {
     }
 
     void Karosserie::tock() {
+        if (!robot_state->online) return;
+
         // Only show karosserie if it has no sections, otherwise show individual sections
         if (!sections.empty()) {
             for (auto &section : sections) section.tock();

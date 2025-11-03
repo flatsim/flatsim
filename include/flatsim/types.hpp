@@ -77,10 +77,12 @@ namespace fs {
         std::string seqid = name;
     };
 
+    enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
+
     struct RobotState {
         bool online = true;
+        RobotRole role = RobotRole::MASTER;
+        OP mode = OP::IDLE;
     };
-
-    enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
 
 } // namespace fs
