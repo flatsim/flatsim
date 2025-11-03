@@ -127,6 +127,10 @@ int main(int argc, char *argv[]) {
     std::cout << "Joystick: Button 11 = attach, Button 12 = detach last, Button 13 = chain status, Button 14 = "
                  "disconnect at pos 2\n";
 
+    // Maintain control state
+    float current_steering = 0.0f;
+    float current_throttle = 0.0f;
+
     // 7) Main loop using ticktock() method with threading built-in
     sim->ticktock(
         [&](float dt) -> bool {
@@ -215,6 +219,15 @@ int main(int argc, char *argv[]) {
                             }
                         }
                     }
+                }
+            }
+
+            // Apply controls to all robots every frame
+            for (int i = 0; i < sim->num_robots(); ++i) {
+                if (selected_robot_idx == i) {
+                    sim->set_controls(i, current_steering, current_throttle);
+                } else {
+                    sim->set_controls(i, 0.0f, 0.0f);
                 }
             }
 

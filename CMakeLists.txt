@@ -79,9 +79,9 @@ FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtra
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.6)
-FetchContent_MakeAvailable(navcon)
-# add_subdirectory(xtra/navcon navcon)
+# FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.6)
+# FetchContent_MakeAvailable(navcon)
+add_subdirectory(xtra/navcon navcon)
 list(APPEND ext_deps navcon::navcon)
 
 # --------------------------------------------------------------------------------------------------
