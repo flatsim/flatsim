@@ -13,6 +13,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    rec->log("", rerun::Clear::RECURSIVE);
+    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
+
     // Set up world and simulator
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
     concord::Size world_size{10000.0f, 10000.0f, 300.0f};

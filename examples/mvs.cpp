@@ -50,11 +50,13 @@ int main(int argc, char *argv[]) {
     }
 
     // 5) Connect to Rerun
-    auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
+    auto rec = std::make_shared<rerun::RecordingStream>("mvs", "space");
     if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
         std::cerr << "Failed to connect to rerun\n";
         return 1;
     }
+    rec->log("", rerun::Clear::RECURSIVE);
+    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
     // 6) Set up your world and simulator
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
@@ -64,44 +66,42 @@ int main(int argc, char *argv[]) {
     sim->init(world_datum, world_size);
 
     // Load machines from JSON files
-    std::filesystem::path machines_dir = "../examples/machines";
+    std::filesystem::path machines_dir = "examples/machines";
 
     try {
         // Load tractor from JSON
         auto tractor = fs::Loader::load_from_json(machines_dir / "tractor.json", concord::Pose(10 * 0, 10 * 0, 0.0f),
-                                                  "tractor0", pigment::RGB(0, 255, 100));
+                                                  pigment::RGB(0, 255, 100));
         sim->add_robot(tractor);
         std::cout << "Loaded tractor from JSON\n";
 
         // Load trailer from JSON
-        auto trailer =
-            fs::Loader::load_from_json(machines_dir / "trailer.json", concord::Pose(10 * 0, 10 * 0 - 5, 0.0f),
-                                       "trailer1", pigment::RGB(255, 150, 0));
+        auto trailer = fs::Loader::load_from_json(machines_dir / "trailer.json",
+                                                  concord::Pose(10 * 0, 10 * 0 - 5, 0.0f), pigment::RGB(255, 150, 0));
         sim->add_robot(trailer);
         std::cout << "Loaded trailer from JSON\n";
 
         // Load oxbo harvester from JSON
         auto oxbo = fs::Loader::load_from_json(machines_dir / "oxbo_harvester.json",
-                                               concord::Pose(10 * 1, 10 * 1, 0.0f), "oxbo2", pigment::RGB(255, 200, 0));
+                                               concord::Pose(10 * 1, 10 * 1, 0.0f), pigment::RGB(255, 200, 0));
         sim->add_robot(oxbo);
         std::cout << "Loaded oxbo harvester from JSON\n";
 
         // Load second trailer from JSON
-        auto trailer2 =
-            fs::Loader::load_from_json(machines_dir / "trailer.json", concord::Pose(10 * 0, 10 * 0 - 10, 0.0f),
-                                       "trailer2", pigment::RGB(255, 100, 50));
+        auto trailer2 = fs::Loader::load_from_json(
+            machines_dir / "trailer.json", concord::Pose(10 * 0, 10 * 0 - 10, 0.0f), pigment::RGB(255, 100, 50));
         sim->add_robot(trailer2);
         std::cout << "Loaded second trailer from JSON\n";
 
         // Load truck from JSON
         auto truck = fs::Loader::load_from_json(machines_dir / "truck.json", concord::Pose(10 * 2, 10 * 0, 0.0f),
-                                                "big_truck3", pigment::RGB(100, 100, 255));
+                                                pigment::RGB(100, 100, 255));
         sim->add_robot(truck);
         std::cout << "Loaded truck from JSON\n";
 
         // Load Husky differential drive robot from JSON
         auto husky = fs::Loader::load_from_json(machines_dir / "husky.json", concord::Pose(10 * 3, 10 * 1, 0.0f),
-                                                "husky4", pigment::RGB(128, 0, 255));
+                                                pigment::RGB(128, 0, 255));
         sim->add_robot(husky);
         std::cout << "Loaded Husky differential drive robot from JSON\n";
 
@@ -159,12 +159,12 @@ int main(int argc, char *argv[]) {
                         int axis = int(e.number);
                         float value = e.value / 32767.0f;
                         if (selected_robot_idx >= 0 && selected_robot_idx < sim->num_robots()) {
-                            if (axis == 0) {
+                            if (axis == 0 || axis == 3) {
                                 float steering = value;
                                 sim->get_robot(selected_robot_idx).set_angular(steering);
                             }
 
-                            if (axis == 1) {
+                            if (axis == 1 || axis == 4) {
                                 float throttle = value;
                                 throttle = (fabs(throttle) < 0.05f) ? 0.0f : throttle;
                                 sim->get_robot(selected_robot_idx).set_linear(throttle);

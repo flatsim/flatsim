@@ -81,6 +81,8 @@ namespace fs {
 
         robots.emplace_back([&] {
             auto r = std::make_shared<Robot>(rec, physics_world, robots.size());
+            std::string seqid = robot_info.type + "_" + std::to_string(robots.size());
+            robot_info.seqid = seqid;
             r->init(world_datum, robot_info);
             r->set_simulator(this); // Give robot reference to simulator
             return r;

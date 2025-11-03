@@ -97,6 +97,8 @@ int main(int argc, char *argv[]) {
         std::cerr << "Failed to connect to rerun\n";
         return 1;
     }
+    rec->log("", rerun::Clear::RECURSIVE);
+    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
     fs::Simulator simulator(rec);
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
@@ -111,7 +113,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < 4; ++i) {
             auto tractor_info = fs::Loader::load_from_json(
                 "examples/machines/tractor.json", concord::Pose{spawn_positions[i], concord::Euler{0.0f, 0.0f, 0.0f}},
-                "tractor" + std::to_string(i), colors[i]);
+                colors[i]);
 
             tractor_info.uuid = generate_uuid();
             tractor_info.seqid = tractor_info.type + "_" + std::to_string(i);

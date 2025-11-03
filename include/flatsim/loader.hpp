@@ -11,7 +11,7 @@ namespace fs {
     class Loader {
       public:
         static RobotInfo load_from_json(const std::filesystem::path &json_path, concord::Pose spawn_pose,
-                                        const std::string &name = "", std::optional<pigment::RGB> color = std::nullopt);
+                                        std::optional<pigment::RGB> color = std::nullopt);
 
         static std::vector<std::filesystem::path> find_machine_files(const std::filesystem::path &directory);
         static bool validate_json(const std::filesystem::path &json_path);

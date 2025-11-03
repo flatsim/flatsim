@@ -52,7 +52,7 @@ namespace fs {
     }
 
     RobotInfo Loader::load_from_json(const std::filesystem::path &json_path, concord::Pose spawn_pose,
-                                     const std::string &name, std::optional<pigment::RGB> color) {
+                                     std::optional<pigment::RGB> color) {
         spdlog::info("Loading machine from: {}", json_path.string());
 
         // Read JSON file
@@ -73,7 +73,6 @@ namespace fs {
         boost::json::object const &info = j.at("info").as_object();
         robot_info.type = get_value<std::string>(info.at("type"));
         std::string default_name = get_value<std::string>(info.at("name"));
-        robot_info.name = name.empty() ? default_name : name;
 
         // Generate proper UUID if not provided or empty
         std::string uuid_str = get_value_or(info, "uuid", std::string(""));
