@@ -64,6 +64,7 @@ namespace fs {
         void init(concord::Datum datum, RobotInfo robo);
         void tick(float dt);
         void tock();
+        void clean();
 
         void reset_controls();
         void set_angular(float angular);

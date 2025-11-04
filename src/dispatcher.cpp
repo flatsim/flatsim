@@ -62,17 +62,11 @@ namespace fs {
             try {
                 // Convert RobotInfoMessage to RobotInfo
                 RobotInfo robot_info = spawn_req.robot_info.to_robot_info();
-
-                // Generate unique seqid: type + "_" + index
-                std::string seqid = robot_info.type + "_" + std::to_string(robots.size());
-                robot_info.seqid = seqid;
-
-                std::cout << "[Dispatcher] Spawning robot with seqid: " << seqid << std::endl;
+                std::cout << "[Dispatcher] Spawning robot " << std::endl;
 
                 // Spawn the robot in simulator
                 if (simulator) {
                     simulator->add_robot(robot_info);
-
                     // Register robot in our registry
                     // Find the robot that was just added
                     Robot *spawned_robot = nullptr;

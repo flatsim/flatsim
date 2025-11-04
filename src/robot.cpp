@@ -377,6 +377,11 @@ namespace fs {
         }
     }
 
+    void Robot::clean() {
+        rec->log(info.seqid, rerun::Clear::RECURSIVE);
+        rec->log_with_static(info.seqid, true, rerun::Clear::RECURSIVE);
+    }
+
     void Robot::visualize_pulse(float p_s, float gps_mult, float inc) {
         if (!pulsing) {
             return;
