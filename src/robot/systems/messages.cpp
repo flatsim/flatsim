@@ -468,4 +468,22 @@ namespace fs::messages {
         return msg;
     }
 
+    // HeartbeatMessage serialization
+    std::string HeartbeatMessage::serialize() const {
+        boost::json::object j;
+        j["robot_uuid"] = robot_uuid;
+        j["timestamp"] = timestamp;
+        return boost::json::serialize(j);
+    }
+
+    HeartbeatMessage HeartbeatMessage::deserialize(const std::string &data) {
+        boost::json::value jv = boost::json::parse(data);
+        boost::json::object const &j = jv.as_object();
+
+        HeartbeatMessage msg;
+        msg.robot_uuid = boost::json::value_to<std::string>(j.at("robot_uuid"));
+        msg.timestamp = boost::json::value_to<double>(j.at("timestamp"));
+        return msg;
+    }
+
 } // namespace fs::messages

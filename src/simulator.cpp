@@ -19,6 +19,14 @@ namespace fs {
             // Process spawn requests
             dispatcher->process_spawn_requests();
 
+            // Get current time for heartbeat processing
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+            double current_time = elapsed.count() / 1000.0;
+
+            // Process heartbeats (updates robot online status)
+            dispatcher->process_heartbeats(current_time);
+
             // Receive control commands from robot processes
             auto commands = dispatcher->receive_commands();
             for (const auto &cmd : commands) {
@@ -278,6 +286,42 @@ namespace fs {
         dispatcher->cleanup();
         dispatcher.reset();
         std::cout << "[Simulator] Dispatcher disabled" << std::endl;
+    }
+
+    // ROBOT ONLINE STATUS
+    bool Simulator::is_robot_online(const std::string &uuid) const {
+        if (dispatcher && dispatcher->is_ready()) {
+            return dispatcher->is_robot_online(uuid);
+        }
+
+        // If no dispatcher, check robot state directly
+        for (const auto &robot : robots) {
+            if (robot && robot->info.uuid == uuid) {
+                return robot->state.online;
+            }
+        }
+
+        return false;
+    }
+
+    double Simulator::get_robot_last_heartbeat(const std::string &uuid) const {
+        if (dispatcher && dispatcher->is_ready()) {
+            return dispatcher->get_last_heartbeat(uuid);
+        }
+        return 0.0;
+    }
+
+    void Simulator::set_heartbeat_timeout(double timeout) {
+        if (dispatcher && dispatcher->is_ready()) {
+            dispatcher->set_heartbeat_timeout(timeout);
+        }
+    }
+
+    double Simulator::get_heartbeat_timeout() const {
+        if (dispatcher && dispatcher->is_ready()) {
+            return dispatcher->get_heartbeat_timeout();
+        }
+        return 5.0; // Default timeout
     }
 
 } // namespace fs

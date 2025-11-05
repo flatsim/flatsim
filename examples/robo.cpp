@@ -152,6 +152,11 @@ int main(int argc, char *argv[]) {
             std::chrono::duration<float> dt = now - last_time;
             last_time = now;
 
+            // Send heartbeat to simulator
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+            double current_time = elapsed.count() / 1000.0;
+            client.send_heartbeat(current_time);
+
             // Receive physics state from simulator
             auto physics_state = client.receive_physics_state();
             if (physics_state.has_value()) {

@@ -29,6 +29,10 @@ namespace fs {
         bool use_tcp = false;
         std::string tcp_host = "127.0.0.1";
 
+        // Heartbeat tracking
+        double last_heartbeat_time = 0.0;
+        double heartbeat_interval = 1.0; // seconds
+
       public:
         Client();
         ~Client();
@@ -59,6 +63,24 @@ namespace fs {
          * @return Physics state if available, empty optional otherwise
          */
         std::optional<messages::PhysicsState> receive_physics_state();
+
+        /**
+         * @brief Send heartbeat to simulator
+         * @param current_time Current time for timestamp
+         */
+        void send_heartbeat(double current_time);
+
+        /**
+         * @brief Set heartbeat interval
+         * @param interval Interval in seconds
+         */
+        void set_heartbeat_interval(double interval) { heartbeat_interval = interval; }
+
+        /**
+         * @brief Get heartbeat interval
+         * @return Interval in seconds
+         */
+        double get_heartbeat_interval() const { return heartbeat_interval; }
 
         /**
          * @brief Cleanup ZMQ resources

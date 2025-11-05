@@ -333,6 +333,7 @@ namespace fs {
 
     void Robot::tock() {
         if (!state.online) {
+            clean();
             return;
         }
         // Create label with role prefix and power percentage

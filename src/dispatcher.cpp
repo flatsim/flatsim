@@ -79,6 +79,8 @@ namespace fs {
 
                     if (spawned_robot) {
                         robots[robot_info.uuid] = spawned_robot;
+                        // Initialize heartbeat tracking for this robot
+                        robot_last_heartbeat[robot_info.uuid] = 0.0;
                         reply.success = true;
                         reply.error_message = "";
                         std::cout << "[Dispatcher] Robot spawned successfully: " << robot_info.uuid << std::endl;
@@ -252,6 +254,81 @@ namespace fs {
         }
     }
 
+    void Dispatcher::process_heartbeats(double current_time) {
+        if (!initialized) {
+            return;
+        }
+
+        try {
+            // Receive heartbeats from all robot-specific command sockets
+            // (heartbeats are sent on the same channel as commands)
+            for (auto &[uuid, socket] : robot_command_sockets) {
+                while (true) {
+                    zmq::message_t message;
+                    auto result = socket->recv(message, zmq::recv_flags::dontwait);
+
+                    if (!result) {
+                        break;
+                    }
+
+                    std::string msg_str(static_cast<char *>(message.data()), message.size());
+
+                    // Try to deserialize as heartbeat first
+                    try {
+                        auto heartbeat = messages::HeartbeatMessage::deserialize(msg_str);
+                        robot_last_heartbeat[heartbeat.robot_uuid] = heartbeat.timestamp;
+
+                        // Update robot online status
+                        auto robot_it = robots.find(heartbeat.robot_uuid);
+                        if (robot_it != robots.end() && robot_it->second) {
+                            robot_it->second->state.online = true;
+                        }
+                        continue;
+                    } catch (...) {
+                        // Not a heartbeat, might be a control command - ignore for now
+                        // Control commands are processed in receive_commands()
+                    }
+                }
+            }
+
+            // Check for timeouts - mark robots offline if no heartbeat received within timeout
+            for (auto &[uuid, last_time] : robot_last_heartbeat) {
+                double time_since_heartbeat = current_time - last_time;
+                if (time_since_heartbeat > heartbeat_timeout) {
+                    auto robot_it = robots.find(uuid);
+                    if (robot_it != robots.end() && robot_it->second) {
+                        if (robot_it->second->state.online) {
+                            robot_it->second->state.online = false;
+                            std::cout << "[Dispatcher] Robot " << uuid << " marked offline (no heartbeat for "
+                                      << time_since_heartbeat << "s)" << std::endl;
+                        }
+                    }
+                }
+            }
+
+        } catch (const zmq::error_t &e) {
+            std::cerr << "[Dispatcher] Error processing heartbeats: " << e.what() << std::endl;
+        } catch (const std::exception &e) {
+            std::cerr << "[Dispatcher] Error processing heartbeats: " << e.what() << std::endl;
+        }
+    }
+
+    bool Dispatcher::is_robot_online(const std::string &uuid) const {
+        auto robot_it = robots.find(uuid);
+        if (robot_it != robots.end() && robot_it->second) {
+            return robot_it->second->state.online;
+        }
+        return false;
+    }
+
+    double Dispatcher::get_last_heartbeat(const std::string &uuid) const {
+        auto it = robot_last_heartbeat.find(uuid);
+        if (it != robot_last_heartbeat.end()) {
+            return it->second;
+        }
+        return 0.0;
+    }
+
     void Dispatcher::cleanup() {
         if (!initialized) {
             return;
@@ -273,6 +350,7 @@ namespace fs {
             context.close();
             initialized = false;
             robots.clear();
+            robot_last_heartbeat.clear();
             std::cout << "[Dispatcher] Cleaned up" << std::endl;
 
         } catch (const zmq::error_t &e) {

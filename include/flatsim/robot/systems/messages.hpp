@@ -203,4 +203,20 @@ namespace fs::messages {
         static SpawnRobotReply deserialize(const std::string &data);
     };
 
+    // Heartbeat message for robot online status tracking
+    struct HeartbeatMessage {
+        std::string robot_uuid;
+        double timestamp;
+
+        // Default constructor
+        HeartbeatMessage() = default;
+
+        // Constructor
+        HeartbeatMessage(const std::string &uuid, double ts) : robot_uuid(uuid), timestamp(ts) {}
+
+        // Serialization
+        std::string serialize() const;
+        static HeartbeatMessage deserialize(const std::string &data);
+    };
+
 } // namespace fs::messages

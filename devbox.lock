@@ -598,50 +598,50 @@
       }
     },
     "rerun@latest": {
-      "last_modified": "2025-10-07T08:41:47Z",
-      "resolved": "github:NixOS/nixpkgs/bce5fe2bb998488d8e7e7856315f90496723793c#rerun",
+      "last_modified": "2025-10-28T12:57:11Z",
+      "resolved": "github:NixOS/nixpkgs/e99366c665bdd53b7b500ccdc5226675cfc51f45#rerun",
       "source": "devbox-search",
-      "version": "0.25.1",
+      "version": "0.26.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/2fky9p3m9512jfi1qv29cgpc85vsfanm-rerun-0.25.1",
+              "path": "/nix/store/6apy1lsb9svixcskg0jkbkhl5mdn6lrl-rerun-0.26.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/2fky9p3m9512jfi1qv29cgpc85vsfanm-rerun-0.25.1"
+          "store_path": "/nix/store/6apy1lsb9svixcskg0jkbkhl5mdn6lrl-rerun-0.26.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/j7slprs1ppdaz1skwy19rswfdvz27wdz-rerun-0.25.1",
+              "path": "/nix/store/4b5gsr87snifi3sz1vz13af32rfzdy0k-rerun-0.26.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/j7slprs1ppdaz1skwy19rswfdvz27wdz-rerun-0.25.1"
+          "store_path": "/nix/store/4b5gsr87snifi3sz1vz13af32rfzdy0k-rerun-0.26.2"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/c23w7r3vczsgy9pr3jcyaygmqmvhl7gv-rerun-0.25.1",
+              "path": "/nix/store/ya2hn5m2zawkl9dwhmsicwmbmp9p03mr-rerun-0.26.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/c23w7r3vczsgy9pr3jcyaygmqmvhl7gv-rerun-0.25.1"
+          "store_path": "/nix/store/ya2hn5m2zawkl9dwhmsicwmbmp9p03mr-rerun-0.26.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/3lcv6pj1f5wjfc2ya5fd6q0h46vac781-rerun-0.25.1",
+              "path": "/nix/store/1nhci159mdg2kzg53ifawjaj8vw162rc-rerun-0.26.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/3lcv6pj1f5wjfc2ya5fd6q0h46vac781-rerun-0.25.1"
+          "store_path": "/nix/store/1nhci159mdg2kzg53ifawjaj8vw162rc-rerun-0.26.2"
         }
       }
     },

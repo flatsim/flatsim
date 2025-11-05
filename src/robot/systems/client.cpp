@@ -157,6 +157,33 @@ namespace fs {
         }
     }
 
+    void Client::send_heartbeat(double current_time) {
+        if (!initialized || !spawned) {
+            return;
+        }
+
+        // Only send if enough time has passed
+        if (current_time - last_heartbeat_time < heartbeat_interval) {
+            return;
+        }
+
+        try {
+            // Create heartbeat message
+            messages::HeartbeatMessage heartbeat(robot_uuid, current_time);
+
+            // Serialize and send heartbeat
+            std::string heartbeat_str = heartbeat.serialize();
+            zmq::message_t message(heartbeat_str.size());
+            memcpy(message.data(), heartbeat_str.c_str(), heartbeat_str.size());
+            command_socket->send(message, zmq::send_flags::none);
+
+            last_heartbeat_time = current_time;
+
+        } catch (const zmq::error_t &e) {
+            std::cerr << "[Client] Error sending heartbeat: " << e.what() << std::endl;
+        }
+    }
+
     void Client::cleanup() {
         if (!initialized) {
             return;

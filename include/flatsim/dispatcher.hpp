@@ -32,6 +32,10 @@ namespace fs {
         // Robot registry: UUID -> Robot pointer
         std::map<std::string, Robot *> robots;
 
+        // Robot heartbeat tracking: UUID -> last heartbeat timestamp
+        std::map<std::string, double> robot_last_heartbeat;
+        double heartbeat_timeout = 5.0; // seconds
+
         // Simulator reference for creating robots
         class Simulator *simulator;
 
@@ -75,6 +79,38 @@ namespace fs {
          * @brief Send physics states to all robots
          */
         void send_states();
+
+        /**
+         * @brief Process heartbeat messages from robot processes
+         * @param current_time Current simulation time for timeout checking
+         */
+        void process_heartbeats(double current_time);
+
+        /**
+         * @brief Check if a robot is online (based on heartbeat)
+         * @param uuid Robot UUID
+         * @return true if robot is online
+         */
+        bool is_robot_online(const std::string &uuid) const;
+
+        /**
+         * @brief Get last heartbeat time for a robot
+         * @param uuid Robot UUID
+         * @return Last heartbeat timestamp, or 0.0 if not found
+         */
+        double get_last_heartbeat(const std::string &uuid) const;
+
+        /**
+         * @brief Set heartbeat timeout
+         * @param timeout Timeout in seconds
+         */
+        void set_heartbeat_timeout(double timeout) { heartbeat_timeout = timeout; }
+
+        /**
+         * @brief Get heartbeat timeout
+         * @return Timeout in seconds
+         */
+        double get_heartbeat_timeout() const { return heartbeat_timeout; }
 
         /**
          * @brief Cleanup ZMQ resources

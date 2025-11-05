@@ -67,6 +67,12 @@ namespace fs {
         void enable_dispatcher(const std::string &server_host = "0.0.0.0");
         void disable_dispatcher();
         bool is_dispatcher_enabled() const { return dispatcher != nullptr; }
+
+        // ROBOT ONLINE STATUS
+        bool is_robot_online(const std::string &uuid) const;
+        double get_robot_last_heartbeat(const std::string &uuid) const;
+        void set_heartbeat_timeout(double timeout);
+        double get_heartbeat_timeout() const;
     };
 
     // Template implementation
