@@ -24,11 +24,13 @@ int main(int argc, char *argv[]) {
     concord::Size world_size{500.0f, 500.0f, 300.0f};
     simulator.init(world_datum, world_size);
 
-    // Load tractor
+    // Load tractor - spawn at first waypoint pointing -90 degrees
+    float initial_yaw = -1.5708f; // -90 degrees = -π/2 radians
+
     try {
-        auto tractor_info =
-            fs::Loader::load_from_json("examples/machines/tractor.json",
-                                       concord::Pose{concord::Point{-5.0f, -5.0f}, concord::Euler{0.0f, 0.0f, 0.0f}});
+        auto tractor_info = fs::Loader::load_from_json(
+            "examples/machines/tractor.json",
+            concord::Pose{concord::Point{5.0f, 0.0f}, concord::Euler{0.0f, 0.0f, initial_yaw}});
         simulator.add_robot(tractor_info);
     } catch (const std::exception &e) {
         std::cerr << "Failed to load tractor: " << e.what() << std::endl;
@@ -41,9 +43,15 @@ int main(int argc, char *argv[]) {
     // Test Stanley Controller with a curved path
     std::cout << "\n--- Testing Stanley Controller with Curved Path ---" << std::endl;
 
-    // IMPORTANT: Set controller type BEFORE setting path
+    // Set controller type
     std::cout << "Setting controller to Stanley..." << std::endl;
     tractor.navcon->set_controller_type(navcon::NavconControllerType::STANLEY);
+
+    // Set Stanley controller parameters
+    auto params = tractor.navcon->get_controller_params();
+    params.cross_track_gain = 2.5f; // Cross-track error correction gain
+    params.softening_gain = 1.5f;   // Heading error softening gain
+    tractor.navcon->set_controller_params(params);
 
     // Create a curved path with waypoints
     // Stanley controller is good at minimizing cross-track error

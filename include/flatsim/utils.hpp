@@ -1,7 +1,7 @@
 #pragma once
 
-#include "muli/muli.h"
 #include "flatsim/types.hpp"
+#include "muli/muli.h"
 #include <algorithm>
 #include <cmath>
 
@@ -69,8 +69,7 @@ namespace fs {
         }
 
         inline float ackermann_scale(float angleRad, float trackWidth) {
-            if (std::fabs(angleRad) < 1e-6f)
-                return 1.0f;
+            if (std::fabs(angleRad) < 1e-6f) return 1.0f;
             float R = trackWidth / std::tan(angleRad);
             return (R - (trackWidth * 0.5f)) / R;
         }

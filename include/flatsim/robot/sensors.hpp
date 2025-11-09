@@ -11,9 +11,8 @@
 namespace fs {
     namespace sensors {
         // Factory function to create sensors by type
-        template<typename SensorType, typename... Args>
-        std::unique_ptr<Sensor> create_sensor(Args&&... args) {
+        template <typename SensorType, typename... Args> std::unique_ptr<Sensor> create_sensor(Args &&...args) {
             return std::make_unique<SensorType>(std::forward<Args>(args)...);
         }
-    }
-}
+    } // namespace sensors
+} // namespace fs

@@ -31,6 +31,19 @@ namespace fs {
         brake = _brake;
         drag = _drag;
 
+        // Physics-based acceleration limits
+        // Steering rate: realistic steering actuators can turn ~30-45 degrees per second
+        // For tractors/heavy vehicles: slower (~20-30 deg/s)
+        // For cars: faster (~45-60 deg/s)
+        // We'll use 30 deg/s as a reasonable default (0.52 rad/s)
+        steering_rate = 0.52f; // radians per second
+
+        // Throttle rate: how fast the throttle/brake pedal can be actuated
+        // Realistic: 0-100% in about 0.3-0.5 seconds for aggressive driving
+        // For heavy machinery: 0.5-1.0 seconds
+        // We'll use 2.0/s meaning 0-100% in 0.5 seconds
+        throttle_rate = 2.5f; // units per second (throttle is -1 to 1)
+
         configure_physics_for_size();
     }
 
@@ -68,18 +81,52 @@ namespace fs {
     }
 
     void Wheel::update(float steering, float throttle, muli::MotorJoint *joint, float dt) {
+        // Store target values
         throttle_val = throttle;
         steering_val = steering;
-        joint->SetAngularOffset(steering);
 
-        if (muli::Abs(throttle) > muli::epsilon) {
+        // ============================================================================
+        // STEERING RATE LIMITING - Gradual steering angle changes
+        // ============================================================================
+        // Calculate maximum change allowed this frame based on steering rate
+        float max_steering_change = steering_rate * dt;
+
+        // Calculate the difference between target and current steering
+        float steering_error = steering - current_steering;
+
+        // Clamp the change to the maximum allowed
+        float steering_change = muli::Clamp(steering_error, -max_steering_change, max_steering_change);
+
+        // Update current steering gradually
+        current_steering += steering_change;
+
+        // Apply the gradual steering to the joint
+        joint->SetAngularOffset(current_steering);
+
+        // ============================================================================
+        // THROTTLE RATE LIMITING - Gradual throttle changes
+        // ============================================================================
+        // Calculate maximum change allowed this frame based on throttle rate
+        float max_throttle_change = throttle_rate * dt;
+
+        // Calculate the difference between target and current throttle
+        float throttle_error = throttle - current_throttle;
+
+        // Clamp the change to the maximum allowed
+        float throttle_change = muli::Clamp(throttle_error, -max_throttle_change, max_throttle_change);
+
+        // Update current throttle gradually
+        current_throttle += throttle_change;
+
+        // Apply force using the gradual throttle value
+        if (muli::Abs(current_throttle) > muli::epsilon) {
             // Scale force by wheel size and apply dt correctly
             float wheel_radius = bound.size.x / 2.0f;
             float scale_factor = muli::Sqrt(wheel_radius / 0.2f); // Normalize to typical wheel size
             float scaled_force = force * scale_factor;
 
-            // Apply force scaled by dt for consistent acceleration
-            muli::Vec2 f2 = forward * (throttle * scaled_force);
+            // Apply force scaled by the gradual throttle value
+            muli::Vec2 f2 = forward * (current_throttle * scaled_force);
             wheel->ApplyForce(wheel->GetPosition(), f2, true);
         }
     }
@@ -119,6 +166,23 @@ namespace fs {
 
         wheel->SetLinearDamping(linear_damping);
         wheel->SetAngularDamping(angular_damping);
+
+        // Adjust steering rate based on wheel size
+        // Larger wheels (like tractor wheels) turn slower due to more inertia
+        // Small wheels (like car wheels) can turn faster
+        // Base rate is 0.52 rad/s (30 deg/s) for a 0.2m radius wheel
+        float size_factor = 0.2f / wheel_radius; // Inverse relationship
+        steering_rate = 0.52f * muli::Sqrt(size_factor);
+
+        // Clamp to reasonable ranges: 15-60 deg/s (0.26-1.05 rad/s)
+        steering_rate = muli::Clamp(steering_rate, 0.26f, 1.05f);
+
+        // Larger vehicles also have slower throttle response
+        // Base rate is 2.5/s for a 0.2m radius wheel
+        throttle_rate = 2.5f * muli::Sqrt(size_factor);
+
+        // Clamp to reasonable ranges: 1.0-5.0 per second
+        throttle_rate = muli::Clamp(throttle_rate, 1.0f, 5.0f);
     }
 
 } // namespace fs

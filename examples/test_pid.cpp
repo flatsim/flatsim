@@ -139,7 +139,18 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < 4; ++i) {
         auto &tractor = simulator.get_robot(i);
+
+        // Set PID controller parameters
+        auto params = tractor.navcon->get_controller_params();
+        params.linear_kp = 2.5f;
+        params.angular_kp = 1.8f;
+        params.angular_kd = 0.2f;
+        tractor.navcon->set_controller_params(params);
+
+        // Set controller type
         tractor.navcon->set_controller_type(navcon::NavconControllerType::PID);
+
+        // Set path
         navcon::PathGoal path(paths[i], 2.0f, 2.5f, false);
         tractor.navcon->set_path(path);
         std::cout << "Tractor " << i << " following " << shape_names[i] << " (" << paths[i].size() << " waypoints)"

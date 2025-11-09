@@ -18,7 +18,7 @@ namespace fs {
         control_system = std::make_unique<ControlSystem>(this);
         chain_manager = std::make_unique<ChainManager>(this);
         network = std::make_unique<Network>();
-        navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PATH_CONTROLLER);
+        navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PID);
     }
     Robot::~Robot() {
         // Cleanup network interfaces
@@ -132,6 +132,8 @@ namespace fs {
         constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians
         constraints.max_angular_velocity = 1.0f;                // 1 rad/s
         constraints.min_turning_radius = robo.turning_radius;
+        constraints.robot_length = robo.bound.size.y; // Robot length (longitudinal)
+        constraints.robot_width = robo.bound.size.x;  // Robot width (lateral)
 
         navcon->init(constraints, rec, robo.seqid);
 
@@ -417,6 +419,15 @@ namespace fs {
         auto velocity_cmd = navcon->tick(state, dt);
 
         if (velocity_cmd.valid) {
+            // Debug output every 50 calls
+            static int nav_debug_count = 0;
+            if (nav_debug_count % 50 == 0) {
+                std::cout << "NAV CMD: linear=" << velocity_cmd.linear_velocity
+                          << ", angular=" << velocity_cmd.angular_velocity
+                          << " (inverted: " << -velocity_cmd.angular_velocity << ")" << std::endl;
+            }
+            nav_debug_count++;
+
             // Apply velocity command directly
             // Note: Robot uses opposite angular velocity convention (positive = CW)
             // while navcon uses standard convention (positive = CCW)

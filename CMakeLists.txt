@@ -16,8 +16,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Performance optimizations
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math -flto" CACHE STRING "Release flags")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math -flto" CACHE STRING "Release flags")
+# Removed -flto to prevent excessive memory usage during compilation
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math" CACHE STRING "Release flags")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math" CACHE STRING "Release flags")
 set(params
     -Wno-reorder
     -Wno-unused-variable
@@ -30,6 +31,7 @@ set(link_options
 )
 
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
+set(HAS_RERUN ON)
 
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
@@ -125,6 +127,15 @@ file(GLOB_RECURSE internal_deps
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
+# Create a static library from internal sources to avoid recompiling for each executable
+add_library(${project_name}_internal STATIC ${internal_deps})
+target_compile_options(${project_name}_internal PRIVATE ${params})
+target_link_libraries(${project_name}_internal PUBLIC ${ext_deps})
+target_include_directories(${project_name}_internal PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
 # --------------------------------------------------------------------------------------------------
 if(${project_name_upper}_BUILD_EXAMPLES)
   file(GLOB exe CONFIGURE_DEPENDS examples/*.cpp)
@@ -137,13 +148,10 @@ if(${project_name_upper}_BUILD_EXAMPLES)
   foreach(src_file IN LISTS exe)
     get_filename_component(exec_name "${src_file}" NAME_WE)
     add_executable(${exec_name} "${src_file}")
-      target_compile_options(${exec_name} PRIVATE ${params})
-      foreach(lib_file IN LISTS internal_deps)
-        target_compile_options(${exec_name} PRIVATE ${params})
-        target_sources(${exec_name} PRIVATE "${lib_file}")
-      endforeach()
+    target_compile_options(${exec_name} PRIVATE ${params})
     target_compile_options(${exec_name} PRIVATE ${CURL_CFLAGS_OTHER})
-    target_link_libraries(${exec_name} ${ext_deps})
+    # Link against the static library instead of compiling all sources again
+    target_link_libraries(${exec_name} ${project_name}_internal ${ext_deps})
     target_link_options(${exec_name} PRIVATE ${link_options})
     target_include_directories(${exec_name} PRIVATE ${CURL_INCLUDE_DIRS})
     install(TARGETS ${exec_name} DESTINATION bin)
@@ -177,11 +185,9 @@ if(${project_name_upper}_ENABLE_TESTS)
   foreach(src_file IN LISTS test_src)
     get_filename_component(test_name "${src_file}" NAME_WE)
     add_executable(${test_name} "${src_file}")
-      target_compile_options(${test_name} PRIVATE ${params})
-      foreach(lib_file IN LISTS internal_deps)
-        target_sources(${test_name} PRIVATE "${lib_file}")
-      endforeach()
-    target_link_libraries(${test_name} ${ext_deps} doctest_with_main)
+    target_compile_options(${test_name} PRIVATE ${params})
+    # Link against the static library instead of compiling all sources again
+    target_link_libraries(${test_name} ${project_name}_internal ${ext_deps} doctest_with_main)
     target_link_options(${test_name} PRIVATE ${link_options})
     add_test(NAME ${test_name} COMMAND ${test_name})
   endforeach()

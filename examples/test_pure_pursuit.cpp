@@ -41,9 +41,15 @@ int main(int argc, char *argv[]) {
     // Test Pure Pursuit with a curved path
     std::cout << "\n--- Testing Pure Pursuit Controller with Curved Path ---" << std::endl;
 
-    // IMPORTANT: Set controller type BEFORE setting path
+    // Set controller type
     std::cout << "Setting controller to Pure Pursuit..." << std::endl;
     tractor.navcon->set_controller_type(navcon::NavconControllerType::PURE_PURSUIT);
+
+    // Set Pure Pursuit parameters
+    auto params = tractor.navcon->get_controller_params();
+    params.lookahead_distance = 3.0f; // Smaller lookahead for tighter tracking
+    params.lookahead_gain = 1.0f;     // Standard gain
+    tractor.navcon->set_controller_params(params);
 
     // Create a dense curved path with many waypoints for better Pure Pursuit performance
     std::vector<concord::Point> curved_path = {
@@ -83,7 +89,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
     tractor.navcon->set_path(path);
-    
+
     // Smoothen the path for better Pure Pursuit performance
     std::cout << "Smoothening path with 50cm intervals..." << std::endl;
     tractor.navcon->smoothen(50.0f); // Add points every 50cm

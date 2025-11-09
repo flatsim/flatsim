@@ -29,7 +29,12 @@ namespace fs {
         float friction, max_impulse;
 
         float throttle_val = 0.0f, steering_val = 0.0f;
+        float current_steering = 0.0f, current_throttle = 0.0f; // Actual current values
         float steering_max, throttle_max;
+
+        // Physics-based acceleration limits
+        float steering_rate; // rad/s - how fast steering can change
+        float throttle_rate; // 1/s - how fast throttle can change
 
       public:
         Wheel() = default;
@@ -54,6 +59,13 @@ namespace fs {
         void set_angular_damping(float damping) {
             if (wheel) wheel->SetAngularDamping(damping);
         }
+
+        // Rate limiters - control how fast wheels can change steering/throttle
+        void set_steering_rate(float rate_rad_per_sec) { steering_rate = rate_rad_per_sec; }
+        void set_throttle_rate(float rate_per_sec) { throttle_rate = rate_per_sec; }
+        float get_steering_rate() const { return steering_rate; }
+        float get_throttle_rate() const { return throttle_rate; }
+
         muli::RigidBody *get_wheel() { return wheel; }
         muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
         void update_color(const pigment::RGB &new_color) { color = new_color; }

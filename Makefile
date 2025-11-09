@@ -23,11 +23,13 @@ $(info ------------------------------------------)
 
 
 build:
+	@echo "Running clang-format on source files..."
+	@find ./src ./include -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | xargs clang-format -i
 	@if [ ! -d "$(BUILD_DIR)" ]; then \
 		echo "Build directory doesn't exist, running config first..."; \
 		$(MAKE) reconfig; \
 	fi
-	@cd $(BUILD_DIR) && set -o pipefail && make -j --no-print-directory 2>&1 | tee >(grep "^$(TOP_DIR)" | grep -E "error:" > "$(TOP_DIR)/.quickfix")
+	@cd $(BUILD_DIR) && set -o pipefail && make -j4 --no-print-directory 2>&1 | tee >(grep "^$(TOP_DIR)" | grep -E "error:" > "$(TOP_DIR)/.quickfix")
 
 b: build
 
