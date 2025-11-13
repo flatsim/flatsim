@@ -36,7 +36,17 @@ set(HAS_RERUN ON)
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
 option(${project_name_upper}_ENABLE_TESTS "Enable tests" OFF)
+option(${project_name_upper}_ENABLE_RUST "Enable Rust components" ON)
 include(FetchContent)
+
+# --------------------------------------------------------------------------------------------------
+# Rust Integration with Corrosion
+if(${project_name_upper}_ENABLE_RUST)
+    message(STATUS "Enabling Rust components via Corrosion")
+    FetchContent_Declare(Corrosion GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git GIT_TAG v0.5)
+    FetchContent_MakeAvailable(Corrosion)
+    corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml CRATES flatsim-ffi)
+endif()
 
 # --------------------------------------------------------------------------------------------------
 # External Dependencies
@@ -135,6 +145,15 @@ target_include_directories(${project_name}_internal PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# Link Rust FFI library if enabled
+if(${project_name_upper}_ENABLE_RUST)
+    target_link_libraries(${project_name}_internal PUBLIC flatsim_ffi)
+    # Include CXX bridge headers
+    target_include_directories(${project_name}_internal PUBLIC 
+        ${CMAKE_BINARY_DIR}/cargo/build/${Rust_CARGO_TARGET}/cxxbridge
+    )
+endif()
 
 # --------------------------------------------------------------------------------------------------
 if(${project_name_upper}_BUILD_EXAMPLES)

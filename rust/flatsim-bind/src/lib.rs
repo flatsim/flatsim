@@ -1,4 +1,4 @@
-//! Flatsim Bindings
+//! Flatsim Bind
 //!
 //! This crate contains Rust bindings to C++ dependencies used by Flatsim.
 //! Currently a placeholder - will be populated with bindgen-generated bindings
