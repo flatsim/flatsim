@@ -23,7 +23,14 @@
     "libsodium@latest",
     "Ipopt@latest",
     "cppad@latest",
-    "eigen@latest"
+    "eigen@latest",
+    "rustc@latest",
+
+    "cargo@latest",
+    "rust-analyzer@latest",
+    "clippy@latest",
+    "vscode-extensions.llvm-org.lldb-vscode@latest",
+
   ],
   "shell": {
     "init_hook": [
