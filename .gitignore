@@ -7,4 +7,9 @@ output.tif
 other
 xtra
 rerun_nix
-target
+
+# Rust artifacts
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
