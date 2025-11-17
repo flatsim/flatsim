@@ -36,7 +36,7 @@ set(HAS_RERUN ON)
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
 option(${project_name_upper}_ENABLE_TESTS "Enable tests" OFF)
-option(${project_name_upper}_ENABLE_RUST "Enable Rust components" ON)
+option(${project_name_upper}_ENABLE_RUST "Enable Rust components" OFF)
 include(FetchContent)
 
 # --------------------------------------------------------------------------------------------------
