@@ -1,4 +1,4 @@
-#include "flatsim/robot/sensors/imu_sensor.hpp"
+#include "flatsim/robot/sensor/imu_sensor.hpp"
 #include <cmath>
 #include <random>
 

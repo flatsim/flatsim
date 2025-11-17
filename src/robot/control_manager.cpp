@@ -1,10 +1,10 @@
-#include "flatsim/robot/systems/control.hpp"
+#include "flatsim/robot/control_manager.hpp"
 #include "flatsim/robot.hpp"
 #include "flatsim/utils.hpp"
 
 namespace fs {
 
-    void ControlSystem::init(Robot *r, const RobotInfo &robo) {
+    void ControlManager::init(Robot *r, const RobotInfo &robo) {
         robot = r;
         steerings.resize(robo.wheels.size(), 0.0f);
         steerings_max = robo.controls.steerings_max;
@@ -14,7 +14,7 @@ namespace fs {
         throttles_diff = robo.controls.throttles_diff;
     }
 
-    void ControlSystem::reset_controls() {
+    void ControlManager::reset_controls() {
         for (uint i = 0; i < steerings.size(); ++i) {
             steerings[i] = 0.0f;
         }
@@ -23,7 +23,7 @@ namespace fs {
         }
     }
 
-    void ControlSystem::set_angular(float angular) {
+    void ControlManager::set_angular(float angular) {
         constexpr float in_min = -1.0f, in_max = 1.0f;
         last_steering_input = angular; // Store for differential drive mode
         const float sign = (angular < 0.0f ? -1.0f : 1.0f);
@@ -41,7 +41,7 @@ namespace fs {
         }
     }
 
-    void ControlSystem::set_linear(float linear) {
+    void ControlManager::set_linear(float linear) {
         constexpr float in_min = -1.0f, in_max = 1.0f;
 
         // Check if this is differential drive mode (all steerings_max are 0)
@@ -109,7 +109,7 @@ namespace fs {
         }
     }
 
-    void ControlSystem::set_angular_as_follower(float angular, const Robot &master) {
+    void ControlManager::set_angular_as_follower(float angular, const Robot &master) {
         // Only apply if this robot has steering capability and is actually a follower
         if (!robot->chain.has_steering_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;
@@ -132,7 +132,7 @@ namespace fs {
         }
     }
 
-    void ControlSystem::set_linear_as_follower(float linear, const Robot &master) {
+    void ControlManager::set_linear_as_follower(float linear, const Robot &master) {
         // Only apply if this robot has throttle capability and is actually a follower
         if (!robot->chain.has_throttle_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/power.hpp"
+#include "flatsim/robot/power/power.hpp"
 #include "flatsim/types.hpp"
 #include <memory>
 #include <optional>

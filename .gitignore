@@ -14,3 +14,4 @@ Cargo.lock
 **/*.rs.bk
 *.pdb
 TODO.md
+CMakeFiles

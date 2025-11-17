@@ -8,16 +8,16 @@
 
 #include "flatsim/exceptions.hpp"
 #include "flatsim/network.hpp"
+#include "flatsim/robot/chain_manager.hpp"
 #include "flatsim/robot/chassis/chassis.hpp"
-#include "flatsim/robot/power.hpp"
-#include "flatsim/robot/sensor.hpp"
-#include "flatsim/robot/sensors/gps_sensor.hpp"
-#include "flatsim/robot/systems/chain.hpp"
-#include "flatsim/robot/systems/control.hpp"
-#include "flatsim/robot/systems/power_manager.hpp"
-#include "flatsim/robot/systems/sensors.hpp"
-#include "flatsim/robot/systems/tank_manager.hpp"
-#include "flatsim/robot/tank.hpp"
+#include "flatsim/robot/control_manager.hpp"
+#include "flatsim/robot/power/power.hpp"
+#include "flatsim/robot/power_manager.hpp"
+#include "flatsim/robot/sensor/gps_sensor.hpp"
+#include "flatsim/robot/sensor/sensor.hpp"
+#include "flatsim/robot/sensor_manager.hpp"
+#include "flatsim/robot/tank/tank.hpp"
+#include "flatsim/robot/tank_manager.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include "flatsim/world.hpp"
@@ -31,7 +31,7 @@ namespace fs {
     class Simulator;
 
     class Robot {
-        friend class ControlSystem;
+        friend class ControlManager;
         friend class ChainManager;
 
       private:
@@ -55,7 +55,7 @@ namespace fs {
 
         // Device managers - direct public access
         SensorManager sensors;
-        ControlSystem controls;
+        ControlManager controls;
         ChainManager chain;
         Network network;
         TankManager tank;

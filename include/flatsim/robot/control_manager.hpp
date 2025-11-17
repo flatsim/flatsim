@@ -8,9 +8,9 @@ namespace fs {
     class Robot;
 
     // ============================================================================
-    // ControlSystem - Handles movement control and propagation through chains
+    // ControlManager - Handles movement control and propagation through chains
     // ============================================================================
-    class ControlSystem {
+    class ControlManager {
       private:
         Robot *robot = nullptr;
         std::vector<float> steerings, throttles;
@@ -19,7 +19,7 @@ namespace fs {
         float last_steering_input = 0.0f;
 
       public:
-        ControlSystem() = default;
+        ControlManager() = default;
 
         void init(Robot *r, const RobotInfo &robo);
         void reset_controls();

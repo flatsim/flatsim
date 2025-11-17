@@ -1,4 +1,4 @@
-#include "flatsim/robot/systems/sensors.hpp"
+#include "flatsim/robot/sensor_manager.hpp"
 
 namespace fs {
 

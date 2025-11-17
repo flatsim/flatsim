@@ -1,4 +1,4 @@
-#include "flatsim/robot/sensor.hpp"
+#include "flatsim/robot/sensor/sensor.hpp"
 
 namespace fs {
     // Base sensor class implementation

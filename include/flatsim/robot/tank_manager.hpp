@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/tank.hpp"
+#include "flatsim/robot/tank/tank.hpp"
 #include <optional>
 
 namespace fs {

@@ -1,4 +1,4 @@
-#include "flatsim/robot/systems/chain.hpp"
+#include "flatsim/robot/chain_manager.hpp"
 #include "flatsim/robot.hpp"
 #include <algorithm>
 #include <chrono>

@@ -1,4 +1,4 @@
-#include "flatsim/robot/systems/power_manager.hpp"
+#include "flatsim/robot/power_manager.hpp"
 
 namespace fs {
 

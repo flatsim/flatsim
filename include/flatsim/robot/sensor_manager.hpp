@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/sensor.hpp"
+#include "flatsim/robot/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <memory>
 #include <vector>
