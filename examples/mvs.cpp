@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
                             // Button 11 = Attach trailer (smart chaining)
                             if ((button == 11 || button == 9) && pressed) {
                                 auto &robot = sim->get_robot(selected_robot_idx);
-                                if (robot.try_connect_from_chain_end()) {
+                                if (robot.chain.try_connect_from_chain_end()) {
                                     std::cout << "Connected to nearby robot!" << std::endl;
                                 } else {
                                     std::cout << "No compatible robot nearby to connect" << std::endl;
@@ -193,8 +193,8 @@ int main(int argc, char *argv[]) {
                             // Button 12 = Detach last trailer in chain
                             if ((button == 12 || button == 10) && pressed) {
                                 auto &robot = sim->get_robot(selected_robot_idx);
-                                if (robot.is_connected()) {
-                                    robot.disconnect_last_follower();
+                                if (robot.chain.is_connected()) {
+                                    robot.chain.disconnect_last_follower();
                                     std::cout << "Disconnected last trailer in chain!" << std::endl;
                                 } else {
                                     std::cout << "No trailer connected to disconnect" << std::endl;
@@ -204,14 +204,14 @@ int main(int argc, char *argv[]) {
                             // Button 13 = Print chain status
                             if (button == 13 && pressed) {
                                 auto &robot = sim->get_robot(selected_robot_idx);
-                                robot.print_chain_status();
+                                robot.chain.print_chain_status();
                             }
 
                             // Button 14 = Disconnect at position 2 (for testing)
                             if (button == 14 && pressed) {
                                 auto &robot = sim->get_robot(selected_robot_idx);
-                                if (robot.get_chain_length() > 2) {
-                                    robot.disconnect_at_position(2);
+                                if (robot.chain.get_chain_length() > 2) {
+                                    robot.chain.disconnect_at_position(2);
                                     std::cout << "Disconnected at position 2!" << std::endl;
                                 } else {
                                     std::cout << "Chain too short to disconnect at position 2" << std::endl;

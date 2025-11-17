@@ -1,4 +1,4 @@
-#include "flatsim/robot/sensors/lidar_sensor.hpp"
+#include "flatsim/robot/sensor/lidar_sensor.hpp"
 #include <algorithm>
 #include <cmath>
 #include <random>

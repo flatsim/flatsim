@@ -107,8 +107,8 @@ namespace fs {
             throw NullPointerException("robot at index " + std::to_string(robot_idx));
         }
 
-        robots[robot_idx]->set_angular(steering);
-        robots[robot_idx]->set_linear(throttle);
+        robots[robot_idx]->controls.set_angular(steering);
+        robots[robot_idx]->controls.set_linear(throttle);
     }
 
     void Simulator::toggle_section_work(uint robot_idx, const std::string &karosserie_name, int section_id) {

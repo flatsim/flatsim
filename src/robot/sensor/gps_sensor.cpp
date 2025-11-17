@@ -1,4 +1,4 @@
-#include "flatsim/robot/sensors/gps_sensor.hpp"
+#include "flatsim/robot/sensor/gps_sensor.hpp"
 #include <cmath>
 #include <random>
 
