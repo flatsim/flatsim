@@ -23,14 +23,16 @@ namespace fs {
     // ============================================================================
     class ChainManager {
       private:
-        Robot *robot;
+        Robot *robot = nullptr;
         std::vector<Robot *> connected_followers;
         std::vector<muli::RevoluteJoint *> connection_joints;
         Robot *master_robot = nullptr;
         FollowerCapabilities follower_capabilities;
 
       public:
-        ChainManager(Robot *r) : robot(r) {}
+        ChainManager() = default;
+
+        void init(Robot *r) { robot = r; }
 
         // Connection management
         bool try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots);

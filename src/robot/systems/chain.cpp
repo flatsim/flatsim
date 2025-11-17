@@ -120,7 +120,7 @@ namespace fs {
                         if (new_joint) {
                             // Add to followers using new system
                             add_follower(other_robot.get(), new_joint);
-                            other_robot->chain_manager->set_master_robot(robot);
+                            other_robot->chain.set_master_robot(robot);
                             other_robot->state.role = RobotRole::FOLLOWER; // Change slave to follower
 
                             // Follower adopts master's color
@@ -128,7 +128,7 @@ namespace fs {
 
                             // Update capabilities for both robots
                             update_follower_capabilities();
-                            other_robot->update_follower_capabilities();
+                            other_robot->chain.update_follower_capabilities();
 
                             spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name,
                                          other_robot->info.name, overlap_percentage);
@@ -217,7 +217,7 @@ namespace fs {
                             add_follower(other_robot, new_joint);
 
                             // Set backward reference
-                            other_robot->chain_manager->set_master_robot(robot);
+                            other_robot->chain.set_master_robot(robot);
                             other_robot->state.role = RobotRole::FOLLOWER;
 
                             // Follower adopts master's color
@@ -225,7 +225,7 @@ namespace fs {
 
                             // Update capabilities for both robots
                             update_follower_capabilities();
-                            other_robot->update_follower_capabilities();
+                            other_robot->chain.update_follower_capabilities();
 
                             spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name,
                                          other_robot->info.name, overlap_percentage);
@@ -244,13 +244,13 @@ namespace fs {
         Robot *chain_end = robot;
 
         // Follow the chain to the end (robot with no followers)
-        while (!chain_end->chain_manager->connected_followers.empty()) {
-            chain_end = chain_end->chain_manager->connected_followers.back(); // Follow the last follower
+        while (!chain_end->chain.connected_followers.empty()) {
+            chain_end = chain_end->chain.connected_followers.back(); // Follow the last follower
         }
 
         // Try to connect from the chain end
         spdlog::info("Trying to connect from chain end: {}", chain_end->info.name);
-        return chain_end->try_connect_nearby();
+        return chain_end->chain.try_connect_nearby();
     }
 
     void ChainManager::disconnect_trailer() { disconnect_all_followers(); }
@@ -266,7 +266,7 @@ namespace fs {
 
             if (follower) {
                 follower->state.role = RobotRole::SLAVE; // Change back to slave
-                follower->chain_manager->master_robot = nullptr;
+                follower->chain.master_robot = nullptr;
 
                 // Restore original color when disconnecting
                 follower->update_color(follower->original_color);
@@ -274,10 +274,10 @@ namespace fs {
                 spdlog::info("Disconnected {} from {}", follower->info.name, robot->info.name);
 
                 // Recursively disconnect any sub-followers
-                follower->disconnect_all_followers();
+                follower->chain.disconnect_all_followers();
 
                 // Update capabilities after disconnection
-                follower->update_follower_capabilities();
+                follower->chain.update_follower_capabilities();
             }
         }
 
@@ -294,44 +294,44 @@ namespace fs {
         Robot *previous_robot = nullptr;
 
         // Traverse to the end of the chain
-        while (!chain_end->chain_manager->connected_followers.empty()) {
+        while (!chain_end->chain.connected_followers.empty()) {
             previous_robot = chain_end;
-            chain_end = chain_end->chain_manager->connected_followers.back(); // Follow the chain
+            chain_end = chain_end->chain.connected_followers.back(); // Follow the chain
         }
 
         // If we found a chain end that isn't ourselves, disconnect it from its master
         if (chain_end != robot && previous_robot) {
             // Find the connection to disconnect
-            auto it = std::find(previous_robot->chain_manager->connected_followers.begin(),
-                                previous_robot->chain_manager->connected_followers.end(), chain_end);
+            auto it = std::find(previous_robot->chain.connected_followers.begin(),
+                                previous_robot->chain.connected_followers.end(), chain_end);
 
-            if (it != previous_robot->chain_manager->connected_followers.end()) {
-                size_t index = std::distance(previous_robot->chain_manager->connected_followers.begin(), it);
+            if (it != previous_robot->chain.connected_followers.end()) {
+                size_t index = std::distance(previous_robot->chain.connected_followers.begin(), it);
 
                 // Destroy the physics joint
-                if (index < previous_robot->chain_manager->connection_joints.size()) {
-                    muli::RevoluteJoint *joint = previous_robot->chain_manager->connection_joints[index];
+                if (index < previous_robot->chain.connection_joints.size()) {
+                    muli::RevoluteJoint *joint = previous_robot->chain.connection_joints[index];
                     if (joint) {
                         previous_robot->world->Destroy(joint);
                     }
-                    previous_robot->chain_manager->connection_joints.erase(
-                        previous_robot->chain_manager->connection_joints.begin() + index);
+                    previous_robot->chain.connection_joints.erase(previous_robot->chain.connection_joints.begin() +
+                                                                  index);
                 }
 
                 // Remove from followers list
-                previous_robot->chain_manager->connected_followers.erase(it);
+                previous_robot->chain.connected_followers.erase(it);
 
                 // Reset disconnected robot's state
                 chain_end->state.role = RobotRole::SLAVE;
-                chain_end->chain_manager->master_robot = nullptr;
+                chain_end->chain.master_robot = nullptr;
 
                 // Restore original color when disconnecting
                 chain_end->update_color(chain_end->original_color);
 
-                chain_end->update_follower_capabilities();
+                chain_end->chain.update_follower_capabilities();
 
                 // Update master's capabilities
-                previous_robot->update_follower_capabilities();
+                previous_robot->chain.update_follower_capabilities();
 
                 spdlog::info("Disconnected last follower {} from {}", chain_end->info.name, previous_robot->info.name);
             }
@@ -342,8 +342,8 @@ namespace fs {
 
     Robot *ChainManager::get_root_master() const {
         const Robot *current = robot;
-        while (current->chain_manager->master_robot != nullptr) {
-            current = current->chain_manager->master_robot;
+        while (current->chain.master_robot != nullptr) {
+            current = current->chain.master_robot;
         }
         return const_cast<Robot *>(current);
     }
@@ -357,7 +357,7 @@ namespace fs {
 
         // Follow the chain adding all followers
         std::function<void(Robot *)> add_followers = [&](Robot *current) {
-            for (Robot *follower : current->chain_manager->connected_followers) {
+            for (Robot *follower : current->chain.connected_followers) {
                 chain.push_back(follower);
                 add_followers(follower); // Recursively add sub-followers
             }
@@ -397,12 +397,12 @@ namespace fs {
         // Reset capabilities
         follower_capabilities.has_steering = false;
         follower_capabilities.has_throttle = false;
-        follower_capabilities.has_tank = robot->has_tank();
+        follower_capabilities.has_tank = robot->tank.exists();
         follower_capabilities.has_additional_hitches = false;
         follower_capabilities.available_master_hitches.clear();
 
         // Check for steering capability
-        for (const auto &max_angle : robot->control_system->get_steerings_max()) {
+        for (const auto &max_angle : robot->controls.get_steerings_max()) {
             if (max_angle > 0) {
                 follower_capabilities.has_steering = true;
                 break;
@@ -410,7 +410,7 @@ namespace fs {
         }
 
         // Check for throttle capability
-        for (const auto &max_throttle : robot->control_system->get_throttles_max()) {
+        for (const auto &max_throttle : robot->controls.get_throttles_max()) {
             if (max_throttle > 0) {
                 follower_capabilities.has_throttle = true;
                 break;
@@ -462,7 +462,7 @@ namespace fs {
         }
 
         Robot *robot_to_disconnect = chain[position];
-        Robot *its_master = robot_to_disconnect->chain_manager->master_robot;
+        Robot *its_master = robot_to_disconnect->chain.master_robot;
 
         if (!its_master) {
             spdlog::warn("Robot at position {} has no master (might be root)", position);
@@ -470,37 +470,36 @@ namespace fs {
         }
 
         // Find the connection in the master's followers list
-        auto it = std::find(its_master->chain_manager->connected_followers.begin(),
-                            its_master->chain_manager->connected_followers.end(), robot_to_disconnect);
+        auto it = std::find(its_master->chain.connected_followers.begin(), its_master->chain.connected_followers.end(),
+                            robot_to_disconnect);
 
-        if (it != its_master->chain_manager->connected_followers.end()) {
-            size_t index = std::distance(its_master->chain_manager->connected_followers.begin(), it);
+        if (it != its_master->chain.connected_followers.end()) {
+            size_t index = std::distance(its_master->chain.connected_followers.begin(), it);
 
             // Destroy the physics joint
-            if (index < its_master->chain_manager->connection_joints.size()) {
-                muli::RevoluteJoint *joint = its_master->chain_manager->connection_joints[index];
+            if (index < its_master->chain.connection_joints.size()) {
+                muli::RevoluteJoint *joint = its_master->chain.connection_joints[index];
                 if (joint) {
                     its_master->world->Destroy(joint);
                 }
-                its_master->chain_manager->connection_joints.erase(
-                    its_master->chain_manager->connection_joints.begin() + index);
+                its_master->chain.connection_joints.erase(its_master->chain.connection_joints.begin() + index);
             }
 
             // Remove from followers list
-            its_master->chain_manager->connected_followers.erase(it);
+            its_master->chain.connected_followers.erase(it);
 
             // Reset disconnected robot's state (this will also disconnect its followers)
             robot_to_disconnect->state.role = RobotRole::SLAVE;
-            robot_to_disconnect->chain_manager->master_robot = nullptr;
+            robot_to_disconnect->chain.master_robot = nullptr;
 
             // Restore original color when disconnecting
             robot_to_disconnect->update_color(robot_to_disconnect->original_color);
 
-            robot_to_disconnect->disconnect_all_followers(); // Disconnect everything after this point
-            robot_to_disconnect->update_follower_capabilities();
+            robot_to_disconnect->chain.disconnect_all_followers(); // Disconnect everything after this point
+            robot_to_disconnect->chain.update_follower_capabilities();
 
             // Update master's capabilities
-            its_master->update_follower_capabilities();
+            its_master->chain.update_follower_capabilities();
 
             spdlog::info("Disconnected robot at position {} ({}) from {}", position, robot_to_disconnect->info.name,
                          its_master->info.name);
@@ -532,12 +531,12 @@ namespace fs {
 
         // Get the root master and the full chain
         Robot *root_master = get_root_master();
-        auto full_chain = root_master->chain_manager->get_full_chain();
+        auto full_chain = root_master->chain.get_full_chain();
 
         spdlog::info("Full chain has {} robots, starting from root {}", full_chain.size(), root_master->info.name);
 
         // Step 1: Disconnect all connections in the entire chain
-        root_master->chain_manager->disconnect_all_followers();
+        root_master->chain.disconnect_all_followers();
 
         // Step 2: Teleport each robot individually to its spawn position
         for (Robot *chain_robot : full_chain) {

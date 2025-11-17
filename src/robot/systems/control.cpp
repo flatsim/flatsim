@@ -4,7 +4,8 @@
 
 namespace fs {
 
-    void ControlSystem::init(const RobotInfo &robo) {
+    void ControlSystem::init(Robot *r, const RobotInfo &robo) {
+        robot = r;
         steerings.resize(robo.wheels.size(), 0.0f);
         steerings_max = robo.controls.steerings_max;
         steerings_diff = robo.controls.steerings_diff;
@@ -33,9 +34,9 @@ namespace fs {
         }
 
         // Propagate to followers that have steering capability
-        for (Robot *follower : robot->get_connected_followers()) {
-            if (follower->has_steering_capability()) {
-                follower->set_angular_as_follower(angular, *robot);
+        for (Robot *follower : robot->chain.get_connected_followers()) {
+            if (follower->chain.has_steering_capability()) {
+                follower->controls.set_angular_as_follower(angular, *robot);
             }
         }
     }
@@ -101,16 +102,16 @@ namespace fs {
         }
 
         // Propagate to followers that have throttle capability
-        for (Robot *follower : robot->get_connected_followers()) {
-            if (follower->has_throttle_capability()) {
-                follower->set_linear_as_follower(linear, *robot);
+        for (Robot *follower : robot->chain.get_connected_followers()) {
+            if (follower->chain.has_throttle_capability()) {
+                follower->controls.set_linear_as_follower(linear, *robot);
             }
         }
     }
 
     void ControlSystem::set_angular_as_follower(float angular, const Robot &master) {
         // Only apply if this robot has steering capability and is actually a follower
-        if (!robot->has_steering_capability() || robot->state.role != RobotRole::FOLLOWER) {
+        if (!robot->chain.has_steering_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;
         }
 
@@ -124,16 +125,16 @@ namespace fs {
         }
 
         // Continue propagation to any followers this robot might have
-        for (Robot *follower : robot->get_connected_followers()) {
-            if (follower->has_steering_capability()) {
-                follower->set_angular_as_follower(angular, *robot);
+        for (Robot *follower : robot->chain.get_connected_followers()) {
+            if (follower->chain.has_steering_capability()) {
+                follower->controls.set_angular_as_follower(angular, *robot);
             }
         }
     }
 
     void ControlSystem::set_linear_as_follower(float linear, const Robot &master) {
         // Only apply if this robot has throttle capability and is actually a follower
-        if (!robot->has_throttle_capability() || robot->state.role != RobotRole::FOLLOWER) {
+        if (!robot->chain.has_throttle_capability() || robot->state.role != RobotRole::FOLLOWER) {
             return;
         }
 
@@ -152,9 +153,9 @@ namespace fs {
         }
 
         // Continue propagation to any followers this robot might have
-        for (Robot *follower : robot->get_connected_followers()) {
-            if (follower->has_throttle_capability()) {
-                follower->set_linear_as_follower(linear, *robot);
+        for (Robot *follower : robot->chain.get_connected_followers()) {
+            if (follower->chain.has_throttle_capability()) {
+                follower->controls.set_linear_as_follower(linear, *robot);
             }
         }
     }

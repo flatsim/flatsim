@@ -266,14 +266,14 @@ class TractorZMQController {
 
                 if (agent_arrived[agent_name]) {
                     // Already arrived and stopped, keep it stopped
-                    tractor.set_angular(0.0f);
-                    tractor.set_linear(0.0f);
+                    tractor.controls.set_angular(0.0f);
+                    tractor.controls.set_linear(0.0f);
                 } else if (tractor.navcon->is_goal_reached()) {
                     // This tractor has JUST arrived - STOP IT IMMEDIATELY!
                     // CRITICAL: Clear the goal so navcon doesn't send more commands in tick()
                     tractor.navcon->clear_goal();
-                    tractor.set_angular(0.0f);
-                    tractor.set_linear(0.0f);
+                    tractor.controls.set_angular(0.0f);
+                    tractor.controls.set_linear(0.0f);
                     agent_arrived[agent_name] = true;
                     std::cout << "      ✓ " << agent_name << " ARRIVED and STOPPED" << std::endl;
                 } else {

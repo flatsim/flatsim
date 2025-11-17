@@ -12,16 +12,16 @@ namespace fs {
     // ============================================================================
     class ControlSystem {
       private:
-        Robot *robot;
+        Robot *robot = nullptr;
         std::vector<float> steerings, throttles;
         std::vector<float> steerings_max, throttles_max;
         std::vector<float> steerings_diff, throttles_diff;
         float last_steering_input = 0.0f;
 
       public:
-        ControlSystem(Robot *r) : robot(r) {}
+        ControlSystem() = default;
 
-        void init(const RobotInfo &robo);
+        void init(Robot *r, const RobotInfo &robo);
         void reset_controls();
         void set_angular(float angular);
         void set_linear(float linear);
