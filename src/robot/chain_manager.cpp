@@ -68,7 +68,7 @@ namespace fs {
 
     bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots) {
         // Only MASTER robots can initiate connections
-        if (robot->state.role != RobotRole::MASTER || !robot->chassis) {
+        if (robot->state.role != RobotRole::MASTER || !robot->chassis.exists()) {
             return false;
         }
 
@@ -86,13 +86,13 @@ namespace fs {
             }
 
             // Skip if other robot has no chassis or hitches
-            if (!other_robot->chassis || other_robot->chassis->hitches.empty()) {
+            if (!other_robot->chassis.exists() || other_robot->chassis.get_hitches()->empty()) {
                 continue;
             }
 
             // Try to connect my master hitches to their slave hitches
-            for (const auto &my_hitch : robot->chassis->hitches) {
-                for (const auto &other_hitch : other_robot->chassis->hitches) {
+            for (const auto &my_hitch : *robot->chassis.get_hitches()) {
+                for (const auto &other_hitch : *other_robot->chassis.get_hitches()) {
                     // Only connect master hitch to slave hitch
                     if (!my_hitch.is_master || other_hitch.is_master) {
                         continue;
@@ -111,7 +111,7 @@ namespace fs {
                                                    (my_hitch_pos.y + other_hitch_pos.y) / 2.0f);
 
                         auto new_joint = robot->world->CreateRevoluteJoint(
-                            robot->chassis->get_body(), other_robot->chassis->get_body(), hitch_world_pos,
+                            robot->chassis.get_body(), other_robot->chassis.get_body(), hitch_world_pos,
                             20.0f, // frequency
                             0.8f,  // damping
                             10.0f  // joint mass
@@ -144,13 +144,14 @@ namespace fs {
 
     bool ChainManager::try_connect_nearby() {
         // Only MASTER robots or FOLLOWERS with available master hitches can initiate connections
-        if ((robot->state.role != RobotRole::MASTER && robot->state.role != RobotRole::FOLLOWER) || !robot->chassis) {
+        if ((robot->state.role != RobotRole::MASTER && robot->state.role != RobotRole::FOLLOWER) ||
+            !robot->chassis.exists()) {
             return false;
         }
 
         // Check if this robot has any available master hitch
         bool has_available_master_hitch = false;
-        for (const auto &hitch : robot->chassis->hitches) {
+        for (const auto &hitch : *robot->chassis.get_hitches()) {
             if (hitch.is_master) {
                 // Check if this hitch is already used
                 bool hitch_used = false;
@@ -181,13 +182,13 @@ namespace fs {
             }
 
             // Skip if other robot has no chassis or hitches
-            if (!other_robot->chassis || other_robot->chassis->hitches.empty()) {
+            if (!other_robot->chassis.exists() || other_robot->chassis.get_hitches()->empty()) {
                 continue;
             }
 
             // Try to connect my master hitches to their slave hitches
-            for (const auto &my_hitch : robot->chassis->hitches) {
-                for (const auto &other_hitch : other_robot->chassis->hitches) {
+            for (const auto &my_hitch : *robot->chassis.get_hitches()) {
+                for (const auto &other_hitch : *other_robot->chassis.get_hitches()) {
                     // Only connect master hitch to slave hitch
                     if (!my_hitch.is_master || other_hitch.is_master) {
                         continue;
@@ -206,7 +207,7 @@ namespace fs {
                                                    (my_hitch_pos.y + other_hitch_pos.y) / 2.0f);
 
                         auto new_joint = robot->world->CreateRevoluteJoint(
-                            robot->chassis->get_body(), other_robot->chassis->get_body(), hitch_world_pos,
+                            robot->chassis.get_body(), other_robot->chassis.get_body(), hitch_world_pos,
                             20.0f, // frequency
                             0.8f,  // damping
                             10.0f  // joint mass
@@ -418,8 +419,8 @@ namespace fs {
         }
 
         // Check for available master hitches (for chaining)
-        if (robot->chassis) {
-            for (const auto &hitch : robot->chassis->hitches) {
+        if (robot->chassis.exists()) {
+            for (const auto &hitch : *robot->chassis.get_hitches()) {
                 if (hitch.is_master) {
                     // Better hitch occupation detection
                     bool hitch_occupied = false;

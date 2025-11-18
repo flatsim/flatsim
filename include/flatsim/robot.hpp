@@ -9,7 +9,7 @@
 #include "flatsim/exceptions.hpp"
 #include "flatsim/network.hpp"
 #include "flatsim/robot/chain_manager.hpp"
-#include "flatsim/robot/chassis/chassis.hpp"
+#include "flatsim/robot/chassis_manager.hpp"
 #include "flatsim/robot/control_manager.hpp"
 #include "flatsim/robot/power/power.hpp"
 #include "flatsim/robot/power_manager.hpp"
@@ -39,7 +39,6 @@ namespace fs {
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         Simulator *simulator = nullptr;
-        std::unique_ptr<Chassis> chassis;
         std::vector<std::shared_ptr<Robot>> slaves; // Legacy - can be removed later
 
         muli::CollisionFilter filter;
@@ -57,6 +56,7 @@ namespace fs {
         SensorManager sensors;
         ControlManager controls;
         ChainManager chain;
+        ChassisManager chassis;
         Network network;
         TankManager tank;
         PowerManager power;
@@ -81,17 +81,17 @@ namespace fs {
         const concord::Pose &get_spawn_position() const { return spawn_position; }
         void pulse() { pulsing = true; }
         void toggle_section_work(const std::string &karosserie_name, int section_id) {
-            chassis->toggle_section_work(karosserie_name, section_id);
+            chassis.toggle_section_work(karosserie_name, section_id);
         }
         void toggle_all_sections_work(const std::string &karosserie_name) {
-            chassis->toggle_all_sections_work(karosserie_name);
+            chassis.toggle_all_sections_work(karosserie_name);
         }
         void toggle_all_except_section_work(const std::string &karosserie_name, int except_section_id) {
-            chassis->toggle_all_except_section_work(karosserie_name, except_section_id);
+            chassis.toggle_all_except_section_work(karosserie_name, except_section_id);
         }
         std::vector<Karosserie> *get_karosseries() {
-            if (!chassis) throw NullPointerException("chassis");
-            return &chassis->karosseries;
+            if (!chassis.exists()) throw NullPointerException("chassis");
+            return chassis.get_karosseries();
         }
 
         // Spatial queries - robot can find other robots

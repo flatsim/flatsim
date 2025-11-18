@@ -27,14 +27,14 @@ namespace fs {
         // Optimize sensor updates - use manager
         sensors.update_all(info.bound.pose, dt);
 
-        if (!chassis) {
+        if (!chassis.exists()) {
             throw NullPointerException("chassis");
         }
 
-        this->info.bound.pose.point.x = chassis->get_transform().position.x;
-        this->info.bound.pose.point.y = chassis->get_transform().position.y;
+        this->info.bound.pose.point.x = chassis.get_transform().position.x;
+        this->info.bound.pose.point.y = chassis.get_transform().position.y;
         // Physics engine gives angle 90 degrees off - correct it
-        this->info.bound.pose.angle.yaw = chassis->get_transform().rotation.GetAngle() + M_PI / 2;
+        this->info.bound.pose.angle.yaw = chassis.get_transform().rotation.GetAngle() + M_PI / 2;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
 
         // Update navigation controller
@@ -43,8 +43,8 @@ namespace fs {
         // Update network interfaces - batch updates to reduce overhead
         network.tick(dt);
 
-        chassis->tick(dt);
-        chassis->update(controls.get_steerings(), controls.get_throttles(), dt);
+        chassis.tick(dt);
+        chassis.update(controls.get_steerings(), controls.get_throttles(), dt);
 
         // Update power consumption based on operation mode
         if (power.is_powered()) {
@@ -70,7 +70,7 @@ namespace fs {
         }
 
         // Update tank if present
-        tank.tick(dt, chassis->get_pose());
+        tank.tick(dt, chassis.get_pose());
 
         // visualize();
     }
@@ -90,11 +90,8 @@ namespace fs {
             throw NullPointerException("recording stream");
         }
 
-        chassis = std::make_unique<Chassis>(world, rec, filter, &info, &state);
-        if (!chassis) {
-            throw InitializationException("chassis creation failed");
-        }
-        chassis->init(robo);
+        // Initialize chassis manager
+        chassis.init(this, rec, world, filter, robo);
 
         // Initialize device managers
         controls.init(this, robo);
@@ -169,7 +166,7 @@ namespace fs {
             chain.break_chain_for_teleport();
         }
 
-        chassis->teleport(pose);
+        chassis.teleport(pose);
     }
 
     void Robot::respawn() {
@@ -179,13 +176,13 @@ namespace fs {
         // Break all chain connections before respawning
         chain.break_chain_for_teleport();
 
-        chassis->teleport(spawn_position);
+        chassis.teleport(spawn_position);
     }
 
     void Robot::update_color(const pigment::RGB &new_color) {
         info.color = new_color;
-        if (chassis) {
-            chassis->update_color(new_color);
+        if (chassis.exists()) {
+            chassis.update_color(new_color);
         }
     }
 
@@ -249,7 +246,7 @@ namespace fs {
         }
         std::string label = role_prefix + info.seqid;
         if (power.exists()) label += "(" + std::to_string(static_cast<int>(power.get_percentage())) + "%)";
-        if (chassis) chassis->tock(label);
+        if (chassis.exists()) chassis.tock(label);
 
         // Visualize tank if present
         tank.tock(rec);
