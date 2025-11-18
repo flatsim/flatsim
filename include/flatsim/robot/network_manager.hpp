@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/network/interface.hpp"
+#include "flatsim/robot/network/interface.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@ namespace fs {
     /**
      * @brief Network manager for robot communication interfaces
      *
-     * Network manages multiple communication interfaces for a robot.
+     * NetworkManager manages multiple communication interfaces for a robot.
      * Each robot can have 1, 2, or many interfaces simultaneously.
      * This class coordinates between interfaces and provides unified API.
      */

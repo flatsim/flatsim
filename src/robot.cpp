@@ -1,7 +1,7 @@
 #include "flatsim/robot.hpp"
-#include "flatsim/network/interfaces/canbus_interface.hpp"
-#include "flatsim/network/interfaces/wifi_interface.hpp"
-#include "flatsim/network/interfaces/zenoh_interface.hpp"
+#include "flatsim/robot/network/interfaces/canbus_interface.hpp"
+#include "flatsim/robot/network/interfaces/wifi_interface.hpp"
+#include "flatsim/robot/network/interfaces/zenoh_interface.hpp"
 #include "flatsim/simulator.hpp"
 #include <algorithm>
 #include <cmath>

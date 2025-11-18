@@ -1,4 +1,4 @@
-#include "flatsim/network/interfaces/wifi_interface.hpp"
+#include "flatsim/robot/network/interfaces/wifi_interface.hpp"
 
 namespace fs::network {
 

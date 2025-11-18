@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/communication/messages.hpp"
 #include "flatsim/types.hpp"
 #include <memory>
 #include <string>

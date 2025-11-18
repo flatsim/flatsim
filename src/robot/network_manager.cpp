@@ -1,4 +1,4 @@
-#include "flatsim/network.hpp"
+#include "flatsim/robot/network_manager.hpp"
 #include <stdexcept>
 
 namespace fs {

@@ -1,32 +1,32 @@
 #pragma once
 
-#include "flatsim/network/interface.hpp"
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/communication/messages.hpp"
+#include "flatsim/robot/network/interface.hpp"
 #include <string>
 #include <vector>
 
 namespace fs::network {
 
     /**
-     * @brief Zenoh interface for high-performance P2P communication
+     * @brief CAN-bus interface for low-latency, reliable communication
      *
-     * TODO: Implement Zenoh protocol integration
-     * - Zenoh pub/sub with key expressions
-     * - Automatic peer discovery via Zenoh scouting
-     * - Content-based routing with spatial/temporal filters
-     * - Sub-millisecond latency, high throughput
+     * TODO: Implement CAN-bus protocol integration
+     * - CAN-bus hardware interface
+     * - Linear bus topology (master-slave chains)
+     * - ~100μs deterministic latency
+     * - High reliability (error detection, automatic retransmission)
      *
-     * Use case: High-performance, scalable P2P communication for field robots
+     * Use case: Physically connected devices (SLAVE robots), high reliability
      */
-    class ZenohInterface : public Interface {
+    class CANBusInterface : public Interface {
       private:
         std::string robot_uuid_;
         bool initialized_ = false;
         std::vector<std::string> connected_peers_;
 
       public:
-        ZenohInterface() = default;
-        ~ZenohInterface() override = default;
+        CANBusInterface() = default;
+        ~CANBusInterface() override = default;
 
         bool init(const std::string &robot_uuid) override;
         void cleanup() override;

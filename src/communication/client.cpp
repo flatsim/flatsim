@@ -1,4 +1,4 @@
-#include "flatsim/robot/communication/client.hpp"
+#include "flatsim/communication/client.hpp"
 #include <chrono>
 #include <iostream>
 

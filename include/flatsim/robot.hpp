@@ -7,10 +7,10 @@
 #include "muli/world.h"
 
 #include "flatsim/exceptions.hpp"
-#include "flatsim/network.hpp"
 #include "flatsim/robot/chain_manager.hpp"
 #include "flatsim/robot/chassis_manager.hpp"
 #include "flatsim/robot/control_manager.hpp"
+#include "flatsim/robot/network_manager.hpp"
 #include "flatsim/robot/power/power.hpp"
 #include "flatsim/robot/power_manager.hpp"
 #include "flatsim/robot/sensor/gps_sensor.hpp"

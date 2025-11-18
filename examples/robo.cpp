@@ -1,5 +1,5 @@
+#include "flatsim/communication/client.hpp"
 #include "flatsim/loader.hpp"
-#include "flatsim/robot/communication/client.hpp"
 #include "flatsim/types.hpp"
 #include <CLI/CLI.hpp>
 #include <chrono>

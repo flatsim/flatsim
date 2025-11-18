@@ -1,4 +1,4 @@
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/communication/messages.hpp"
 
 namespace fs::messages {
 
