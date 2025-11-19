@@ -1,4 +1,4 @@
-#include "flatsim/network/interfaces/zenoh_interface.hpp"
+#include "flatsim/robot/network/interfaces/zenoh_interface.hpp"
 
 namespace fs::network {
 

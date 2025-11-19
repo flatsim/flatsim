@@ -6,11 +6,12 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "flatsim/exceptions.hpp"
-#include "flatsim/network.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot/chain_manager.hpp"
 #include "flatsim/robot/chassis_manager.hpp"
 #include "flatsim/robot/control_manager.hpp"
+#include "flatsim/robot/network_manager.hpp"
 #include "flatsim/robot/power/power.hpp"
 #include "flatsim/robot/power_manager.hpp"
 #include "flatsim/robot/sensor/gps_sensor.hpp"
@@ -18,8 +19,7 @@
 #include "flatsim/robot/sensor_manager.hpp"
 #include "flatsim/robot/tank/tank.hpp"
 #include "flatsim/robot/tank_manager.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
 #include "navcon.hpp"
 
@@ -60,7 +60,7 @@ namespace fs {
         Network network;
         TankManager tank;
         PowerManager power;
-        std::unique_ptr<navcon::Navcon> navcon;
+        std::unique_ptr<navcon::Tracker> tracker;
 
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();

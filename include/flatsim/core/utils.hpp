@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/muli.h"
 #include <algorithm>
 #include <cmath>

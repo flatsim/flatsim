@@ -1,8 +1,8 @@
 #pragma once
 
+#include "flatsim/ipc/messages.hpp"
 #include "flatsim/robot.hpp"
-#include "flatsim/robot/communication/messages.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include <map>
 #include <memory>
 #include <string>
@@ -18,7 +18,7 @@ namespace fs {
      * - Control commands from robot processes
      * - Physics state broadcasts to robot processes
      */
-    class Dispatcher {
+    class Server {
       private:
         zmq::context_t context;
         std::unique_ptr<zmq::socket_t> spawn_socket;   // REP socket for spawn requests
@@ -45,8 +45,8 @@ namespace fs {
         std::string server_host = "0.0.0.0"; // Host address for TCP connections (0.0.0.0 = use client's IP)
 
       public:
-        Dispatcher();
-        ~Dispatcher();
+        Server();
+        ~Server();
 
         /**
          * @brief Initialize ZMQ sockets and context

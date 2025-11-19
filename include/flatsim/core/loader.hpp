@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include <boost/json.hpp>
 #include <filesystem>
 #include <optional>

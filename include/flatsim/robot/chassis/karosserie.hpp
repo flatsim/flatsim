@@ -1,8 +1,8 @@
 #pragma once
 
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot/chassis/section.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/collision_filter.h"
 #include "muli/world.h"
 

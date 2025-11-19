@@ -1,32 +1,33 @@
 #pragma once
 
-#include "flatsim/network/interface.hpp"
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/ipc/messages.hpp"
+#include "flatsim/robot/network/interface.hpp"
 #include <string>
 #include <vector>
 
 namespace fs::network {
 
     /**
-     * @brief CAN-bus interface for low-latency, reliable communication
+     * @brief WiFi interface for long-range communication
      *
-     * TODO: Implement CAN-bus protocol integration
-     * - CAN-bus hardware interface
-     * - Linear bus topology (master-slave chains)
-     * - ~100μs deterministic latency
-     * - High reliability (error detection, automatic retransmission)
+     * TODO: Implement WiFi protocol integration
+     * - WiFi Direct/Ad-hoc or Infrastructure mode
+     * - UDP multicast for discovery
+     * - TCP for reliable messaging
+     * - Up to 100m range (line of sight)
+     * - High bandwidth (video, sensor data)
      *
-     * Use case: Physically connected devices (SLAVE robots), high reliability
+     * Use case: Long-range communication for dispersed robot fleets
      */
-    class CANBusInterface : public Interface {
+    class WiFiInterface : public Interface {
       private:
         std::string robot_uuid_;
         bool initialized_ = false;
         std::vector<std::string> connected_peers_;
 
       public:
-        CANBusInterface() = default;
-        ~CANBusInterface() override = default;
+        WiFiInterface() = default;
+        ~WiFiInterface() override = default;
 
         bool init(const std::string &robot_uuid) override;
         void cleanup() override;

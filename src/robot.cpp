@@ -1,7 +1,7 @@
 #include "flatsim/robot.hpp"
-#include "flatsim/network/interfaces/canbus_interface.hpp"
-#include "flatsim/network/interfaces/wifi_interface.hpp"
-#include "flatsim/network/interfaces/zenoh_interface.hpp"
+#include "flatsim/robot/network/interfaces/canbus_interface.hpp"
+#include "flatsim/robot/network/interfaces/wifi_interface.hpp"
+#include "flatsim/robot/network/interfaces/zenoh_interface.hpp"
 #include "flatsim/simulator.hpp"
 #include <algorithm>
 #include <cmath>
@@ -14,8 +14,8 @@ namespace fs {
         filter.bit = 1 << group;     // Each robot gets unique bit position
         filter.mask = ~(1 << group); // Exclude own bit from collision mask
 
-        // Initialize navigation controller
-        navcon = std::make_unique<navcon::Navcon>(navcon::NavconControllerType::PID);
+        // Initialize tracker
+        tracker = std::make_unique<navcon::Tracker>(navcon::TrackerType::PID);
     }
 
     Robot::~Robot() {
@@ -116,8 +116,9 @@ namespace fs {
         constraints.min_turning_radius = robo.turning_radius;
         constraints.robot_length = robo.bound.size.y; // Robot length (longitudinal)
         constraints.robot_width = robo.bound.size.x;  // Robot width (lateral)
+        constraints.allow_reverse = false;            // TODO: Enable backward maneuvers for tight turns
 
-        navcon->init(constraints, rec, robo.seqid);
+        tracker->init(constraints, rec, robo.seqid);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
@@ -265,9 +266,9 @@ namespace fs {
         rec->log_static(this->info.seqid + "/pose",
                         rerun::GeoPoints({{float(wgs_coords.lat), float(wgs_coords.lon)}}).with_colors({color}));
 
-        // Update navigation visualization
-        if (navcon) {
-            navcon->tock();
+        // Update tracker visualization
+        if (tracker) {
+            tracker->tock();
         }
     }
 
@@ -295,7 +296,7 @@ namespace fs {
 
     // Navigation helper method
     void Robot::update_navigation(float dt) {
-        if (!navcon) {
+        if (!tracker) {
             return;
         }
 
@@ -307,7 +308,7 @@ namespace fs {
         state.timestamp = 0.0;        // TODO: get actual timestamp
 
         // Compute control command
-        auto velocity_cmd = navcon->tick(state, dt);
+        auto velocity_cmd = tracker->tick(state, dt);
 
         if (velocity_cmd.valid) {
             // Debug output every 50 calls

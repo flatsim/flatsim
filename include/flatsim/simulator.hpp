@@ -1,9 +1,9 @@
 #pragma once
 
-#include "flatsim/dispatcher.hpp"
-#include "flatsim/exceptions.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/ipc/server.hpp"
 #include "flatsim/robot.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
 
 #include "muli/world.h"
@@ -28,7 +28,7 @@ namespace fs {
         int selected_robot_idx = -1;
         uint ticks = 0;
         uint tocks = 0;
-        std::unique_ptr<Dispatcher> dispatcher;
+        std::unique_ptr<Server> dispatcher;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/world.h"
 #include <memory>
 #include <vector>

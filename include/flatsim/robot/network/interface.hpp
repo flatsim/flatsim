@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/ipc/messages.hpp"
 #include <string>
 #include <vector>
 

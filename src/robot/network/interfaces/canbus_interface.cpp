@@ -1,4 +1,4 @@
-#include "flatsim/network/interfaces/canbus_interface.hpp"
+#include "flatsim/robot/network/interfaces/canbus_interface.hpp"
 
 namespace fs::network {
 

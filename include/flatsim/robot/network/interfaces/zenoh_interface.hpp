@@ -1,7 +1,7 @@
 #pragma once
 
-#include "flatsim/network/interface.hpp"
-#include "flatsim/robot/communication/messages.hpp"
+#include "flatsim/ipc/messages.hpp"
+#include "flatsim/robot/network/interface.hpp"
 #include <string>
 #include <vector>
 

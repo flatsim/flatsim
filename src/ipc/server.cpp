@@ -1,14 +1,14 @@
-#include "flatsim/dispatcher.hpp"
+#include "flatsim/ipc/server.hpp"
 #include "flatsim/simulator.hpp"
 #include <iostream>
 
 namespace fs {
 
-    Dispatcher::Dispatcher() : context(1) {}
+    Server::Server() : context(1) {}
 
-    Dispatcher::~Dispatcher() { cleanup(); }
+    Server::~Server() { cleanup(); }
 
-    bool Dispatcher::init(Simulator *sim, bool use_tcp, const std::string &server_host) {
+    bool Server::init(Simulator *sim, bool use_tcp, const std::string &server_host) {
         if (initialized) {
             std::cerr << "[Dispatcher] Already initialized" << std::endl;
             return false;
@@ -35,7 +35,7 @@ namespace fs {
         }
     }
 
-    void Dispatcher::process_spawn_requests() {
+    void Server::process_spawn_requests() {
         if (!initialized) {
             return;
         }
@@ -178,7 +178,7 @@ namespace fs {
         }
     }
 
-    std::vector<messages::ControlCommand> Dispatcher::receive_commands() {
+    std::vector<messages::ControlCommand> Server::receive_commands() {
         std::vector<messages::ControlCommand> commands;
 
         if (!initialized) {
@@ -211,7 +211,7 @@ namespace fs {
         return commands;
     }
 
-    void Dispatcher::send_state_to_robot(const std::string &uuid, const messages::PhysicsState &state) {
+    void Server::send_state_to_robot(const std::string &uuid, const messages::PhysicsState &state) {
         if (!initialized) {
             return;
         }
@@ -234,7 +234,7 @@ namespace fs {
         }
     }
 
-    void Dispatcher::send_states() {
+    void Server::send_states() {
         if (!initialized) {
             return;
         }
@@ -254,7 +254,7 @@ namespace fs {
         }
     }
 
-    void Dispatcher::process_heartbeats(double current_time) {
+    void Server::process_heartbeats(double current_time) {
         if (!initialized) {
             return;
         }
@@ -313,7 +313,7 @@ namespace fs {
         }
     }
 
-    bool Dispatcher::is_robot_online(const std::string &uuid) const {
+    bool Server::is_robot_online(const std::string &uuid) const {
         auto robot_it = robots.find(uuid);
         if (robot_it != robots.end() && robot_it->second) {
             return robot_it->second->state.online;
@@ -321,7 +321,7 @@ namespace fs {
         return false;
     }
 
-    double Dispatcher::get_last_heartbeat(const std::string &uuid) const {
+    double Server::get_last_heartbeat(const std::string &uuid) const {
         auto it = robot_last_heartbeat.find(uuid);
         if (it != robot_last_heartbeat.end()) {
             return it->second;
@@ -329,7 +329,7 @@ namespace fs {
         return 0.0;
     }
 
-    void Dispatcher::cleanup() {
+    void Server::cleanup() {
         if (!initialized) {
             return;
         }
