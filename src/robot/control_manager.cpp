@@ -1,6 +1,6 @@
 #include "flatsim/robot/control_manager.hpp"
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot.hpp"
-#include "flatsim/utils.hpp"
 
 namespace fs {
 

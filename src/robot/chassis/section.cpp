@@ -1,5 +1,5 @@
 #include "flatsim/robot/chassis/section.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/core/utils.hpp"
 
 namespace fs {
     Section::Section(std::shared_ptr<rerun::RecordingStream> rec, RobotInfo *robot_info, RobotState *robot_state)

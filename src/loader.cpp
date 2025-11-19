@@ -1,5 +1,5 @@
-#include "flatsim/loader.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/core/loader.hpp"
+#include "flatsim/core/utils.hpp"
 #include <boost/json.hpp>
 #include <fstream>
 #include <iomanip>

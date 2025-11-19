@@ -1,4 +1,4 @@
-#include "flatsim/dispatcher.hpp"
+#include "flatsim/ipc/server.hpp"
 #include "flatsim/simulator.hpp"
 #include <iostream>
 

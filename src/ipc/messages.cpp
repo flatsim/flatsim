@@ -1,4 +1,4 @@
-#include "flatsim/communication/messages.hpp"
+#include "flatsim/ipc/messages.hpp"
 
 namespace fs::messages {
 

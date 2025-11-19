@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/core/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/types.h"
 
 namespace fs {

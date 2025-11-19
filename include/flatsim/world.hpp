@@ -6,10 +6,10 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "flatsim/exceptions.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/robot/types.hpp"
 
 namespace fs {
     class WorldSettings : public muli::WorldSettings {

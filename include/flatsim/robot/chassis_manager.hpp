@@ -1,7 +1,7 @@
 #pragma once
 
 #include "flatsim/robot/chassis/chassis.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include <memory>
 #include <vector>
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "flatsim/dispatcher.hpp"
-#include "flatsim/exceptions.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/ipc/server.hpp"
 #include "flatsim/robot.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
 
 #include "muli/world.h"

@@ -1,6 +1,6 @@
-#include "flatsim/communication/client.hpp"
-#include "flatsim/loader.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/ipc/client.hpp"
+#include "flatsim/core/loader.hpp"
+#include "flatsim/robot/types.hpp"
 #include <CLI/CLI.hpp>
 #include <chrono>
 #include <cstring>

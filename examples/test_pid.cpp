@@ -6,9 +6,9 @@
 #include <thread>
 #include <vector>
 
-#include "flatsim/loader.hpp"
+#include "flatsim/core/loader.hpp"
 #include "flatsim/simulator.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "rerun/recording_stream.hpp"
 
 std::string generate_uuid() {

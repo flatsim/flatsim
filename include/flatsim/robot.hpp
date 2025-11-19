@@ -6,7 +6,8 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
-#include "flatsim/exceptions.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot/chain_manager.hpp"
 #include "flatsim/robot/chassis_manager.hpp"
 #include "flatsim/robot/control_manager.hpp"
@@ -18,8 +19,7 @@
 #include "flatsim/robot/sensor_manager.hpp"
 #include "flatsim/robot/tank/tank.hpp"
 #include "flatsim/robot/tank_manager.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
 #include "navcon.hpp"
 

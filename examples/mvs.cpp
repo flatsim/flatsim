@@ -7,9 +7,9 @@
 #include <unistd.h>
 #include <vector>
 
-#include "flatsim/loader.hpp"
+#include "flatsim/core/loader.hpp"
 #include "flatsim/simulator.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {

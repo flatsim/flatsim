@@ -1,8 +1,8 @@
 #pragma once
 
-#include "flatsim/exceptions.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/core/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/world.h"
 
 namespace fs {

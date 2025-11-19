@@ -1,12 +1,12 @@
 #pragma once
 
-#include "flatsim/constants.hpp"
-#include "flatsim/exceptions.hpp"
+#include "flatsim/core/constants.hpp"
+#include "flatsim/core/exceptions.hpp"
+#include "flatsim/core/utils.hpp"
 #include "flatsim/robot/chassis/hitch.hpp"
 #include "flatsim/robot/chassis/karosserie.hpp"
 #include "flatsim/robot/chassis/wheel.hpp"
-#include "flatsim/types.hpp"
-#include "flatsim/utils.hpp"
+#include "flatsim/robot/types.hpp"
 #include "muli/world.h"
 
 #include <rerun.hpp>

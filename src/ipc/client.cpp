@@ -1,4 +1,4 @@
-#include "flatsim/communication/client.hpp"
+#include "flatsim/ipc/client.hpp"
 #include <chrono>
 #include <iostream>
 

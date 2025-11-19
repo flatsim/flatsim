@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concord/concord.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 

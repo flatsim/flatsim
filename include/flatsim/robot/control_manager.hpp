@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/types.hpp"
+#include "flatsim/robot/types.hpp"
 #include <vector>
 
 namespace fs {
