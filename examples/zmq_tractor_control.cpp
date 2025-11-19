@@ -151,12 +151,12 @@ class TractorZMQController {
 
             auto &tractor = simulator.get_robot(robot_idx);
 
-            // Configure navigation controller for simple point-to-point navigation
-            tractor.navcon->set_controller_type(navcon::NavconControllerType::CARROT);
+            // Configure tracker for simple point-to-point navigation
+            tractor.tracker->set_controller_type(navcon::TrackerType::CARROT);
 
-            auto params = tractor.navcon->get_controller_params();
+            auto params = tractor.tracker->get_controller_params();
             params.carrot_distance = 2.0f; // Lookahead distance
-            tractor.navcon->set_controller_params(params);
+            tractor.tracker->set_controller_params(params);
 
             std::cout << "  ✓ Spawned " << agent_name << " at grid (" << grid_spawn_x << ", " << grid_spawn_y
                       << ") -> world (" << spawn_point.x << ", " << spawn_point.y << ") with robot_idx=" << robot_idx
@@ -212,7 +212,7 @@ class TractorZMQController {
             // This is the proper way to navigate to a single target point
             float position_tolerance = grid_cell_size * 0.3f; // Arrival tolerance
             navcon::NavigationGoal goal(world_point, position_tolerance);
-            tractor.navcon->set_goal(goal);
+            tractor.tracker->set_goal(goal);
 
             // Store the target position and reset arrival status
             agent_target_positions[agent_name] = world_point;
@@ -229,7 +229,7 @@ class TractorZMQController {
             if (agent_to_robot_idx.find(agent_name) != agent_to_robot_idx.end()) {
                 int robot_idx = agent_to_robot_idx[agent_name];
                 auto &tractor = simulator.get_robot(robot_idx);
-                tractor.navcon->clear_goal();
+                tractor.tracker->clear_goal();
             }
         }
 
@@ -268,10 +268,10 @@ class TractorZMQController {
                     // Already arrived and stopped, keep it stopped
                     tractor.controls.set_angular(0.0f);
                     tractor.controls.set_linear(0.0f);
-                } else if (tractor.navcon->is_goal_reached()) {
+                } else if (tractor.tracker->is_goal_reached()) {
                     // This tractor has JUST arrived - STOP IT IMMEDIATELY!
-                    // CRITICAL: Clear the goal so navcon doesn't send more commands in tick()
-                    tractor.navcon->clear_goal();
+                    // CRITICAL: Clear the goal so tracker doesn't send more commands in tick()
+                    tractor.tracker->clear_goal();
                     tractor.controls.set_angular(0.0f);
                     tractor.controls.set_linear(0.0f);
                     agent_arrived[agent_name] = true;

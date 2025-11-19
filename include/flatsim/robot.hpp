@@ -60,7 +60,7 @@ namespace fs {
         Network network;
         TankManager tank;
         PowerManager power;
-        std::unique_ptr<navcon::Navcon> navcon;
+        std::unique_ptr<navcon::Tracker> tracker;
 
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();

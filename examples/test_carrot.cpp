@@ -43,12 +43,12 @@ int main(int argc, char *argv[]) {
 
     // Set controller type to Carrot
     std::cout << "Setting controller to Carrot..." << std::endl;
-    tractor.navcon->set_controller_type(navcon::NavconControllerType::CARROT);
+    tractor.tracker->set_controller_type(navcon::TrackerType::CARROT);
 
     // Set Carrot controller parameters (optional, using defaults)
-    auto params = tractor.navcon->get_controller_params();
+    auto params = tractor.tracker->get_controller_params();
     params.carrot_distance = 1.0f; // Distance to "carrot" target point
-    tractor.navcon->set_controller_params(params);
+    tractor.tracker->set_controller_params(params);
 
     // Create a simple straight path - Carrot algorithm excels at simple goal-seeking behavior
     // Carrot algorithm moves directly toward the target point (like following a carrot on a stick)
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     navcon::PathGoal path(straight_path, 3.0f, 3.0f, false); // Larger tolerance for simple algorithm
 
     std::cout << "Setting navigation path with " << straight_path.size() << " waypoints..." << std::endl;
-    tractor.navcon->set_path(path);
+    tractor.tracker->set_path(path);
 
     std::cout << "Starting Carrot Algorithm path following..." << std::endl;
     std::cout << "Carrot should demonstrate simple, direct movement toward each target" << std::endl;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
     float dt = 0.016f; // 60 FPS
 
     int step_count = 0;
-    while (!tractor.navcon->is_path_completed()) {
+    while (!tractor.tracker->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress every 2 seconds to see path following behavior
         if (step_count % 120 == 0) { // Every ~2 seconds at 60 FPS
-            auto target = tractor.navcon->get_current_target();
+            auto target = tractor.tracker->get_current_target();
             auto pos = tractor.get_position();
 
             // Calculate distance to current target
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
-    if (tractor.navcon->is_path_completed()) {
+    if (tractor.tracker->is_path_completed()) {
         std::cout << "\n✅ Carrot Algorithm successfully completed the straight path!" << std::endl;
         std::cout << "Check Rerun visualization to see the direct point-to-point navigation." << std::endl;
     } else {
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     };
 
     navcon::PathGoal zigzag_goal(zigzag_path, 3.0f, 3.0f, false);
-    tractor.navcon->set_path(zigzag_goal);
+    tractor.tracker->set_path(zigzag_goal);
 
     std::cout << "Testing zigzag navigation with Carrot algorithm..." << std::endl;
     std::cout << "Carrot should show direct movement to each waypoint, creating sharp turns" << std::endl;
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
     start_time = std::chrono::steady_clock::now();
     step_count = 0;
 
-    while (!tractor.navcon->is_path_completed()) {
+    while (!tractor.tracker->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress for zigzag test
         if (step_count % 60 == 0) { // Every ~1 second
-            auto target = tractor.navcon->get_current_target();
+            auto target = tractor.tracker->get_current_target();
             auto pos = tractor.get_position();
             float distance_to_target =
                 std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    if (tractor.navcon->is_path_completed()) {
+    if (tractor.tracker->is_path_completed()) {
         std::cout << "\n✅ Carrot Algorithm successfully completed the zigzag test!" << std::endl;
         std::cout << "Carrot's direct navigation should create characteristic sharp direction changes." << std::endl;
     } else {

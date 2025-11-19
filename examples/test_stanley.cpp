@@ -45,13 +45,13 @@ int main(int argc, char *argv[]) {
 
     // Set controller type
     std::cout << "Setting controller to Stanley..." << std::endl;
-    tractor.navcon->set_controller_type(navcon::NavconControllerType::STANLEY);
+    tractor.tracker->set_controller_type(navcon::TrackerType::STANLEY);
 
     // Set Stanley controller parameters
-    auto params = tractor.navcon->get_controller_params();
+    auto params = tractor.tracker->get_controller_params();
     params.cross_track_gain = 2.5f; // Cross-track error correction gain
     params.softening_gain = 1.5f;   // Heading error softening gain
-    tractor.navcon->set_controller_params(params);
+    tractor.tracker->set_controller_params(params);
 
     // Create a curved path with waypoints
     // Stanley controller is good at minimizing cross-track error
@@ -91,11 +91,11 @@ int main(int argc, char *argv[]) {
     navcon::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
-    tractor.navcon->set_path(path);
+    tractor.tracker->set_path(path);
 
     // Smoothen the path for better Stanley performance
     std::cout << "Smoothening path with 50cm intervals..." << std::endl;
-    tractor.navcon->smoothen(50.0f); // Add points every 50cm
+    tractor.tracker->smoothen(50.0f); // Add points every 50cm
 
     std::cout << "Starting Stanley path following..." << std::endl;
     std::cout << "This should show smooth path following with good cross-track error correction" << std::endl;
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
     float dt = 0.016f; // 60 FPS
 
     int step_count = 0;
-    while (!tractor.navcon->is_path_completed()) {
+    while (!tractor.tracker->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress every 2 seconds to see path following behavior
         if (step_count % 120 == 0) { // Every ~2 seconds at 60 FPS
-            auto target = tractor.navcon->get_current_target();
+            auto target = tractor.tracker->get_current_target();
             auto pos = tractor.get_position();
             std::cout << "Step " << step_count / 60 << "s: Target(" << target.x << "," << target.y << "), Robot("
                       << pos.point.x << "," << pos.point.y << "), Yaw=" << pos.angle.yaw << std::endl;
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
-    if (tractor.navcon->is_path_completed()) {
+    if (tractor.tracker->is_path_completed()) {
         std::cout << "\n✅ Stanley controller successfully completed the curved path!" << std::endl;
         std::cout << "Check Rerun visualization to see the cross-track error minimization." << std::endl;
     } else {

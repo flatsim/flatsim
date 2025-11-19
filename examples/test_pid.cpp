@@ -141,18 +141,18 @@ int main(int argc, char *argv[]) {
         auto &tractor = simulator.get_robot(i);
 
         // Set PID controller parameters
-        auto params = tractor.navcon->get_controller_params();
+        auto params = tractor.tracker->get_controller_params();
         params.linear_kp = 2.5f;
         params.angular_kp = 1.8f;
         params.angular_kd = 0.2f;
-        tractor.navcon->set_controller_params(params);
+        tractor.tracker->set_controller_params(params);
 
         // Set controller type
-        tractor.navcon->set_controller_type(navcon::NavconControllerType::PID);
+        tractor.tracker->set_controller_type(navcon::TrackerType::PID);
 
         // Set path
         navcon::PathGoal path(paths[i], 2.0f, 2.5f, false);
-        tractor.navcon->set_path(path);
+        tractor.tracker->set_path(path);
         std::cout << "Tractor " << i << " following " << shape_names[i] << " (" << paths[i].size() << " waypoints)"
                   << std::endl;
     }
@@ -183,10 +183,10 @@ int main(int argc, char *argv[]) {
         all_completed = true;
         for (int i = 0; i < 4; ++i) {
             auto &tractor = simulator.get_robot(i);
-            if (!tractor.navcon->is_path_completed()) {
+            if (!tractor.tracker->is_path_completed()) {
                 all_completed = false;
 
-                auto target = tractor.navcon->get_current_target();
+                auto target = tractor.tracker->get_current_target();
                 auto pos = tractor.get_position();
                 float tracking_error =
                     std::sqrt(std::pow(target.x - pos.point.x, 2) + std::pow(target.y - pos.point.y, 2));
@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < 4; ++i) {
                 auto &tractor = simulator.get_robot(i);
                 auto pos = tractor.get_position();
-                bool completed = tractor.navcon->is_path_completed();
+                bool completed = tractor.tracker->is_path_completed();
                 float avg_error = error_samples[i] > 0 ? total_errors[i] / error_samples[i] : 0.0f;
                 std::cout << "Tractor " << i << " (" << shape_names[i]
                           << "): " << (completed ? "✅ COMPLETED" : "🚜 Running") << " | Pos(" << pos.point.x << ","
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
     std::cout << "\n=== PID Controller Test Results ===" << std::endl;
     for (int i = 0; i < 4; ++i) {
         auto &tractor = simulator.get_robot(i);
-        bool completed = tractor.navcon->is_path_completed();
+        bool completed = tractor.tracker->is_path_completed();
         float avg_error = error_samples[i] > 0 ? total_errors[i] / error_samples[i] : 0.0f;
 
         std::cout << "\nTractor " << i << " (" << shape_names[i] << "):" << std::endl;

@@ -43,13 +43,13 @@ int main(int argc, char *argv[]) {
 
     // Set controller type
     std::cout << "Setting controller to Pure Pursuit..." << std::endl;
-    tractor.navcon->set_controller_type(navcon::NavconControllerType::PURE_PURSUIT);
+    tractor.tracker->set_controller_type(navcon::TrackerType::PURE_PURSUIT);
 
     // Set Pure Pursuit parameters
-    auto params = tractor.navcon->get_controller_params();
+    auto params = tractor.tracker->get_controller_params();
     params.lookahead_distance = 3.0f; // Smaller lookahead for tighter tracking
     params.lookahead_gain = 1.0f;     // Standard gain
-    tractor.navcon->set_controller_params(params);
+    tractor.tracker->set_controller_params(params);
 
     // Create a dense curved path with many waypoints for better Pure Pursuit performance
     std::vector<concord::Point> curved_path = {
@@ -88,11 +88,11 @@ int main(int argc, char *argv[]) {
     navcon::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
-    tractor.navcon->set_path(path);
+    tractor.tracker->set_path(path);
 
     // Smoothen the path for better Pure Pursuit performance
     std::cout << "Smoothening path with 50cm intervals..." << std::endl;
-    tractor.navcon->smoothen(50.0f); // Add points every 50cm
+    tractor.tracker->smoothen(50.0f); // Add points every 50cm
 
     std::cout << "Starting Pure Pursuit path following..." << std::endl;
     std::cout << "This should show smooth curved motion using lookahead points" << std::endl;
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     float dt = 0.016f; // 60 FPS
 
     int step_count = 0;
-    while (!tractor.navcon->is_path_completed()) {
+    while (!tractor.tracker->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress every 2 seconds to see path following behavior
         if (step_count % 120 == 0) { // Every ~2 seconds at 60 FPS
-            auto target = tractor.navcon->get_current_target();
+            auto target = tractor.tracker->get_current_target();
             auto pos = tractor.get_position();
             std::cout << "Step " << step_count / 60 << "s: Target(" << target.x << "," << target.y << "), Robot("
                       << pos.point.x << "," << pos.point.y << "), Yaw=" << pos.angle.yaw << std::endl;
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
-    if (tractor.navcon->is_path_completed()) {
+    if (tractor.tracker->is_path_completed()) {
         std::cout << "\n✅ Pure Pursuit successfully completed the curved path!" << std::endl;
         std::cout << "Check Rerun visualization to see the smooth path following behavior." << std::endl;
     } else {
