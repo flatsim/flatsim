@@ -28,7 +28,7 @@ namespace fs {
         int selected_robot_idx = -1;
         uint ticks = 0;
         uint tocks = 0;
-        std::unique_ptr<Dispatcher> dispatcher;
+        std::unique_ptr<Server> dispatcher;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);

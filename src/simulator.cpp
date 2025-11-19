@@ -269,7 +269,7 @@ namespace fs {
             return;
         }
 
-        dispatcher = std::make_unique<Dispatcher>();
+        dispatcher = std::make_unique<Server>();
         if (dispatcher->init(this, true, server_host)) {
             std::cout << "[Simulator] Dispatcher enabled successfully (host: " << server_host << ")" << std::endl;
         } else {
