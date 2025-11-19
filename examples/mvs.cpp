@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "flatsim/core/loader.hpp"
-#include "flatsim/simulator.hpp"
 #include "flatsim/robot/types.hpp"
+#include "flatsim/simulator.hpp"
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {
@@ -177,7 +177,8 @@ int main(int argc, char *argv[]) {
                             }
                             if (button == 10 && pressed) {
                                 sim->get_robot(selected_robot_idx)
-                                    .toggle_all_except_section_work("front", 2); // Toggle all except middle section
+                                    .chassis.toggle_all_except_section_work("front",
+                                                                            2); // Toggle all except middle section
                             }
 
                             // Button 11 = Attach trailer (smart chaining)

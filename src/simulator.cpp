@@ -121,7 +121,7 @@ namespace fs {
             throw NullPointerException("robot at index " + std::to_string(robot_idx));
         }
 
-        robots[robot_idx]->toggle_section_work(karosserie_name, section_id);
+        robots[robot_idx]->chassis.toggle_section_work(karosserie_name, section_id);
     }
 
     void Simulator::toggle_all_sections_work(uint robot_idx, const std::string &karosserie_name) {
@@ -134,7 +134,7 @@ namespace fs {
             throw NullPointerException("robot at index " + std::to_string(robot_idx));
         }
 
-        robots[robot_idx]->toggle_all_sections_work(karosserie_name);
+        robots[robot_idx]->chassis.toggle_all_sections_work(karosserie_name);
     }
 
     void Simulator::toggle_all_except_section_work(uint robot_idx, const std::string &karosserie_name,
@@ -148,7 +148,7 @@ namespace fs {
             throw NullPointerException("robot at index " + std::to_string(robot_idx));
         }
 
-        robots[robot_idx]->toggle_all_except_section_work(karosserie_name, except_section_id);
+        robots[robot_idx]->chassis.toggle_all_except_section_work(karosserie_name, except_section_id);
     }
 
     Robot &Simulator::get_robot(uint i) {

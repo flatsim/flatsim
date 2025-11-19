@@ -80,19 +80,6 @@ namespace fs {
         const concord::Pose &get_position() const { return info.bound.pose; }
         const concord::Pose &get_spawn_position() const { return spawn_position; }
         void pulse() { pulsing = true; }
-        void toggle_section_work(const std::string &karosserie_name, int section_id) {
-            chassis.toggle_section_work(karosserie_name, section_id);
-        }
-        void toggle_all_sections_work(const std::string &karosserie_name) {
-            chassis.toggle_all_sections_work(karosserie_name);
-        }
-        void toggle_all_except_section_work(const std::string &karosserie_name, int except_section_id) {
-            chassis.toggle_all_except_section_work(karosserie_name, except_section_id);
-        }
-        std::vector<Karosserie> *get_karosseries() {
-            if (!chassis.exists()) throw NullPointerException("chassis");
-            return chassis.get_karosseries();
-        }
 
         // Spatial queries - robot can find other robots
         std::vector<Robot *> get_all_robots() const;
