@@ -116,9 +116,13 @@ namespace fs {
         constraints.min_turning_radius = robo.turning_radius;
         constraints.robot_length = robo.bound.size.y; // Robot length (longitudinal)
         constraints.robot_width = robo.bound.size.x;  // Robot width (lateral)
-        constraints.allow_reverse = false;            // TODO: Enable backward maneuvers for tight turns
 
         tracker->init(constraints, rec, robo.seqid);
+
+        // Configure controller settings
+        navcon::ControllerConfig config;
+        config.allow_reverse = false; // TODO: Enable backward maneuvers for tight turns
+        tracker->get_controller()->set_config(config);
 
         // Initialize tank if present
         if (robo.tank.has_value()) {
