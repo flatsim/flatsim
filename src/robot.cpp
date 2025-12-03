@@ -99,20 +99,49 @@ namespace fs {
 
         // Initialize navigation controller with robot constraints
         navcon::RobotConstraints constraints;
-        constraints.wheelbase = 3.0;   // Reasonable wheelbase for tractor
-        constraints.track_width = 2.0; // Reasonable track width
+        constraints.steering_type = navcon::SteeringType::ACKERMANN;
 
-        // Use actual robot throttle limits
-        float max_throttle = 0.0f;
-        for (size_t i = 0; i < robo.controls.throttles_max.size(); ++i) {
-            max_throttle = std::max(max_throttle, robo.controls.throttles_max[i]);
+        // Derive basic geometry from wheel bounds
+        if (!robo.wheels.empty()) {
+            double max_y = -std::numeric_limits<double>::infinity();
+            double min_y = std::numeric_limits<double>::infinity();
+            double max_x = -std::numeric_limits<double>::infinity();
+            double min_x = std::numeric_limits<double>::infinity();
+
+            for (const auto &w : robo.wheels) {
+                max_y = std::max(max_y, static_cast<double>(w.pose.point.y));
+                min_y = std::min(min_y, static_cast<double>(w.pose.point.y));
+                max_x = std::max(max_x, static_cast<double>(w.pose.point.x));
+                min_x = std::min(min_x, static_cast<double>(w.pose.point.x));
+            }
+
+            double wheelbase = std::abs(max_y - min_y);
+            double track_width = std::abs(max_x - min_x);
+
+            constraints.wheelbase = wheelbase > 0.1 ? wheelbase : 1.0;
+            constraints.track_width = track_width > 0.1 ? track_width : 1.0;
+        } else {
+            constraints.wheelbase = 1.5;
+            constraints.track_width = 1.5;
         }
-        constraints.max_linear_velocity = max_throttle;
-        constraints.min_linear_velocity = -max_throttle;
 
-        // Set reasonable navigation limits
-        constraints.max_steering_angle = 35.0f * M_PI / 180.0f; // 35 degrees in radians
-        constraints.max_angular_velocity = 1.0f;                // 1 rad/s
+        // Use normalized velocity units for navcon ([-1,1] maps to full throttle)
+        constraints.max_linear_velocity = 1.0;
+        constraints.min_linear_velocity = -1.0;
+        constraints.max_linear_acceleration = 1.0;
+        constraints.max_angular_velocity = 1.0;
+
+        // Steering limits from robot config
+        double max_steer = 0.0;
+        for (float a : robo.controls.steerings_max) {
+            max_steer = std::max(max_steer, static_cast<double>(std::abs(a)));
+        }
+        if (max_steer <= 0.0) {
+            max_steer = 30.0 * M_PI / 180.0;
+        }
+        constraints.max_steering_angle = max_steer;
+        constraints.max_steering_rate = 1.0; // rad/s, approximate actuator rate
+
         constraints.min_turning_radius = robo.turning_radius;
         constraints.robot_length = robo.bound.size.y; // Robot length (longitudinal)
         constraints.robot_width = robo.bound.size.x;  // Robot width (lateral)
@@ -307,9 +336,19 @@ namespace fs {
         // Get current robot state
         navcon::RobotState state;
         state.pose = info.bound.pose;
-        state.velocity.linear = 0.0;  // TODO: get from robot if available
-        state.velocity.angular = 0.0; // TODO: get from robot if available
-        state.timestamp = 0.0;        // TODO: get actual timestamp
+        // Pull current velocities from physics so controllers (e.g. MPC) get an accurate state
+        if (auto *body = chassis.get_body()) {
+            const auto &linear_vel = body->GetLinearVelocity();
+            const double yaw = state.pose.angle.yaw;
+            // Forward velocity along the robot's heading
+            state.velocity.linear = linear_vel.x * std::cos(yaw) + linear_vel.y * std::sin(yaw);
+            // Angular velocity around Z from the physics body
+            state.velocity.angular = body->GetAngularVelocity();
+        } else {
+            state.velocity.linear = 0.0;
+            state.velocity.angular = 0.0;
+        }
+        state.timestamp = 0.0; // TODO: get actual timestamp
 
         // Compute control command
         auto velocity_cmd = tracker->tick(state, dt);

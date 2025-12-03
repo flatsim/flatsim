@@ -63,11 +63,14 @@ find_package(rerun_sdk REQUIRED)
 find_package(TBB REQUIRED)
 find_package(ZeroMQ REQUIRED)
 find_package(cppzmq REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(fmt REQUIRED)
 find_package(Boost REQUIRED COMPONENTS json)
 
-list(APPEND ext_deps rerun_sdk zmq cppzmq spdlog::spdlog Boost::json TBB::tbb)
+# Use spdlog as header-only to avoid fmt version conflicts
+FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
+set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(spdlog)
+
+list(APPEND ext_deps rerun_sdk zmq cppzmq spdlog::spdlog_header_only Boost::json TBB::tbb)
 
 FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
 FetchContent_MakeAvailable(concord)
@@ -91,8 +94,13 @@ list(APPEND ext_deps farmtrax::farmtrax)
 
 # FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.6)
 # FetchContent_MakeAvailable(navcon)
+set(NAVCON_ENABLE_MPC ON CACHE BOOL "Enable MPC controller in navcon" FORCE)
+set(NAVCON_ENABLE_LQR ON CACHE BOOL "Enable LQR controller in navcon" FORCE)
 add_subdirectory(xtra/navcon navcon)
 list(APPEND ext_deps navcon::navcon)
+
+add_subdirectory(xtra/navplan navplan)
+list(APPEND ext_deps navplan::navplan)
 
 # --------------------------------------------------------------------------------------------------
 add_library(${project_name} INTERFACE)

@@ -170,12 +170,12 @@ namespace fs {
         // Adjust steering rate based on wheel size
         // Larger wheels (like tractor wheels) turn slower due to more inertia
         // Small wheels (like car wheels) can turn faster
-        // Base rate is 0.52 rad/s (30 deg/s) for a 0.2m radius wheel
+        // Base rate is 1.04 rad/s (~60 deg/s) for a 0.2m radius wheel
         float size_factor = 0.2f / wheel_radius; // Inverse relationship
-        steering_rate = 0.52f * muli::Sqrt(size_factor);
+        steering_rate = 1.04f * muli::Sqrt(size_factor);
 
-        // Clamp to reasonable ranges: 15-60 deg/s (0.26-1.05 rad/s)
-        steering_rate = muli::Clamp(steering_rate, 0.26f, 1.05f);
+        // Clamp to reasonable ranges: 30-120 deg/s (0.52-2.10 rad/s)
+        steering_rate = muli::Clamp(steering_rate, 0.52f, 2.10f);
 
         // Larger vehicles also have slower throttle response
         // Base rate is 2.5/s for a 0.2m radius wheel

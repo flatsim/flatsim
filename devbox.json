@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.1/.schema/devbox.schema.json",
   "packages": [
     "cmake@latest",
+    "pkgconfig@latest",
     "clang@latest",
     "clang-tools@latest",
     "gcc@13.3",
@@ -16,21 +17,18 @@
     "tbb@latest",
     "spdlog@latest",
     "spdlog.dev",
-    "fmt@latest",
-    "fmt.dev",
     "tbb.dev",
     "cli11@latest",
     "libsodium@latest",
-    "Ipopt@latest",
+    "ipopt@latest",
+    "ipopt.dev",
     "cppad@latest",
     "eigen@latest",
     "rustc@latest",
-
     "cargo@latest",
     "rust-analyzer@latest",
     "clippy@latest",
-    "vscode-extensions.llvm-org.lldb-vscode@latest",
-
+    "vscode-extensions.llvm-org.lldb-vscode@latest"
   ],
   "shell": {
     "init_hook": [
