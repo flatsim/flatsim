@@ -29,3 +29,4 @@ Diagnostics:
     - "pp_hash_error"
     - "warn_unused_function"
     - "invalid_consteval_call"
+    - "pp_file_not_found"
