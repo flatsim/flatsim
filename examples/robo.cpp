@@ -1,13 +1,13 @@
-#include "flatsim/ipc/client.hpp"
 #include "flatsim/core/loader.hpp"
+#include "flatsim/ipc/client.hpp"
 #include "flatsim/robot/types.hpp"
 #include <CLI/CLI.hpp>
 #include <chrono>
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <iostream>
 #include <linux/joystick.h>
-#include <spdlog/spdlog.h>
 #include <thread>
 #include <unistd.h>
 
@@ -56,21 +56,6 @@ int main(int argc, char *argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    spdlog::info("Starting robot process...");
-    spdlog::info("Config file: " + config_file);
-    spdlog::info("Position: " + position_str);
-    if (!color_str.empty()) {
-        spdlog::info("Color: " + color_str);
-    }
-    if (!tcp_host.empty()) {
-        spdlog::info("Transport: TCP (host: " + tcp_host + ")");
-    } else {
-        spdlog::info("Transport: IPC");
-    }
-    if (use_joystick) {
-        spdlog::info("Joystick control: ENABLED");
-    }
-
     // Joystick initialization
     int js_fd = -1;
     unsigned char num_axes = 0, num_buttons = 0;
@@ -79,19 +64,13 @@ int main(int argc, char *argv[]) {
         const char *js_device = "/dev/input/js0";
         js_fd = open(js_device, O_RDONLY | O_NONBLOCK);
         if (js_fd < 0) {
-            spdlog::error("Failed to open joystick device {}", js_device);
+            std::cerr << "Failed to open joystick device " << js_device << std::endl;
             return 1;
         }
 
         // Query number of axes/buttons
         ioctl(js_fd, JSIOCGAXES, &num_axes);
         ioctl(js_fd, JSIOCGBUTTONS, &num_buttons);
-
-        // Print joystick info
-        char js_name[128] = "Unknown";
-        if (ioctl(js_fd, JSIOCGNAME(sizeof(js_name)), js_name) >= 0) {
-            spdlog::info("Joystick: {}  Axes: {}  Buttons: {}", js_name, int(num_axes), int(num_buttons));
-        }
     }
 
     try {
@@ -102,7 +81,7 @@ int main(int argc, char *argv[]) {
         // Load RobotInfo from JSON file
         std::filesystem::path config_path(config_file);
         if (!std::filesystem::exists(config_path)) {
-            spdlog::error("Config file not found: " + config_file);
+            std::cerr << "Config file not found: " << config_file << std::endl;
             return 1;
         }
 
@@ -117,29 +96,18 @@ int main(int argc, char *argv[]) {
             robot_info.uuid = custom_uuid;
         }
 
-        spdlog::info("Loaded robot: " + robot_info.type + " (UUID: " + robot_info.uuid + ")");
-
         // Create ZMQ client
         fs::Client client;
         bool use_tcp = !tcp_host.empty();
         if (!client.init(use_tcp, tcp_host.empty() ? "127.0.0.1" : tcp_host)) {
-            spdlog::error("Failed to initialize client");
+            std::cerr << "Failed to initialize client" << std::endl;
             return 1;
         }
 
         // Spawn robot in simulator
-        spdlog::info("Spawning robot in simulator...");
         if (!client.spawn_robot(robot_info)) {
-            spdlog::error("Failed to spawn robot");
+            std::cerr << "Failed to spawn robot" << std::endl;
             return 1;
-        }
-
-        spdlog::info("Robot spawned successfully!");
-        if (use_joystick) {
-            spdlog::info("Running control loop with JOYSTICK (press Ctrl+C to exit)...");
-            spdlog::info("Joystick: Axis 0 = Steering, Axis 1 = Throttle");
-        } else {
-            spdlog::info("Running control loop (press Ctrl+C to exit)...");
         }
 
         // Control loop
@@ -159,11 +127,6 @@ int main(int argc, char *argv[]) {
 
             // Receive physics state from simulator
             auto physics_state = client.receive_physics_state();
-            if (physics_state.has_value()) {
-                // We received updated physics state
-                // spdlog::debug("Position: {:.2f}, {:.2f}", physics_state->pose.point.x,
-                //               physics_state->pose.point.y);
-            }
 
             // Read joystick input if enabled
             if (use_joystick) {
@@ -190,14 +153,11 @@ int main(int argc, char *argv[]) {
                         bool pressed = e.value != 0;
 
                         if (pressed) {
-                            spdlog::info("Button {} pressed", button);
-
                             // Button actions can be added here
                             // Example: Button 0 = reset to zero
                             if (button == 0) {
                                 steering = 0.0f;
                                 throttle = 0.0f;
-                                spdlog::info("Controls reset to zero");
                             }
                         }
                     }
@@ -213,7 +173,7 @@ int main(int argc, char *argv[]) {
         }
 
     } catch (const std::exception &e) {
-        spdlog::error("Error: " + std::string(e.what()));
+        std::cerr << "Error: " << e.what() << std::endl;
 
         // Cleanup joystick
         if (js_fd >= 0) {

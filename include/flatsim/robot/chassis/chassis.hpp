@@ -10,7 +10,6 @@
 #include "muli/world.h"
 
 #include <rerun.hpp>
-#include <spdlog/spdlog.h>
 
 namespace fs {
 

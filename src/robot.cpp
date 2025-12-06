@@ -76,7 +76,6 @@ namespace fs {
     }
 
     void Robot::init(concord::Datum datum, RobotInfo robo) {
-        spdlog::info("Initializing robot {}...", robo.name);
         this->datum = datum;
         this->info = robo;
         this->spawn_position = robo.bound.pose;
@@ -191,8 +190,6 @@ namespace fs {
     void Robot::teleport(concord::Pose pose) { teleport(pose, true); }
 
     void Robot::teleport(concord::Pose pose, bool propagate) {
-        spdlog::info("Teleporting robot {} to ({:.2f}, {:.2f}) - breaking chain connections", info.name, pose.point.x,
-                     pose.point.y);
         controls.reset_controls();
 
         // Break all chain connections before teleporting
@@ -204,7 +201,6 @@ namespace fs {
     }
 
     void Robot::respawn() {
-        spdlog::info("Respawning robot {} - breaking chain connections", info.name);
         controls.reset_controls();
 
         // Break all chain connections before respawning

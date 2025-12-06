@@ -4,7 +4,6 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
-#include <spdlog/spdlog.h>
 #include <thread>
 
 namespace fs {
@@ -62,8 +61,6 @@ namespace fs {
     void ChainManager::add_follower(Robot *follower, muli::RevoluteJoint *joint) {
         connected_followers.push_back(follower);
         connection_joints.push_back(joint);
-
-        spdlog::info("Connected {} as follower to {}", follower->info.name, robot->info.name);
     }
 
     bool ChainManager::try_connect_nearby_slave(const std::vector<std::shared_ptr<Robot>> &all_robots) {
@@ -130,8 +127,6 @@ namespace fs {
                             update_follower_capabilities();
                             other_robot->chain.update_follower_capabilities();
 
-                            spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name,
-                                         other_robot->info.name, overlap_percentage);
                             return true;
                         }
                     }
@@ -228,8 +223,6 @@ namespace fs {
                             update_follower_capabilities();
                             other_robot->chain.update_follower_capabilities();
 
-                            spdlog::info("Connected {} to {} (hitch overlap: {:.1f}%)", robot->info.name,
-                                         other_robot->info.name, overlap_percentage);
                             return true;
                         }
                     }
@@ -250,7 +243,6 @@ namespace fs {
         }
 
         // Try to connect from the chain end
-        spdlog::info("Trying to connect from chain end: {}", chain_end->info.name);
         return chain_end->chain.try_connect_nearby();
     }
 
@@ -271,8 +263,6 @@ namespace fs {
 
                 // Restore original color when disconnecting
                 follower->update_color(follower->original_color);
-
-                spdlog::info("Disconnected {} from {}", follower->info.name, robot->info.name);
 
                 // Recursively disconnect any sub-followers
                 follower->chain.disconnect_all_followers();
@@ -333,8 +323,6 @@ namespace fs {
 
                 // Update master's capabilities
                 previous_robot->chain.update_follower_capabilities();
-
-                spdlog::info("Disconnected last follower {} from {}", chain_end->info.name, previous_robot->info.name);
             }
         }
     }
@@ -442,23 +430,16 @@ namespace fs {
                 }
             }
         }
-
-        // Log capabilities for debugging
-        spdlog::debug("{} capabilities: steering={}, throttle={}, tank={}, master_hitches={}", robot->info.name,
-                      follower_capabilities.has_steering, follower_capabilities.has_throttle,
-                      follower_capabilities.has_tank, follower_capabilities.available_master_hitches.size());
     }
 
     void ChainManager::disconnect_at_position(int position) {
         // Position 1 = first follower, 2 = second follower, etc.
         if (position < 1) {
-            spdlog::warn("Invalid position {} for disconnection (must be >= 1)", position);
             return;
         }
 
         auto chain = get_full_chain();
         if (position >= static_cast<int>(chain.size())) {
-            spdlog::warn("Position {} is beyond chain length {}", position, chain.size());
             return;
         }
 
@@ -466,7 +447,6 @@ namespace fs {
         Robot *its_master = robot_to_disconnect->chain.master_robot;
 
         if (!its_master) {
-            spdlog::warn("Robot at position {} has no master (might be root)", position);
             return;
         }
 
@@ -501,40 +481,29 @@ namespace fs {
 
             // Update master's capabilities
             its_master->chain.update_follower_capabilities();
-
-            spdlog::info("Disconnected robot at position {} ({}) from {}", position, robot_to_disconnect->info.name,
-                         its_master->info.name);
         }
     }
 
     void ChainManager::disconnect_from_position(int position) {
         // Disconnect everything from position onwards
         if (position < 1) {
-            spdlog::warn("Invalid position {} for disconnection (must be >= 1)", position);
             return;
         }
 
         auto chain = get_full_chain();
         if (position >= static_cast<int>(chain.size())) {
-            spdlog::warn("Position {} is beyond chain length {}", position, chain.size());
             return;
         }
 
         // Just disconnect at the position - the disconnect_all_followers() call in disconnect_at_position
         // will handle disconnecting everything after that point
         disconnect_at_position(position);
-
-        spdlog::info("Disconnected chain from position {} onwards", position);
     }
 
     void ChainManager::break_chain_for_teleport() {
-        spdlog::info("Breaking chain and teleporting all robots to spawn for robot {}", robot->info.name);
-
         // Get the root master and the full chain
         Robot *root_master = get_root_master();
         auto full_chain = root_master->chain.get_full_chain();
-
-        spdlog::info("Full chain has {} robots, starting from root {}", full_chain.size(), root_master->info.name);
 
         // Step 1: Disconnect all connections in the entire chain
         root_master->chain.disconnect_all_followers();
@@ -542,7 +511,6 @@ namespace fs {
         // Step 2: Teleport each robot individually to its spawn position
         for (Robot *chain_robot : full_chain) {
             if (chain_robot != robot) { // Don't teleport the initiating robot here
-                spdlog::info("Teleporting chain robot {} to its spawn position", chain_robot->info.name);
                 chain_robot->teleport(chain_robot->get_spawn_position(), false); // No propagation
 
                 // Small delay to prevent physics conflicts

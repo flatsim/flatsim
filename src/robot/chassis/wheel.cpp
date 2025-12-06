@@ -1,5 +1,4 @@
 #include "flatsim/robot/chassis/wheel.hpp"
-#include <spdlog/spdlog.h>
 
 namespace fs {
 

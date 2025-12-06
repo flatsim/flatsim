@@ -3,8 +3,8 @@
 #include <boost/json.hpp>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <random>
-#include <spdlog/spdlog.h>
 #include <sstream>
 
 namespace fs {
@@ -53,7 +53,6 @@ namespace fs {
 
     RobotInfo Loader::load_from_json(const std::filesystem::path &json_path, concord::Pose spawn_pose,
                                      std::optional<pigment::RGB> color) {
-        spdlog::info("Loading machine from: {}", json_path.string());
 
         // Read JSON file
         std::ifstream file(json_path);
@@ -151,7 +150,6 @@ namespace fs {
         std::vector<std::filesystem::path> machine_files;
 
         if (!std::filesystem::exists(directory)) {
-            spdlog::warn("Machine directory does not exist: {}", directory.string());
             return machine_files;
         }
 
@@ -190,7 +188,7 @@ namespace fs {
 
             return true;
         } catch (const std::exception &e) {
-            spdlog::error("JSON validation failed for {}: {}", json_path.string(), e.what());
+            std::cerr << "JSON validation failed for " << json_path.string() << ": " << e.what() << std::endl;
             return false;
         }
     }

@@ -15,8 +15,6 @@
     "cppzmq@latest",
     "rerun@latest",
     "tbb@latest",
-    "spdlog@latest",
-    "spdlog.dev",
     "tbb.dev",
     "cli11@latest",
     "libsodium@latest",

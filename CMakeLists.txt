@@ -39,14 +39,7 @@ option(${project_name_upper}_ENABLE_TESTS "Enable tests" OFF)
 option(${project_name_upper}_ENABLE_RUST "Enable Rust components" OFF)
 include(FetchContent)
 
-# --------------------------------------------------------------------------------------------------
-# Rust Integration with Corrosion
-if(${project_name_upper}_ENABLE_RUST)
-    message(STATUS "Enabling Rust components via Corrosion")
-    FetchContent_Declare(Corrosion GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git GIT_TAG v0.5)
-    FetchContent_MakeAvailable(Corrosion)
-    corrosion_import_crate(MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml CRATES flatsim-ffi)
-endif()
+# Rust integration removed - we're calling C++ from Rust instead
 
 # --------------------------------------------------------------------------------------------------
 # External Dependencies
@@ -65,12 +58,7 @@ find_package(ZeroMQ REQUIRED)
 find_package(cppzmq REQUIRED)
 find_package(Boost REQUIRED COMPONENTS json)
 
-# Use spdlog as header-only to avoid fmt version conflicts
-FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.15.0)
-set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(spdlog)
-
-list(APPEND ext_deps rerun_sdk zmq cppzmq spdlog::spdlog_header_only Boost::json TBB::tbb)
+list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json TBB::tbb)
 
 FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
 FetchContent_MakeAvailable(concord)
@@ -145,23 +133,24 @@ file(GLOB_RECURSE internal_deps
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
+# Add Rust shim files if Rust is enabled
+if(${project_name_upper}_ENABLE_RUST)
+    list(APPEND internal_deps
+        "${CMAKE_CURRENT_SOURCE_DIR}/rust/rust_shim.cpp"
+    )
+endif()
+
 # Create a static library from internal sources to avoid recompiling for each executable
 add_library(${project_name}_internal STATIC ${internal_deps})
 target_compile_options(${project_name}_internal PRIVATE ${params})
 target_link_libraries(${project_name}_internal PUBLIC ${ext_deps})
 target_include_directories(${project_name}_internal PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rust>
     $<INSTALL_INTERFACE:include>
 )
 
-# Link Rust FFI library if enabled
-if(${project_name_upper}_ENABLE_RUST)
-    target_link_libraries(${project_name}_internal PUBLIC flatsim_ffi)
-    # Include CXX bridge headers
-    target_include_directories(${project_name}_internal PUBLIC 
-        ${CMAKE_BINARY_DIR}/cargo/build/${Rust_CARGO_TARGET}/cxxbridge
-    )
-endif()
+# Rust FFI removed - we're calling C++ from Rust instead
 
 # --------------------------------------------------------------------------------------------------
 if(${project_name_upper}_BUILD_EXAMPLES)

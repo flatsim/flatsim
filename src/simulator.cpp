@@ -4,10 +4,7 @@
 #include <execution>
 
 namespace fs {
-    Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {
-        unsigned int numThreads = std::thread::hardware_concurrency();
-        spdlog::info("Using {} threads", numThreads);
-    }
+    Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
     Simulator::~Simulator() {}
 
     void Simulator::tick(float dt) {
@@ -77,7 +74,6 @@ namespace fs {
 
         for (auto &robot : robots) {
             if (robot && robot->info.uuid == robot_info.uuid) {
-                spdlog::warn("Robot with uuid {} already exists, skipping", robot_info.uuid);
                 return;
             }
         }
