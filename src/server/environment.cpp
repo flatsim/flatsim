@@ -71,8 +71,11 @@ namespace fs::server {
             state.id = robot->info.uuid;
             state.timestamp = 0.0; // caller can fill wall-clock if needed
             state.pose = robot->info.bound.pose;
-            // Velocity is currently approximated / left at defaults; can be
-            // refined once EnvironmentServer gains access to body velocities.
+            double lin = 0.0;
+            double ang = 0.0;
+            robot->get_velocity(lin, ang);
+            state.velocity.linear = lin;
+            state.velocity.angular = ang;
             out_states.push_back(state);
         }
     }
@@ -96,4 +99,3 @@ namespace fs::server {
     const std::vector<std::shared_ptr<Robot>> &EnvironmentServer::robots() const { return robots_; }
 
 } // namespace fs::server
-

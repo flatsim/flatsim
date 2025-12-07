@@ -13,10 +13,9 @@ namespace fs::agent {
         const auto &p = state.pose.point;
         auto color = rerun::Color(0, 255, 0);
 
-        rec_->log_static(
-            id_ + "/pose",
-            rerun::Points3D({{static_cast<float>(p.x), static_cast<float>(p.y), static_cast<float>(p.z)}})
-                .with_colors({color}));
+        rec_->log_static(id_ + "/pose",
+                         rerun::Points3D({{static_cast<float>(p.x), static_cast<float>(p.y), static_cast<float>(p.z)}})
+                             .with_colors({color}));
     }
 
     protocol::RobotCommand LoggingAgent::compute_command() {
@@ -29,4 +28,3 @@ namespace fs::agent {
     }
 
 } // namespace fs::agent
-

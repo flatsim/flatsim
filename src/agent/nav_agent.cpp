@@ -47,4 +47,3 @@ namespace fs::agent {
     void NavAgent::clear_goal() { tracker_->clear_goal(); }
 
 } // namespace fs::agent
-

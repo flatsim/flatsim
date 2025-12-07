@@ -36,6 +36,7 @@ namespace fs {
 
       private:
         bool pulsing = false;
+        bool navigation_enabled = true;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::shared_ptr<muli::World> world;
         Simulator *simulator = nullptr;
@@ -87,6 +88,15 @@ namespace fs {
 
         // Set simulator reference (called by simulator when robot is added)
         void set_simulator(Simulator *sim) { simulator = sim; }
+
+        // Enable or disable internal navigation (navcon-based) for this robot.
+        void set_navigation_enabled(bool enabled) { navigation_enabled = enabled; }
+        bool is_navigation_enabled() const { return navigation_enabled; }
+
+        // Approximate kinematic state from physics body.
+        // linear: forward velocity in robot frame (m/s)
+        // angular: yaw rate (rad/s)
+        void get_velocity(double &linear, double &angular) const;
 
         // Simple helper method to update navigation and apply velocity commands
         void update_navigation(float dt);

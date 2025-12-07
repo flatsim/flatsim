@@ -39,6 +39,17 @@ option(${project_name_upper}_ENABLE_TESTS "Enable tests" OFF)
 option(${project_name_upper}_ENABLE_RUST "Enable Rust components" OFF)
 include(FetchContent)
 
+# When developing offline or in constrained environments, avoid trying to
+# update already-fetched FetchContent dependencies from the network.
+set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+
+# If a local Muli checkout already exists in the binary directory, reuse it
+# instead of fetching from Git. This makes builds work without network access
+# as long as the dependency was fetched once beforehand.
+if(EXISTS "${CMAKE_BINARY_DIR}/_deps/muli-src")
+  set(FETCHCONTENT_SOURCE_DIR_MULI "${CMAKE_BINARY_DIR}/_deps/muli-src")
+endif()
+
 # Rust integration removed - we're calling C++ from Rust instead
 
 # --------------------------------------------------------------------------------------------------
