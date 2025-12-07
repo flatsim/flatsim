@@ -208,4 +208,3 @@ if(${project_name_upper}_ENABLE_TESTS)
     add_test(NAME ${test_name} COMMAND ${test_name})
   endforeach()
 endif()
-
