@@ -1,8 +1,8 @@
 #include "flatsim/core/loader.hpp"
 #include "flatsim/ipc/adapters.hpp"
 #include "flatsim/ipc/client.hpp"
-#include "flatsim/agent/nav_agent.hpp"
-#include "flatsim/agent/logging_agent.hpp"
+
+#include "flatsim/agent.hpp"
 
 #include <CLI/CLI.hpp>
 #include <chrono>
@@ -20,12 +20,9 @@ int main(int argc, char *argv[]) {
     double target_y = 0.0;
     bool enable_logging = false;
 
-    app.add_option("--config", config_file, "Path to robot configuration JSON")
-        ->required()
-        ->check(CLI::ExistingFile);
+    app.add_option("--config", config_file, "Path to robot configuration JSON")->required()->check(CLI::ExistingFile);
     app.add_option("--pose", position_str, "Initial pose in format: x,y,r")->required();
-    app.add_option("--tcp", tcp_host,
-                   "Use TCP transport with specified host (e.g., 127.0.0.1 or 192.168.1.10)");
+    app.add_option("--tcp", tcp_host, "Use TCP transport with specified host (e.g., 127.0.0.1 or 192.168.1.10)");
     app.add_option("--target-x", target_x, "Target X position in world coordinates")->default_val(10.0);
     app.add_option("--target-y", target_y, "Target Y position in world coordinates")->default_val(0.0);
     app.add_flag("--log-agent", enable_logging, "Enable client-side Rerun logging for this agent");
@@ -114,20 +111,17 @@ int main(int argc, char *argv[]) {
         constraints.robot_length = robot_info.bound.size.y;
         constraints.robot_width = robot_info.bound.size.x;
 
-        // Create navigation agent
-        fs::agent::NavAgent nav_agent(robot_id, constraints, navcon::TrackerType::CARROT);
-        navcon::NavigationGoal goal(concord::Point{target_x, target_y}, 0.5f, 1.0f);
-        nav_agent.set_goal(goal);
-
-        // Optional client-side Rerun logging
+        // Create unified navigation + visualization agent
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::unique_ptr<fs::agent::LoggingAgent> log_agent;
         if (enable_logging) {
             rec = std::make_shared<rerun::RecordingStream>("flatsim_agent_nav", robot_id);
             rec->spawn().exit_on_failure();
             rec->set_global();
-            log_agent = std::make_unique<fs::agent::LoggingAgent>(robot_id, rec);
         }
+
+        fs::Agent agent(robot_id, constraints, navcon::TrackerType::CARROT, rec);
+        navcon::NavigationGoal goal(concord::Point{target_x, target_y}, 0.5f, 1.0f);
+        agent.set_goal(goal);
 
         auto last_time = std::chrono::steady_clock::now();
 
@@ -155,14 +149,11 @@ int main(int argc, char *argv[]) {
             // Convert to protocol state
             fs::protocol::RobotState proto_state = fs::ipc::to_protocol(*physics_state_opt);
 
-            // Update agents
-            nav_agent.on_state(proto_state, dt_s);
-            if (log_agent) {
-                log_agent->on_state(proto_state, dt_s);
-            }
+            // Update agent (navigation + optional visualization)
+            agent.on_state(proto_state, dt_s);
 
             // Compute and send command
-            fs::protocol::RobotCommand proto_cmd = nav_agent.compute_command();
+            fs::protocol::RobotCommand proto_cmd = agent.compute_command();
             fs::messages::ControlCommand cmd = fs::ipc::from_protocol(proto_cmd);
             client.send_control_command(cmd);
 
@@ -176,4 +167,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-

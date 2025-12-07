@@ -1,8 +1,7 @@
+#include "flatsim/agent.hpp"
 #include "flatsim/core/loader.hpp"
 #include "flatsim/protocol/types.hpp"
 #include "flatsim/server/environment.hpp"
-#include "flatsim/agent/nav_agent.hpp"
-#include "flatsim/agent/logging_agent.hpp"
 
 #include <CLI/CLI.hpp>
 #include <chrono>
@@ -70,13 +69,10 @@ int main(int argc, char *argv[]) {
         constraints.robot_length = robot_info.bound.size.y;
         constraints.robot_width = robot_info.bound.size.x;
 
-        // Create navigation agent
-        fs::agent::NavAgent nav_agent(robot_id, constraints, navcon::TrackerType::CARROT);
+        // Create unified agent with navigation and optional logging
+        fs::Agent agent(robot_id, constraints, navcon::TrackerType::CARROT, rec);
         navcon::NavigationGoal goal(concord::Point{target_x, target_y}, 0.5f, 1.0f);
-        nav_agent.set_goal(goal);
-
-        // Optional logging agent for agent-side visualization
-        fs::agent::LoggingAgent log_agent(robot_id, rec);
+        agent.set_goal(goal);
 
         std::vector<fs::protocol::RobotCommand> commands;
         std::vector<fs::protocol::RobotState> states;
@@ -102,11 +98,10 @@ int main(int argc, char *argv[]) {
             commands.clear();
             for (const auto &state : states) {
                 if (state.id == robot_id) {
-                    // Feed state to agents
-                    nav_agent.on_state(state, dt_s);
-                    log_agent.on_state(state, dt_s);
+                    // Feed state to agent
+                    agent.on_state(state, dt_s);
 
-                    commands.push_back(nav_agent.compute_command());
+                    commands.push_back(agent.compute_command());
                 }
             }
 
@@ -130,4 +125,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-

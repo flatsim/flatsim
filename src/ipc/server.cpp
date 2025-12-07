@@ -282,7 +282,9 @@ namespace fs {
                     // Try to deserialize as heartbeat first
                     try {
                         auto heartbeat = messages::HeartbeatMessage::deserialize(msg_str);
-                        robot_last_heartbeat[heartbeat.robot_uuid] = heartbeat.timestamp;
+                        // Use server time for heartbeat tracking to avoid
+                        // cross-process clock skew between simulator and agents.
+                        robot_last_heartbeat[heartbeat.robot_uuid] = current_time;
 
                         // Update robot online status
                         auto robot_it = robots.find(heartbeat.robot_uuid);
