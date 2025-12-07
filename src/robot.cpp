@@ -80,6 +80,9 @@ namespace fs {
         this->info = robo;
         this->spawn_position = robo.bound.pose;
         this->original_color = robo.color; // Store original color
+        // Synchronize runtime role state with the static robot info so that
+        // chain and control logic (MASTER/FOLLOWER/SLAVE) behaves as configured
+        this->state.role = robo.role;
 
         if (!world) {
             throw NullPointerException("world");
@@ -329,7 +332,7 @@ namespace fs {
             return;
         }
 
-        // Get current robot state
+        // Get current robot state for navcon
         navcon::RobotState state;
         state.pose = info.bound.pose;
         // Pull current velocities from physics so controllers (e.g. MPC) get an accurate state
@@ -345,6 +348,14 @@ namespace fs {
             state.velocity.angular = 0.0;
         }
         state.timestamp = 0.0; // TODO: get actual timestamp
+
+        // If this robot is pulling a follower (e.g. trailer), expose its pose
+        // to the navigation stack so trailer-aware controllers can use it.
+        const auto followers = chain.get_connected_followers();
+        if (!followers.empty() && followers.front()) {
+            state.has_trailer = true;
+            state.trailer_pose = followers.front()->get_position();
+        }
 
         // Compute control command
         auto velocity_cmd = tracker->tick(state, dt);
