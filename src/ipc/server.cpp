@@ -78,6 +78,9 @@ namespace fs {
                     }
 
                     if (spawned_robot) {
+                        // Robots spawned via dispatcher are controlled externally
+                        // (e.g. by agent_nav), so disable their internal navigation.
+                        spawned_robot->set_navigation_enabled(false);
                         robots[robot_info.uuid] = spawned_robot;
                         // Initialize heartbeat tracking for this robot
                         robot_last_heartbeat[robot_info.uuid] = 0.0;
@@ -246,8 +249,11 @@ namespace fs {
                 state.robot_uuid = uuid;
                 state.timestamp = 0.0; // TODO: Get actual timestamp
                 state.pose = robot->get_position();
-                state.velocity.linear = 0.0f;  // TODO: Get actual velocity
-                state.velocity.angular = 0.0f; // TODO: Get actual velocity
+                double lin = 0.0;
+                double ang = 0.0;
+                robot->get_velocity(lin, ang);
+                state.velocity.linear = static_cast<float>(lin);
+                state.velocity.angular = static_cast<float>(ang);
 
                 send_state_to_robot(uuid, state);
             }
@@ -276,7 +282,9 @@ namespace fs {
                     // Try to deserialize as heartbeat first
                     try {
                         auto heartbeat = messages::HeartbeatMessage::deserialize(msg_str);
-                        robot_last_heartbeat[heartbeat.robot_uuid] = heartbeat.timestamp;
+                        // Use server time for heartbeat tracking to avoid
+                        // cross-process clock skew between simulator and agents.
+                        robot_last_heartbeat[heartbeat.robot_uuid] = current_time;
 
                         // Update robot online status
                         auto robot_it = robots.find(heartbeat.robot_uuid);

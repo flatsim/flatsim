@@ -25,15 +25,11 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[Simulator] Server host: " << server_host << std::endl;
 
-    // Connect to Rerun
+    // Set up Rerun logging on the server side.
+    // Prefer an in-process viewer so the example works out-of-the-box.
     auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
-    if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
-        std::cerr << "[Simulator] Failed to connect to rerun" << std::endl;
-        return 1;
-    }
-
-    rec->log("", rerun::Clear::RECURSIVE);
-    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
+    rec->spawn().exit_on_failure();
+    rec->set_global();
 
     // Set up world and simulator
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};

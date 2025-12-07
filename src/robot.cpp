@@ -37,8 +37,10 @@ namespace fs {
         this->info.bound.pose.angle.yaw = chassis.get_transform().rotation.GetAngle() + M_PI / 2;
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
 
-        // Update navigation controller
-        update_navigation(dt);
+        // Update navigation controller when enabled
+        if (navigation_enabled) {
+            update_navigation(dt);
+        }
 
         // Update network interfaces - batch updates to reduce overhead
         network.tick(dt);
@@ -324,6 +326,24 @@ namespace fs {
 
         // Reset pulsing after some time
         pulsing = false;
+    }
+
+    void Robot::get_velocity(double &linear, double &angular) const {
+        linear = 0.0;
+        angular = 0.0;
+
+        if (!chassis.exists()) {
+            return;
+        }
+
+        if (const auto *body = chassis.get_body()) {
+            const auto &linear_vel = body->GetLinearVelocity();
+            const double yaw = info.bound.pose.angle.yaw;
+            // Forward velocity along the robot's heading
+            linear = linear_vel.x * std::cos(yaw) + linear_vel.y * std::sin(yaw);
+            // Angular velocity around Z from the physics body
+            angular = body->GetAngularVelocity();
+        }
     }
 
     // Navigation helper method

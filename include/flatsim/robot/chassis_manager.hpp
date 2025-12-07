@@ -129,6 +129,7 @@ namespace fs {
          * @return Pointer to rigid body
          */
         muli::RigidBody *get_body();
+        const muli::RigidBody *get_body() const;
 
         /**
          * @brief Get karosseries

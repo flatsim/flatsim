@@ -89,6 +89,13 @@ namespace fs {
         return nullptr;
     }
 
+    const muli::RigidBody *ChassisManager::get_body() const {
+        if (chassis) {
+            return chassis->get_body();
+        }
+        return nullptr;
+    }
+
     std::vector<Karosserie> *ChassisManager::get_karosseries() {
         if (chassis) {
             return &chassis->karosseries;
