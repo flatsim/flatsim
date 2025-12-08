@@ -93,8 +93,6 @@ list(APPEND ext_deps farmtrax::farmtrax)
 
 # FetchContent_Declare(navcon GIT_REPOSITORY https://github.com/onlyhead/navcon.git GIT_TAG 0.1.6)
 # FetchContent_MakeAvailable(navcon)
-set(NAVCON_ENABLE_MPC ON CACHE BOOL "Enable MPC controller in navcon" FORCE)
-set(NAVCON_ENABLE_LQR ON CACHE BOOL "Enable LQR controller in navcon" FORCE)
 add_subdirectory(xtra/navcon navcon)
 list(APPEND ext_deps navcon::navcon)
 

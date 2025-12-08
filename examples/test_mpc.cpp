@@ -11,7 +11,6 @@
 int main(int argc, char *argv[]) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
 
-#ifdef HAS_MPC
     // Initialize Rerun logging
     auto rec = std::make_shared<rerun::RecordingStream>("mpc_test", "space");
     if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
@@ -46,8 +45,8 @@ int main(int argc, char *argv[]) {
 
     // Test MPC Controller with a challenging S-curve path
     std::cout << "\n--- Testing MPC Controller with S-Curve Path ---" << std::endl;
-    std::cout << "MPC uses Model Predictive Control with IPOPT optimization" << std::endl;
-    std::cout << "This should show optimal trajectory planning with smooth control" << std::endl;
+    std::cout << "MPC uses Model Predictive Control with lightweight BFGS optimizer" << std::endl;
+    std::cout << "This should show smooth trajectory planning without external solvers" << std::endl;
 
     // Set controller type to MPC
     std::cout << "Setting controller to MPC..." << std::endl;
@@ -58,22 +57,21 @@ int main(int argc, char *argv[]) {
     if (mpc_controller) {
         auto mpc_config = mpc_controller->get_mpc_config();
 
-        // Configure MPC parameters (balanced lookahead and smoothness)
-        mpc_config.horizon_steps = 32; // Moderate prediction horizon (~1.2s)
+        // Configure MPC parameters for the lightweight optimizer
+        // Shorter horizon works better with gradient-based optimization
+        mpc_config.horizon_steps = 15; // Shorter horizon for faster convergence
         mpc_config.dt = 0.1;           // Time step (seconds)
         mpc_config.ref_velocity = 0.8; // Reference normalized speed (~80% throttle)
 
-        // Retuned cost weights for this tractor + flatsim dynamics
-        mpc_config.weight_cte = 1500.0;             // Cross-track error
-        mpc_config.weight_epsi = 1300.0;            // Heading error
-        mpc_config.weight_vel = 0.5;                // Velocity tracking
-        mpc_config.weight_steering = 10.0;          // Steering effort (discourage large angles)
-        mpc_config.weight_acceleration = 10.0;      // Acceleration effort
-        mpc_config.weight_steering_rate = 600.0;    // Steering smoothness
-        mpc_config.weight_acceleration_rate = 30.0; // Acceleration smoothness
-
-        mpc_config.max_solver_time = 0.5; // IPOPT solver time limit
-        mpc_config.print_level = 0;       // Silent IPOPT output
+        // Tuned cost weights for smooth control with BFGS optimizer
+        // Key: High steering_rate weight prevents oscillation
+        mpc_config.weight_cte = 200.0;               // Cross-track error (moderate)
+        mpc_config.weight_epsi = 150.0;              // Heading error (moderate)
+        mpc_config.weight_vel = 1.0;                 // Velocity tracking
+        mpc_config.weight_steering = 50.0;           // Penalize large steering angles
+        mpc_config.weight_acceleration = 20.0;       // Penalize large accelerations
+        mpc_config.weight_steering_rate = 800.0;     // HIGH: prevents steering oscillation
+        mpc_config.weight_acceleration_rate = 100.0; // Smooth acceleration changes
 
         mpc_controller->set_mpc_config(mpc_config);
 
@@ -177,17 +175,4 @@ int main(int argc, char *argv[]) {
     std::cout << "Final position: (" << final_pos.point.x << ", " << final_pos.point.y << ")" << std::endl;
 
     return 0;
-
-#else
-    std::cerr << "❌ MPC controller not available!" << std::endl;
-    std::cerr << "MPC requires:" << std::endl;
-    std::cerr << "  - Eigen3 library" << std::endl;
-    std::cerr << "  - IPOPT solver" << std::endl;
-    std::cerr << "  - CppAD library" << std::endl;
-    std::cerr << "\nTo enable MPC:" << std::endl;
-    std::cerr << "  1. Install dependencies (see README)" << std::endl;
-    std::cerr << "  2. Rebuild with: make reconfig" << std::endl;
-    std::cerr << "  3. CMake will auto-detect and enable MPC" << std::endl;
-    return 1;
-#endif
 }

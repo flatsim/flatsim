@@ -53,9 +53,9 @@ std::vector<concord::Point> generate_s_shape(float offset_x, float offset_y, flo
 }
 
 int main(int argc, char *argv[]) {
-    std::cout << "=== PID Controller Stress Test: 30 Robots ===" << std::endl;
+    std::cout << "=== MPPI Controller Stress Test: 30 Robots ===" << std::endl;
 
-    auto rec = std::make_shared<rerun::RecordingStream>("pid_stress_30", "space");
+    auto rec = std::make_shared<rerun::RecordingStream>("mppi_stress_30", "space");
     if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
         std::cerr << "Failed to connect to rerun\n";
         return 1;
@@ -128,27 +128,47 @@ int main(int argc, char *argv[]) {
     std::cout << "All " << NUM_ROBOTS << " tractors loaded successfully\n" << std::endl;
 
     // All robots follow the same S-shape path from their spawn positions
-    std::cout << "Setting up S-shape paths for all robots..." << std::endl;
+    std::cout << "Setting up S-shape paths for all robots with MPPI controller..." << std::endl;
     for (int i = 0; i < NUM_ROBOTS; ++i) {
         auto &tractor = simulator.get_robot(i);
 
-        // Set PID controller parameters
-        auto params = tractor.tracker->get_controller_params();
-        params.linear_kp = 2.5f;
-        params.angular_kp = 1.8f;
-        params.angular_kd = 0.2f;
-        tractor.tracker->set_controller_params(params);
+        // Set controller type to MPPI
+        tractor.tracker->set_controller_type(navcon::TrackerType::MPPI);
 
-        // Set controller type
-        tractor.tracker->set_controller_type(navcon::TrackerType::PID);
+        // Configure MPPI controller parameters (per robot)
+        auto mppi_controller = dynamic_cast<navcon::pred::MPPIFollower *>(tractor.tracker->get_controller());
+        if (mppi_controller) {
+            auto mppi_config = mppi_controller->get_mppi_config();
+
+            // Configuration adapted from examples/test_mppi.cpp, slightly tuned for 30 robots
+            mppi_config.horizon_steps = 20;       // Slightly shorter horizon for multi-robot load
+            mppi_config.dt = 0.1;                 // Time step (seconds)
+            mppi_config.num_samples = 1200;       // Fewer samples to keep computation reasonable
+            mppi_config.temperature = 0.15;       // Moderate temperature for stability
+            mppi_config.steering_noise = 0.15;    // Reduced noise for less oscillation
+            mppi_config.acceleration_noise = 0.1; // Reduced acceleration noise
+            mppi_config.ref_velocity = 0.8;       // Reference normalized speed (~80% throttle)
+
+            // Cost weights
+            mppi_config.weight_cte = 200.0;         // Cross-track error
+            mppi_config.weight_epsi = 180.0;        // Heading error
+            mppi_config.weight_vel = 1.0;           // Velocity tracking
+            mppi_config.weight_steering = 80.0;     // Steering penalty
+            mppi_config.weight_acceleration = 20.0; // Acceleration penalty
+
+            mppi_controller->set_mppi_config(mppi_config);
+        } else {
+            std::cerr << "Failed to cast controller to MPPI for robot " << i << std::endl;
+        }
 
         // Set S-shape path from path start position (not spawn position)
         auto path = generate_s_shape(path_starts[i].x, path_starts[i].y, 1.0f);
         navcon::PathGoal path_goal(path, 2.0f, 2.5f, false);
         tractor.tracker->set_path(path_goal);
+        tractor.tracker->smoothen(25.0f); // Smooth path for MPPI
     }
 
-    std::cout << "Starting PID path following for all " << NUM_ROBOTS << " tractors...\n" << std::endl;
+    std::cout << "Starting MPPI path following for all " << NUM_ROBOTS << " tractors...\n" << std::endl;
 
     auto start_time = std::chrono::steady_clock::now();
     float dt = 0.016f;
@@ -216,7 +236,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    std::cout << "\n=== PID Controller Stress Test Results (30 Robots) ===" << std::endl;
+    std::cout << "\n=== MPPI Controller Stress Test Results (30 Robots) ===" << std::endl;
 
     float total_max_error = 0.0f;
     float total_avg_error = 0.0f;
@@ -244,3 +264,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
