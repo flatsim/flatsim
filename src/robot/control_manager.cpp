@@ -73,12 +73,11 @@ namespace fs {
             auto lin_val = linear;
 
             if (is_differential_drive) {
-                // Pure differential drive: use throttles_diff sign to determine direction
-                const float steering_scale = 20.0f; // Make steering much more aggressive
+                // Differential drive: map linear/angular into left/right wheel pairs.
                 if (i < throttles_diff.size() && std::abs(throttles_diff[i]) > 1e-6f) {
-                    // Use sign of throttles_diff to determine if this wheel gets + or - steering
-                    float sign_multiplier = (throttles_diff[i] > 0) ? 1.0f : -1.0f;
-                    lin_val = linear + (last_steering_input * steering_scale * sign_multiplier);
+                    float left_cmd = std::clamp(linear + last_steering_input, in_min, in_max);
+                    float right_cmd = std::clamp(linear - last_steering_input, in_min, in_max);
+                    lin_val = (throttles_diff[i] < 0.0f) ? left_cmd : right_cmd;
                 }
             } else {
                 // Ackermann mode: apply existing logic
@@ -98,6 +97,8 @@ namespace fs {
                 }
             }
 
+            // Clamp mixed command to the normalized input range before mapping
+            lin_val = std::max(in_min, std::min(in_max, lin_val));
             throttles[i] = utils::mapper(lin_val, in_min, in_max, -throttles_max[i], throttles_max[i]);
         }
 
