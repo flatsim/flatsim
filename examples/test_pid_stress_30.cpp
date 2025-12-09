@@ -140,11 +140,11 @@ int main(int argc, char *argv[]) {
         tractor.tracker->set_controller_params(params);
 
         // Set controller type
-        tractor.tracker->set_controller_type(navcon::TrackerType::PID);
+        tractor.tracker->set_controller_type(waypoint::TrackerType::PID);
 
         // Set S-shape path from path start position (not spawn position)
         auto path = generate_s_shape(path_starts[i].x, path_starts[i].y, 1.0f);
-        navcon::PathGoal path_goal(path, 2.0f, 2.5f, false);
+        waypoint::PathGoal path_goal(path, 2.0f, 2.5f, false);
         tractor.tracker->set_path(path_goal);
     }
 

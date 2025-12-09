@@ -1,6 +1,6 @@
 // C++ shim functions for Rust CXX bridge
 #include "rust_shim.hpp"
-#include "navcon/types.hpp"
+#include "waypoint/types.hpp"
 #include <cmath>
 
 namespace flatsim {

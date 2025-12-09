@@ -1,7 +1,7 @@
 #pragma once
 
 #include "flatsim/protocol/types.hpp"
-#include "navcon.hpp"
+#include "waypoint.hpp"
 #include <memory>
 #include <optional>
 #include <rerun.hpp>
@@ -26,8 +26,8 @@ namespace fs {
          * @param type Navigation controller type (PID, CARROT, MPC, etc.)
          * @param rec Optional Rerun recording stream for logging
          */
-        Agent(const protocol::RobotId &id, const navcon::RobotConstraints &constraints,
-              navcon::TrackerType type = navcon::TrackerType::PID,
+        Agent(const protocol::RobotId &id, const waypoint::RobotConstraints &constraints,
+              waypoint::TrackerType type = waypoint::TrackerType::PID,
               std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         // Main agent interface
@@ -35,7 +35,7 @@ namespace fs {
         protocol::RobotCommand compute_command();
 
         // Navigation control
-        void set_goal(const navcon::NavigationGoal &goal);
+        void set_goal(const waypoint::NavigationGoal &goal);
         void clear_goal();
         bool is_goal_reached() const;
 
@@ -45,8 +45,8 @@ namespace fs {
         bool is_logging_enabled() const { return rec_ != nullptr; }
 
         // Access to navigation tracker
-        navcon::Tracker *tracker() { return tracker_.get(); }
-        const navcon::Tracker *tracker() const { return tracker_.get(); }
+        waypoint::Tracker *tracker() { return tracker_.get(); }
+        const waypoint::Tracker *tracker() const { return tracker_.get(); }
 
         // Get agent ID
         const protocol::RobotId &id() const { return id_; }
@@ -56,10 +56,10 @@ namespace fs {
         protocol::RobotId id_;
 
         // Navigation component
-        std::unique_ptr<navcon::Tracker> tracker_;
-        navcon::RobotState last_nav_state_;
+        std::unique_ptr<waypoint::Tracker> tracker_;
+        waypoint::RobotState last_nav_state_;
         float last_dt_{0.0f};
-        navcon::VelocityCommand last_cmd_{};
+        waypoint::VelocityCommand last_cmd_{};
 
         // Logging component (optional)
         std::shared_ptr<rerun::RecordingStream> rec_;

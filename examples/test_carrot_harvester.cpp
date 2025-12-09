@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     // Set controller type to Carrot
     std::cout << "Setting controller to Carrot..." << std::endl;
-    harvester.tracker->set_controller_type(navcon::TrackerType::CARROT);
+    harvester.tracker->set_controller_type(waypoint::TrackerType::CARROT);
 
     // Set Carrot controller parameters (optional, using defaults)
     auto params = harvester.tracker->get_controller_params();
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
         {85.0f, 0.0f}, // Final target
     };
 
-    navcon::PathGoal path(straight_path, 4.0f, 4.0f, false); // Larger tolerance for bigger machine
+    waypoint::PathGoal path(straight_path, 4.0f, 4.0f, false); // Larger tolerance for bigger machine
 
     std::cout << "Setting navigation path with " << straight_path.size() << " waypoints..." << std::endl;
     harvester.tracker->set_path(path);
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
         {final_pos.point.x + 75.0f, final_pos.point.y + 10.0f}  // Final up-right
     };
 
-    navcon::PathGoal zigzag_goal(zigzag_path, 4.0f, 4.0f, false);
+    waypoint::PathGoal zigzag_goal(zigzag_path, 4.0f, 4.0f, false);
     harvester.tracker->set_path(zigzag_goal);
 
     std::cout << "Testing zigzag navigation with Carrot algorithm..." << std::endl;

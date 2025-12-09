@@ -15,7 +15,7 @@ namespace fs {
         filter.mask = ~(1 << group); // Exclude own bit from collision mask
 
         // Initialize tracker
-        tracker = std::make_unique<navcon::Tracker>(navcon::TrackerType::PID);
+        tracker = std::make_unique<waypoint::Tracker>(waypoint::TrackerType::PID);
     }
 
     Robot::~Robot() {
@@ -102,8 +102,17 @@ namespace fs {
         chain.init(this);
 
         // Initialize navigation controller with robot constraints
-        navcon::RobotConstraints constraints;
-        constraints.steering_type = navcon::SteeringType::ACKERMANN;
+        waypoint::RobotConstraints constraints;
+        // Differential-drive huskies have all zero steering limits
+        bool is_differential_drive = true;
+        for (float a : robo.controls.steerings_max) {
+            if (std::abs(a) > 1e-6f) {
+                is_differential_drive = false;
+                break;
+            }
+        }
+        constraints.steering_type =
+            is_differential_drive ? waypoint::SteeringType::DIFFERENTIAL : waypoint::SteeringType::ACKERMANN;
 
         // Derive basic geometry from wheel bounds
         if (!robo.wheels.empty()) {
@@ -153,7 +162,7 @@ namespace fs {
         tracker->init(constraints, rec, robo.seqid);
 
         // Configure controller settings
-        navcon::ControllerConfig config;
+        waypoint::ControllerConfig config;
         config.allow_reverse = false; // TODO: Enable backward maneuvers for tight turns
         tracker->get_controller()->set_config(config);
 
@@ -352,33 +361,33 @@ namespace fs {
             return;
         }
 
-        // Get current robot state for navcon
-        navcon::RobotState state;
-        state.pose = info.bound.pose;
+        // Get current robot state for waypoint
+        waypoint::RobotState nav_state;
+        nav_state.pose = info.bound.pose;
         // Pull current velocities from physics so controllers (e.g. MPC) get an accurate state
         if (auto *body = chassis.get_body()) {
             const auto &linear_vel = body->GetLinearVelocity();
-            const double yaw = state.pose.angle.yaw;
+            const double yaw = nav_state.pose.angle.yaw;
             // Forward velocity along the robot's heading
-            state.velocity.linear = linear_vel.x * std::cos(yaw) + linear_vel.y * std::sin(yaw);
+            nav_state.velocity.linear = linear_vel.x * std::cos(yaw) + linear_vel.y * std::sin(yaw);
             // Angular velocity around Z from the physics body
-            state.velocity.angular = body->GetAngularVelocity();
+            nav_state.velocity.angular = body->GetAngularVelocity();
         } else {
-            state.velocity.linear = 0.0;
-            state.velocity.angular = 0.0;
+            nav_state.velocity.linear = 0.0;
+            nav_state.velocity.angular = 0.0;
         }
-        state.timestamp = 0.0; // TODO: get actual timestamp
+        nav_state.timestamp = 0.0; // TODO: get actual timestamp
 
         // If this robot is pulling a follower (e.g. trailer), expose its pose
         // to the navigation stack so trailer-aware controllers can use it.
         const auto followers = chain.get_connected_followers();
         if (!followers.empty() && followers.front()) {
-            state.has_trailer = true;
-            state.trailer_pose = followers.front()->get_position();
+            nav_state.has_trailer = true;
+            nav_state.trailer_pose = followers.front()->get_position();
         }
 
         // Compute control command
-        auto velocity_cmd = tracker->tick(state, dt);
+        auto velocity_cmd = tracker->tick(nav_state, dt);
 
         if (velocity_cmd.valid) {
             // Debug output every 50 calls

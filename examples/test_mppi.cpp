@@ -50,10 +50,10 @@ int main(int argc, char *argv[]) {
 
     // Set controller type to MPPI
     std::cout << "Setting controller to MPPI..." << std::endl;
-    tractor.tracker->set_controller_type(navcon::TrackerType::MPPI);
+    tractor.tracker->set_controller_type(waypoint::TrackerType::MPPI);
 
     // Access the MPPI controller directly to configure it
-    auto mppi_controller = dynamic_cast<navcon::pred::MPPIFollower *>(tractor.tracker->get_controller());
+    auto mppi_controller = dynamic_cast<waypoint::pred::MPPIFollower *>(tractor.tracker->get_controller());
     if (mppi_controller) {
         auto mppi_config = mppi_controller->get_mppi_config();
 
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
         {90.0f, 0.0f}   // End
     };
 
-    navcon::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerance
+    waypoint::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerance
 
     std::cout << "Setting navigation path with " << s_curve_path.size() << " waypoints..." << std::endl;
     tractor.tracker->set_path(path);

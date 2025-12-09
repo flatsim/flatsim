@@ -133,10 +133,10 @@ int main(int argc, char *argv[]) {
         auto &tractor = simulator.get_robot(i);
 
         // Set controller type to MPPI
-        tractor.tracker->set_controller_type(navcon::TrackerType::MPPI);
+        tractor.tracker->set_controller_type(waypoint::TrackerType::MPPI);
 
         // Configure MPPI controller parameters (per robot)
-        auto mppi_controller = dynamic_cast<navcon::pred::MPPIFollower *>(tractor.tracker->get_controller());
+        auto mppi_controller = dynamic_cast<waypoint::pred::MPPIFollower *>(tractor.tracker->get_controller());
         if (mppi_controller) {
             auto mppi_config = mppi_controller->get_mppi_config();
 
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 
         // Set S-shape path from path start position (not spawn position)
         auto path = generate_s_shape(path_starts[i].x, path_starts[i].y, 1.0f);
-        navcon::PathGoal path_goal(path, 2.0f, 2.5f, false);
+        waypoint::PathGoal path_goal(path, 2.0f, 2.5f, false);
         tractor.tracker->set_path(path_goal);
         tractor.tracker->smoothen(25.0f); // Smooth path for MPPI
     }

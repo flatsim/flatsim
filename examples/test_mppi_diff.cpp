@@ -7,7 +7,7 @@
 #include "flatsim/core/loader.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/simulator.hpp"
-#include "navcon/pred/mppi.hpp"
+#include "waypoint/pred/mppi.hpp"
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {
@@ -37,28 +37,33 @@ int main(int argc, char *argv[]) {
     }
 
     auto &husky = simulator.get_robot(0);
-    husky.tracker->set_controller_type(navcon::TrackerType::MPPI);
+    husky.tracker->set_controller_type(waypoint::TrackerType::MPPI);
 
-    auto *mppi_controller = dynamic_cast<navcon::pred::MPPIFollower *>(husky.tracker->get_controller());
+    auto *mppi_controller = dynamic_cast<waypoint::pred::MPPIFollower *>(husky.tracker->get_controller());
     if (!mppi_controller) {
         std::cerr << "Failed to get MPPI controller" << std::endl;
         return 1;
     }
 
-    auto mppi_config = mppi_controller->get_mppi_config();
-    mppi_config.horizon_steps = 25;
-    mppi_config.dt = 0.1;
-    mppi_config.num_samples = 2000;
-    mppi_config.temperature = 0.1;
-    mppi_config.steering_noise = 0.15;
-    mppi_config.acceleration_noise = 0.1;
-    mppi_config.ref_velocity = 0.8;
-    mppi_config.weight_cte = 200.0;
-    mppi_config.weight_epsi = 180.0;
-    mppi_config.weight_vel = 1.0;
-    mppi_config.weight_steering = 80.0;
-    mppi_config.weight_acceleration = 20.0;
-    mppi_controller->set_mppi_config(mppi_config);
+    auto turn_config = mppi_controller->get_mppi_config();
+    turn_config.horizon_steps = 25;
+    turn_config.dt = 0.1;
+    turn_config.num_samples = 2000;
+    turn_config.temperature = 0.1;
+    turn_config.steering_noise = 0.15;
+    turn_config.acceleration_noise = 0.1;
+    turn_config.ref_velocity = 0.0; // Hold still while rotating to align
+    turn_config.weight_cte = 200.0;
+    turn_config.weight_epsi = 180.0;
+    turn_config.weight_vel = 60.0; // Heavily penalize linear motion during the turn
+    turn_config.weight_steering = 80.0;
+    turn_config.weight_acceleration = 20.0;
+
+    auto drive_config = turn_config;
+    drive_config.ref_velocity = 0.6;  // Resume forward motion once aligned
+    drive_config.weight_vel = 1.0;    // Allow linear motion
+
+    mppi_controller->set_mppi_config(turn_config);
 
     std::vector<concord::Point> s_curve_path = {
         {0.0f, 0.0f}, {5.0f, 0.0f},  {10.0f, 1.0f},  {15.0f, 3.0f},   {20.0f, 6.0f},  {25.0f, 10.0f},
@@ -66,7 +71,7 @@ int main(int argc, char *argv[]) {
         {60.0f, 14.0f}, {65.0f, 10.0f}, {70.0f, 6.0f},  {75.0f, 3.0f},   {80.0f, 1.0f},  {85.0f, 0.0f},
         {90.0f, 0.0f}};
 
-    navcon::PathGoal path(s_curve_path, 2.0f, 2.0f, false);
+    waypoint::PathGoal path(s_curve_path, 2.0f, 2.0f, false);
     husky.tracker->set_path(path);
     husky.tracker->smoothen(25.0f);
 
@@ -79,6 +84,8 @@ int main(int argc, char *argv[]) {
     float max_cte = 0.0f;
     float total_cte = 0.0f;
     int cte_samples = 0;
+    bool using_drive_config = false;
+    const float heading_threshold = 0.15f;
 
     while (!husky.tracker->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
@@ -96,6 +103,15 @@ int main(int argc, char *argv[]) {
         max_cte = std::max(max_cte, static_cast<float>(status.cross_track_error));
         total_cte += static_cast<float>(status.cross_track_error);
         cte_samples++;
+
+        float heading = std::abs(status.heading_error);
+        if (heading < heading_threshold && !using_drive_config) {
+            mppi_controller->set_mppi_config(drive_config);
+            using_drive_config = true;
+        } else if (heading >= heading_threshold && using_drive_config) {
+            mppi_controller->set_mppi_config(turn_config);
+            using_drive_config = false;
+        }
 
         if (step_count % 120 == 0) {
             auto pos = husky.get_position();

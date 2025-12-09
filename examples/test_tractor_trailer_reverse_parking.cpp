@@ -110,9 +110,9 @@ int main(int argc, char *argv[]) {
     std::cout << "  3. Non-holonomic constraints make it harder" << std::endl;
     std::cout << "  4. Requires long prediction horizon to 'see' backing path" << std::endl;
 
-    tractor.tracker->set_controller_type(navcon::TrackerType::MPC_TRAILER);
+    tractor.tracker->set_controller_type(waypoint::TrackerType::MPC_TRAILER);
 
-    auto mpc_controller = dynamic_cast<navcon::pred::MPCTrailerFollower *>(tractor.tracker->get_controller());
+    auto mpc_controller = dynamic_cast<waypoint::pred::MPCTrailerFollower *>(tractor.tracker->get_controller());
     if (mpc_controller) {
         auto mpc_config = mpc_controller->get_mpc_config();
 
@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
         {trailer_target.point.x, trailer_target.point.y},
     };
 
-    navcon::PathGoal path(reverse_parking_path, 1.0f, 0.6f, false); // Tight positional tolerance, modest speed
+    waypoint::PathGoal path(reverse_parking_path, 1.0f, 0.6f, false); // Tight positional tolerance, modest speed
 
     std::cout << "Setting reverse parking path with " << reverse_parking_path.size() << " waypoints..." << std::endl;
     tractor.tracker->set_path(path);
@@ -303,7 +303,7 @@ int main(int argc, char *argv[]) {
                 trailer_target.point,
             };
 
-            navcon::PathGoal forward_goal(forward_path, 0.8f, 0.6f, false);
+            waypoint::PathGoal forward_goal(forward_path, 0.8f, 0.6f, false);
             tractor.tracker->set_path(forward_goal);
             tractor.tracker->smoothen(20.0f);
         }
