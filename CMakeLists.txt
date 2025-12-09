@@ -93,8 +93,8 @@ list(APPEND ext_deps farmtrax::farmtrax)
 
 # FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/waypoint.git GIT_TAG 0.1.6)
 # FetchContent_MakeAvailable(waypoint)
-add_subdirectory(xtra/waypoint waypoint)
-list(APPEND ext_deps waypoint::waypoint)
+add_subdirectory(xtra/drivekit waypoint)
+list(APPEND ext_deps drivekit::drivekit)
 
 add_subdirectory(xtra/navplan navplan)
 list(APPEND ext_deps navplan::navplan)

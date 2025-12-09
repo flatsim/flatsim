@@ -6,6 +6,7 @@
 #include "muli/settings.h"
 #include "muli/world.h"
 
+#include "drivekit.hpp"
 #include "flatsim/core/exceptions.hpp"
 #include "flatsim/core/utils.hpp"
 #include "flatsim/robot/chain_manager.hpp"
@@ -21,7 +22,6 @@
 #include "flatsim/robot/tank_manager.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
-#include "waypoint.hpp"
 
 #include <memory>
 #include <optional>
@@ -61,7 +61,7 @@ namespace fs {
         Network network;
         TankManager tank;
         PowerManager power;
-        std::unique_ptr<waypoint::Tracker> tracker;
+        std::unique_ptr<drivekit::Tracker> tracker;
 
         Robot(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world, uint32_t group);
         ~Robot();
@@ -89,7 +89,7 @@ namespace fs {
         // Set simulator reference (called by simulator when robot is added)
         void set_simulator(Simulator *sim) { simulator = sim; }
 
-        // Enable or disable internal navigation (waypoint-based) for this robot.
+        // Enable or disable internal navigation (drivekit-based) for this robot.
         void set_navigation_enabled(bool enabled) { navigation_enabled = enabled; }
         bool is_navigation_enabled() const { return navigation_enabled; }
 

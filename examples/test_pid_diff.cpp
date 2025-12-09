@@ -148,10 +148,10 @@ int main(int argc, char *argv[]) {
         husky.tracker->set_controller_params(params);
 
         // Set controller type
-        husky.tracker->set_controller_type(waypoint::TrackerType::PID);
+        husky.tracker->set_controller_type(drivekit::TrackerType::PID);
 
         // Set path
-        waypoint::PathGoal path(paths[i], 2.0f, 2.5f, false);
+        drivekit::PathGoal path(paths[i], 2.0f, 2.5f, false);
         husky.tracker->set_path(path);
         std::cout << "Husky " << i << " following " << shape_names[i] << " (" << paths[i].size() << " waypoints)"
                   << std::endl;

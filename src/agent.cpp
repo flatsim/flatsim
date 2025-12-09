@@ -2,10 +2,10 @@
 
 namespace fs {
 
-    Agent::Agent(const protocol::RobotId &id, const waypoint::RobotConstraints &constraints, waypoint::TrackerType type,
+    Agent::Agent(const protocol::RobotId &id, const drivekit::RobotConstraints &constraints, drivekit::TrackerType type,
                  std::shared_ptr<rerun::RecordingStream> rec)
         : id_(id), rec_(rec) {
-        tracker_ = std::make_unique<waypoint::Tracker>(type);
+        tracker_ = std::make_unique<drivekit::Tracker>(type);
         tracker_->init(constraints, rec, "agent/" + id);
     }
 
@@ -39,7 +39,7 @@ namespace fs {
         return cmd;
     }
 
-    void Agent::set_goal(const waypoint::NavigationGoal &goal) { tracker_->set_goal(goal); }
+    void Agent::set_goal(const drivekit::NavigationGoal &goal) { tracker_->set_goal(goal); }
 
     void Agent::clear_goal() { tracker_->clear_goal(); }
 

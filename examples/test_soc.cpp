@@ -57,10 +57,10 @@ int main(int argc, char *argv[]) {
 
     // Set controller type to SOC
     std::cout << "Setting controller to SOC..." << std::endl;
-    tractor.tracker->set_controller_type(waypoint::TrackerType::SOC);
+    tractor.tracker->set_controller_type(drivekit::TrackerType::SOC);
 
     // Access the SOC controller directly to configure it
-    auto soc_controller = dynamic_cast<waypoint::pred::SOCFollower *>(tractor.tracker->get_controller());
+    auto soc_controller = dynamic_cast<drivekit::pred::SOCFollower *>(tractor.tracker->get_controller());
     if (soc_controller) {
         auto soc_config = soc_controller->get_soc_config();
 
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     // Create S-curve path for SOC
     auto s_curve_path = build_s_shape_path();
-    waypoint::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerances
+    drivekit::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerances
 
     std::cout << "Setting navigation path with " << s_curve_path.size() << " waypoints..." << std::endl;
     tractor.tracker->set_path(path);

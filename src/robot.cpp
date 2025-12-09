@@ -15,7 +15,7 @@ namespace fs {
         filter.mask = ~(1 << group); // Exclude own bit from collision mask
 
         // Initialize tracker
-        tracker = std::make_unique<waypoint::Tracker>(waypoint::TrackerType::PID);
+        tracker = std::make_unique<drivekit::Tracker>(drivekit::TrackerType::PID);
     }
 
     Robot::~Robot() {
@@ -102,7 +102,7 @@ namespace fs {
         chain.init(this);
 
         // Initialize navigation controller with robot constraints
-        waypoint::RobotConstraints constraints;
+        drivekit::RobotConstraints constraints;
         // Differential-drive huskies have all zero steering limits
         bool is_differential_drive = true;
         for (float a : robo.controls.steerings_max) {
@@ -112,7 +112,7 @@ namespace fs {
             }
         }
         constraints.steering_type =
-            is_differential_drive ? waypoint::SteeringType::DIFFERENTIAL : waypoint::SteeringType::ACKERMANN;
+            is_differential_drive ? drivekit::SteeringType::DIFFERENTIAL : drivekit::SteeringType::ACKERMANN;
 
         // Derive basic geometry from wheel bounds
         if (!robo.wheels.empty()) {
@@ -162,7 +162,7 @@ namespace fs {
         tracker->init(constraints, rec, robo.seqid);
 
         // Configure controller settings
-        waypoint::ControllerConfig config;
+        drivekit::ControllerConfig config;
         config.allow_reverse = false; // TODO: Enable backward maneuvers for tight turns
         tracker->get_controller()->set_config(config);
 
@@ -362,7 +362,7 @@ namespace fs {
         }
 
         // Get current robot state for waypoint
-        waypoint::RobotState nav_state;
+        drivekit::RobotState nav_state;
         nav_state.pose = info.bound.pose;
         // Pull current velocities from physics so controllers (e.g. MPC) get an accurate state
         if (auto *body = chassis.get_body()) {

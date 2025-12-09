@@ -148,10 +148,10 @@ int main(int argc, char *argv[]) {
         tractor.tracker->set_controller_params(params);
 
         // Set controller type
-        tractor.tracker->set_controller_type(waypoint::TrackerType::PID);
+        tractor.tracker->set_controller_type(drivekit::TrackerType::PID);
 
         // Set path
-        waypoint::PathGoal path(paths[i], 2.0f, 2.5f, false);
+        drivekit::PathGoal path(paths[i], 2.0f, 2.5f, false);
         tractor.tracker->set_path(path);
         std::cout << "Tractor " << i << " following " << shape_names[i] << " (" << paths[i].size() << " waypoints)"
                   << std::endl;

@@ -7,7 +7,7 @@
 #include "flatsim/core/loader.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/simulator.hpp"
-#include "waypoint/pred/mppi.hpp"
+#include "drivekit/pred/mppi.hpp"
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {
@@ -37,9 +37,9 @@ int main(int argc, char *argv[]) {
     }
 
     auto &husky = simulator.get_robot(0);
-    husky.tracker->set_controller_type(waypoint::TrackerType::MPPI);
+    husky.tracker->set_controller_type(drivekit::TrackerType::MPPI);
 
-    auto *mppi_controller = dynamic_cast<waypoint::pred::MPPIFollower *>(husky.tracker->get_controller());
+    auto *mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(husky.tracker->get_controller());
     if (!mppi_controller) {
         std::cerr << "Failed to get MPPI controller" << std::endl;
         return 1;
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
         {60.0f, 14.0f}, {65.0f, 10.0f}, {70.0f, 6.0f},  {75.0f, 3.0f},   {80.0f, 1.0f},  {85.0f, 0.0f},
         {90.0f, 0.0f}};
 
-    waypoint::PathGoal path(s_curve_path, 2.0f, 2.0f, false);
+    drivekit::PathGoal path(s_curve_path, 2.0f, 2.0f, false);
     husky.tracker->set_path(path);
     husky.tracker->smoothen(25.0f);
 

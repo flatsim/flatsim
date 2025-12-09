@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
     // Set controller type
     std::cout << "Setting controller to Stanley..." << std::endl;
-    tractor.tracker->set_controller_type(waypoint::TrackerType::STANLEY);
+    tractor.tracker->set_controller_type(drivekit::TrackerType::STANLEY);
 
     // Set Stanley controller parameters
     auto params = tractor.tracker->get_controller_params();
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         {12.0f, 30.0f}  // End point
     };
 
-    waypoint::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
+    drivekit::PathGoal path(curved_path, 2.5f, 3.0f, false); // Larger tolerance for the bigger path
 
     std::cout << "Setting navigation path with " << curved_path.size() << " waypoints..." << std::endl;
     tractor.tracker->set_path(path);

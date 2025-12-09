@@ -50,10 +50,10 @@ int main(int argc, char *argv[]) {
 
     // Set controller type to MPC
     std::cout << "Setting controller to MPC..." << std::endl;
-    tractor.tracker->set_controller_type(waypoint::TrackerType::MPC);
+    tractor.tracker->set_controller_type(drivekit::TrackerType::MPC);
 
     // Access the MPC controller directly to configure it
-    auto mpc_controller = dynamic_cast<waypoint::pred::MPCFollower *>(tractor.tracker->get_controller());
+    auto mpc_controller = dynamic_cast<drivekit::pred::MPCFollower *>(tractor.tracker->get_controller());
     if (mpc_controller) {
         auto mpc_config = mpc_controller->get_mpc_config();
 
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
         {90.0f, 0.0f}   // End
     };
 
-    waypoint::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerance
+    drivekit::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerance
 
     std::cout << "Setting navigation path with " << s_curve_path.size() << " waypoints..." << std::endl;
     tractor.tracker->set_path(path);
