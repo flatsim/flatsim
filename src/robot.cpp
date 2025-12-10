@@ -1,4 +1,5 @@
 #include "flatsim/robot.hpp"
+#include "concord/geometry/primitives/triangle.hpp"
 #include "flatsim/robot/network/interfaces/canbus_interface.hpp"
 #include "flatsim/robot/network/interfaces/wifi_interface.hpp"
 #include "flatsim/robot/network/interfaces/zenoh_interface.hpp"
@@ -386,8 +387,9 @@ namespace fs {
             nav_state.trailer_pose = followers.front()->get_position();
         }
 
-        // Pass through turn_first behavior flag from robot state
+        // Pass through behavior flags from robot state
         nav_state.turn_first = state.turn_first;
+        nav_state.allow_move = state.allow_move;
 
         // Compute control command
         auto velocity_cmd = tracker->tick(nav_state, dt);
@@ -408,6 +410,68 @@ namespace fs {
             controls.set_linear(velocity_cmd.linear_velocity);
             controls.set_angular(-velocity_cmd.angular_velocity); // Invert for robot's convention
         }
+    }
+
+    void Robot::brake() {
+        // Apply braking using the chassis brake system
+        chassis.brake(fs::constants::brake);
+        // Also reset controls to zero
+        controls.reset_controls();
+    }
+
+    bool Robot::in_line_of_sight(const concord::Point &point, float sight_distance, float half_angle) const {
+        // Default sight distance is 4x robot length
+        if (sight_distance <= 0.0f) {
+            sight_distance = 4.0f * static_cast<float>(info.bound.size.y);
+        }
+
+        // Get robot's current position and heading
+        const auto &pos = info.bound.pose;
+        double heading = pos.angle.yaw;
+
+        // Create vision triangle
+        concord::Triangle vision = concord::Triangle::from_vision(pos.point, heading, sight_distance, half_angle);
+
+        return vision.contains(point);
+    }
+
+    bool Robot::robot_in_sight(const Robot &other, float sight_distance, float half_angle) const {
+        // Don't check against self
+        if (&other == this) {
+            return false;
+        }
+
+        // Default sight distance is 4x robot length
+        if (sight_distance <= 0.0f) {
+            sight_distance = 4.0f * static_cast<float>(info.bound.size.y);
+        }
+
+        // Get robot's current position and heading
+        const auto &pos = info.bound.pose;
+        double heading = pos.angle.yaw;
+
+        // Create vision triangle
+        concord::Triangle vision = concord::Triangle::from_vision(pos.point, heading, sight_distance, half_angle);
+
+        // Get other robot's position and approximate size as a circle
+        const auto &other_pos = other.info.bound.pose.point;
+        double other_radius = std::max(other.info.bound.size.x, other.info.bound.size.y) / 2.0;
+
+        // Check if other robot's bounding circle intersects our vision triangle
+        return vision.intersects_circle(other_pos, other_radius);
+    }
+
+    std::vector<Robot *> Robot::get_robots_in_sight(float sight_distance, float half_angle) const {
+        std::vector<Robot *> in_sight;
+
+        auto all_robots = get_all_robots();
+        for (auto *robot : all_robots) {
+            if (robot && robot != this && robot_in_sight(*robot, sight_distance, half_angle)) {
+                in_sight.push_back(robot);
+            }
+        }
+
+        return in_sight;
     }
 
 } // namespace fs

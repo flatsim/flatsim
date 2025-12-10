@@ -57,5 +57,8 @@ namespace fs {
         const concord::Bound &get_bound() const { return bound; }
         const std::string &get_name() const { return name; }
         muli::RigidBody *get_body() { return body; }
+
+        // Apply braking to all wheels
+        void brake(float brake_force);
     };
 } // namespace fs

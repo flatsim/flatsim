@@ -83,29 +83,6 @@ package("muli")
     end)
 package_end()
 
--- Define concord package (from git)
-package("concord")
-    add_deps("cmake")
-    set_sourcedir(path.join(os.projectdir(), "build/_deps/concord-src"))
-
-    on_fetch(function (package)
-        -- Clone git repository if not exists
-        local sourcedir = package:sourcedir()
-        if not os.isdir(sourcedir) then
-            print("Fetching concord from git...")
-            os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "2.3.2", 
-                            "-c", "advice.detachedHead=false",
-                            "https://github.com/onlyhead/concord.git", sourcedir})
-        end
-    end)
-
-    on_install(function (package)
-        local configs = {}
-        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
-        import("package.tools.cmake").install(package, configs)
-    end)
-package_end()
 
 -- Define pigment package (from git)
 package("pigment")
@@ -153,52 +130,6 @@ package("entropy")
     end)
 package_end()
 
--- Define zoneout package (from git)
-package("zoneout")
-    add_deps("cmake")
-    set_sourcedir(path.join(os.projectdir(), "build/_deps/zoneout-src"))
-
-    on_fetch(function (package)
-        local sourcedir = package:sourcedir()
-        if not os.isdir(sourcedir) then
-            print("Fetching zoneout from git...")
-            os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.1.0",
-                            "-c", "advice.detachedHead=false",
-                            "https://github.com/onlyhead/zoneout.git", sourcedir})
-        end
-    end)
-
-    on_install(function (package)
-        local configs = {}
-        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
-        import("package.tools.cmake").install(package, configs)
-    end)
-package_end()
-
--- Define farmtrax package (from git)
-package("farmtrax")
-    add_deps("cmake")
-    set_sourcedir(path.join(os.projectdir(), "build/_deps/farmtrax-src"))
-
-    on_fetch(function (package)
-        local sourcedir = package:sourcedir()
-        if not os.isdir(sourcedir) then
-            print("Fetching farmtrax from git...")
-            os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.0.1",
-                            "-c", "advice.detachedHead=false",
-                            "https://github.com/onlyhead/farmtrax.git", sourcedir})
-        end
-    end)
-
-    on_install(function (package)
-        local configs = {}
-        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
-        import("package.tools.cmake").install(package, configs)
-    end)
-package_end()
-
 -- Define rerun_sdk package (from ~/.local installation)
 package("rerun_sdk")
     set_kind("library", {headeronly = false})
@@ -229,7 +160,7 @@ package("rerun_sdk")
 package_end()
 
 -- Add required packages
-add_requires("muli", "concord", "pigment", "entropy", "zoneout", "farmtrax")
+add_requires("muli", "pigment", "entropy")
 add_requires("rerun_sdk")
 
 -- Use pkgconfig to find system packages
@@ -239,9 +170,11 @@ add_requires("tbb", {system = true})
 -- Boost needs explicit library specification
 add_requires("boost", {system = true})
 
--- Add drivekit and waypoint subdirectories
+-- Add drivekit, waypoint, concord and farmtrax subdirectories
 includes("xtra/drivekit")
 includes("xtra/waypoint")
+includes("xtra/concord")
+includes("xtra/farmtrax")
 
 if has_config("examples") then
     add_requires("cli11")
@@ -257,7 +190,7 @@ target("flatsim_internal")
 
     -- Add source files
     add_files("src/**.cpp")
-    
+
     -- Add Rust shim if enabled
     if has_config("rust") then
         add_files("rust/rust_shim.cpp")
@@ -269,10 +202,11 @@ target("flatsim_internal")
     add_includedirs("include", {public = true})
 
     -- Link dependencies
-    add_packages("muli", "concord", "pigment", "entropy", "zoneout", "farmtrax")
+    add_packages("muli", "pigment", "entropy")
+    add_deps("concord", "farmtrax")
     add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq")
     add_deps("drivekit", "waypoint")
-    
+
     -- Explicitly link only boost_json (avoid pulling in all boost libs)
     add_linkdirs(path.join(os.getenv("CMAKE_PREFIX_PATH") or "", "lib"))
     add_links("boost_json")
@@ -291,7 +225,7 @@ target("flatsim")
 
     -- Set install files
     add_installfiles("include/(flatsim/**.hpp)")
-    
+
     on_install(function (target)
         local installdir = target:installdir()
         os.cp("include/*", path.join(installdir, "include"))
@@ -306,13 +240,14 @@ if has_config("examples") then
             set_kind("binary")
             add_files(filepath)
             add_deps("flatsim_internal")
-            add_packages("muli", "concord", "pigment", "entropy", "zoneout", "farmtrax")
+            add_packages("muli", "pigment", "entropy")
+            add_deps("farmtrax")
             add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq", "cli11")
             add_includedirs("include")
-            
+
             -- Link boost_json explicitly
             add_links("boost_json")
-            
+
             -- Add linker option
             add_ldflags("-Wl,--no-as-needed", {force = true})
         target_end()
@@ -327,16 +262,17 @@ if has_config("tests") then
             set_kind("binary")
             add_files(filepath)
             add_deps("flatsim_internal")
-            add_packages("muli", "concord", "pigment", "entropy", "zoneout", "farmtrax")
+            add_packages("muli", "pigment", "entropy")
+            add_deps("farmtrax")
             add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq", "doctest")
             add_includedirs("include")
-            
+
             -- Link boost_json explicitly
             add_links("boost_json")
 
             -- Add as test
             add_tests("default", {rundir = os.projectdir()})
-            
+
             -- Add linker option
             add_ldflags("-Wl,--no-as-needed", {force = true})
         target_end()

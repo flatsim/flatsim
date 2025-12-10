@@ -56,6 +56,12 @@ namespace fs {
         }
     }
 
+    void ChassisManager::brake(float brake_force) {
+        if (chassis) {
+            chassis->brake(brake_force);
+        }
+    }
+
     void ChassisManager::teleport(concord::Pose pose) {
         if (chassis) {
             chassis->teleport(pose);

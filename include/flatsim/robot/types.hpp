@@ -84,6 +84,7 @@ namespace fs {
         RobotRole role = RobotRole::MASTER;
         OP mode = OP::IDLE;
         bool turn_first = false; // For diff/skid: rotate in place before translating
+        bool allow_move = true;  // Allow movement (false = send zero velocity for collision avoidance)
     };
 
 } // namespace fs

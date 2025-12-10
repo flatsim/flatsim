@@ -184,4 +184,43 @@ namespace fs {
         throttle_rate = muli::Clamp(throttle_rate, 1.0f, 5.0f);
     }
 
+    void Wheel::apply_brake(float brake_force) {
+        if (!wheel) return;
+
+        // Get current velocity
+        muli::Vec2 v = wheel->GetLinearVelocity();
+        float speed = muli::Length(v);
+
+        if (speed < muli::epsilon) {
+            // Already stopped, just zero out any residual velocity
+            wheel->SetLinearVelocity(muli::Vec2(0, 0));
+            wheel->SetAngularVelocity(0);
+            return;
+        }
+
+        // Apply braking force opposite to velocity direction
+        // Scale by wheel size for consistent braking across different vehicles
+        float wheel_radius = bound.size.x / 2.0f;
+        float scale_factor = muli::Sqrt(wheel_radius / 0.2f);
+        float scaled_brake = brake_force * scale_factor;
+
+        // Calculate braking impulse (opposite to velocity)
+        muli::Vec2 brake_impulse = -muli::Normalize(v) * scaled_brake * wheel->GetMass();
+
+        // Clamp impulse to not exceed current momentum (prevents reversing)
+        float max_impulse = wheel->GetMass() * speed;
+        if (muli::Length(brake_impulse) > max_impulse) {
+            brake_impulse = muli::Normalize(brake_impulse) * max_impulse;
+        }
+
+        wheel->ApplyLinearImpulse(wheel->GetPosition(), brake_impulse, true);
+
+        // Also apply angular braking to stop wheel rotation
+        float angular_vel = wheel->GetAngularVelocity();
+        if (muli::Abs(angular_vel) > muli::epsilon) {
+            float angular_brake = -angular_vel * scaled_brake * 0.1f;
+            wheel->ApplyTorque(angular_brake, true);
+        }
+    }
+
 } // namespace fs

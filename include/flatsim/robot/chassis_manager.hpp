@@ -98,6 +98,12 @@ namespace fs {
          */
         void set_wheel_damping(float linear_damping, float angular_damping);
 
+        /**
+         * @brief Apply braking force to all wheels and chassis
+         * @param brake_force Braking force multiplier
+         */
+        void brake(float brake_force);
+
         // Transform operations
         /**
          * @brief Teleport chassis to a new pose

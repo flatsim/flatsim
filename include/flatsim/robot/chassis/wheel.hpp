@@ -69,5 +69,8 @@ namespace fs {
         muli::RigidBody *get_wheel() { return wheel; }
         muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
         void update_color(const pigment::RGB &new_color) { color = new_color; }
+
+        // Apply braking force to stop the wheel
+        void apply_brake(float brake_force);
     };
 } // namespace fs

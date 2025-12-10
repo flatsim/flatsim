@@ -71,8 +71,9 @@ find_package(Boost REQUIRED COMPONENTS json)
 
 list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json TBB::tbb)
 
-FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
-FetchContent_MakeAvailable(concord)
+# FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
+# FetchContent_MakeAvailable(concord)
+add_subdirectory(xtra/concord concord)
 list(APPEND ext_deps concord::concord)
 
 FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/onlyhead/pigment.git GIT_TAG 0.3.1)
@@ -91,11 +92,13 @@ FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtra
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-# FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/waypoint.git GIT_TAG 0.1.6)
-# FetchContent_MakeAvailable(waypoint)
+# FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/drivekit.git GIT_TAG 0.1.6)
+# FetchContent_MakeAvailable(drivekit)
 add_subdirectory(xtra/drivekit drivekit)
 list(APPEND ext_deps drivekit::drivekit)
 
+# FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/waypoint.git GIT_TAG 0.1.6)
+# FetchContent_MakeAvailable(waypoint)
 add_subdirectory(xtra/waypoint waypoint)
 list(APPEND ext_deps waypoint::waypoint)
 

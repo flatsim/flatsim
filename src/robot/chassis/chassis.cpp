@@ -198,4 +198,37 @@ namespace fs {
         // Note: hitches don't have color fields so we skip them
     }
 
+    void Chassis::brake(float brake_force) {
+        // Apply braking to all wheels
+        for (auto &wheel : wheels) {
+            wheel.apply_brake(brake_force);
+        }
+
+        // Also apply direct braking to the chassis body for immediate effect
+        if (body) {
+            muli::Vec2 v = body->GetLinearVelocity();
+            float speed = muli::Length(v);
+
+            if (speed > muli::epsilon) {
+                // Apply impulse opposite to velocity
+                muli::Vec2 brake_impulse = -muli::Normalize(v) * brake_force * body->GetMass() * 0.5f;
+
+                // Clamp to not exceed current momentum
+                float max_impulse = body->GetMass() * speed;
+                if (muli::Length(brake_impulse) > max_impulse) {
+                    brake_impulse = muli::Normalize(brake_impulse) * max_impulse;
+                }
+
+                body->ApplyLinearImpulse(body->GetPosition(), brake_impulse, true);
+            }
+
+            // Also brake angular velocity
+            float angular_vel = body->GetAngularVelocity();
+            if (muli::Abs(angular_vel) > muli::epsilon) {
+                float angular_brake = -angular_vel * brake_force * 0.5f;
+                body->ApplyTorque(angular_brake, true);
+            }
+        }
+    }
+
 } // namespace fs

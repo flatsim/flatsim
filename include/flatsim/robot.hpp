@@ -100,5 +100,34 @@ namespace fs {
 
         // Simple helper method to update navigation and apply velocity commands
         void update_navigation(float dt);
+
+        // Apply braking force to stop the robot
+        void brake();
+
+        /**
+         * @brief Check if a point is within the robot's forward line of sight
+         * @param point The point to check
+         * @param sight_distance How far ahead to look (0 = use 4x robot length)
+         * @param half_angle Half of the vision cone angle in radians (default: ~30 deg)
+         * @return true if the point is within line of sight
+         */
+        bool in_line_of_sight(const concord::Point &point, float sight_distance = 0.0f, float half_angle = 0.52f) const;
+
+        /**
+         * @brief Check if another robot is within forward line of sight
+         * @param other The other robot to check
+         * @param sight_distance How far ahead to look (0 = use 4x robot length)
+         * @param half_angle Half of the vision cone angle in radians (default: ~30 deg)
+         * @return true if the other robot is within line of sight
+         */
+        bool robot_in_sight(const Robot &other, float sight_distance = 0.0f, float half_angle = 0.52f) const;
+
+        /**
+         * @brief Get all robots that are within forward line of sight
+         * @param sight_distance How far ahead to look (0 = use 4x robot length)
+         * @param half_angle Half of the vision cone angle in radians (default: ~30 deg)
+         * @return Vector of pointers to robots in line of sight
+         */
+        std::vector<Robot *> get_robots_in_sight(float sight_distance = 0.0f, float half_angle = 0.52f) const;
     };
 } // namespace fs
