@@ -16,3 +16,5 @@ Cargo.lock
 TODO.md
 CMakeFiles
 PLAN.md
+.xmake
+compile_commands.json
