@@ -83,6 +83,7 @@ namespace fs {
         bool online = true;
         RobotRole role = RobotRole::MASTER;
         OP mode = OP::IDLE;
+        bool turn_first = false; // For diff/skid: rotate in place before translating
     };
 
 } // namespace fs

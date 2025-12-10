@@ -386,6 +386,9 @@ namespace fs {
             nav_state.trailer_pose = followers.front()->get_position();
         }
 
+        // Pass through turn_first behavior flag from robot state
+        nav_state.turn_first = state.turn_first;
+
         // Compute control command
         auto velocity_cmd = tracker->tick(nav_state, dt);
 

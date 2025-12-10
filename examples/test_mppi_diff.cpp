@@ -4,10 +4,10 @@
 #include <thread>
 #include <vector>
 
+#include "drivekit/pred/mppi.hpp"
 #include "flatsim/core/loader.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/simulator.hpp"
-#include "drivekit/pred/mppi.hpp"
 #include "rerun/recording_stream.hpp"
 
 int main(int argc, char *argv[]) {
@@ -45,37 +45,82 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    auto turn_config = mppi_controller->get_mppi_config();
-    turn_config.horizon_steps = 25;
-    turn_config.dt = 0.1;
-    turn_config.num_samples = 2000;
-    turn_config.temperature = 0.1;
-    turn_config.steering_noise = 0.15;
-    turn_config.acceleration_noise = 0.1;
-    turn_config.ref_velocity = 0.0; // Hold still while rotating to align
-    turn_config.weight_cte = 200.0;
-    turn_config.weight_epsi = 180.0;
-    turn_config.weight_vel = 60.0; // Heavily penalize linear motion during the turn
-    turn_config.weight_steering = 80.0;
-    turn_config.weight_acceleration = 20.0;
+    auto mppi_config = mppi_controller->get_mppi_config();
+    mppi_config.horizon_steps = 25;
+    mppi_config.dt = 0.1;
+    mppi_config.num_samples = 2000;
+    mppi_config.temperature = 0.1;
+    mppi_config.steering_noise = 0.15;
+    mppi_config.acceleration_noise = 0.1;
+    mppi_config.ref_velocity = 0.6; // Normal driving velocity (turn_first will adjust when needed)
+    mppi_config.weight_cte = 200.0;
+    mppi_config.weight_epsi = 180.0;
+    mppi_config.weight_vel = 1.0; // Normal velocity weight (turn_first will adjust when needed)
+    mppi_config.weight_steering = 80.0;
+    mppi_config.weight_acceleration = 20.0;
 
-    auto drive_config = turn_config;
-    drive_config.ref_velocity = 0.6;  // Resume forward motion once aligned
-    drive_config.weight_vel = 1.0;    // Allow linear motion
+    // Turn-first behavior thresholds (hysteresis prevents oscillation)
+    mppi_config.turn_first_activation_deg = 70.0; // Activate turn-in-place when heading error > 60°
+    mppi_config.turn_first_release_deg = 15.0;    // Resume forward motion when heading error < 15°
 
-    mppi_controller->set_mppi_config(turn_config);
+    mppi_controller->set_mppi_config(mppi_config);
 
-    std::vector<concord::Point> s_curve_path = {
-        {0.0f, 0.0f}, {5.0f, 0.0f},  {10.0f, 1.0f},  {15.0f, 3.0f},   {20.0f, 6.0f},  {25.0f, 10.0f},
-        {30.0f, 14.0f}, {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f},  {50.0f, 19.0f}, {55.0f, 17.0f},
-        {60.0f, 14.0f}, {65.0f, 10.0f}, {70.0f, 6.0f},  {75.0f, 3.0f},   {80.0f, 1.0f},  {85.0f, 0.0f},
-        {90.0f, 0.0f}};
+    // "3" shape path (smaller) extended with sharp zigzag turns
+    std::vector<concord::Point> extended_path = {// "3" shape - two curves on right side
+                                                 {0.0f, 0.0f},
+                                                 {3.0f, 0.0f},
+                                                 // First curve (upper)
+                                                 {6.0f, 1.0f},
+                                                 {9.0f, 3.0f},
+                                                 {12.0f, 5.0f},
+                                                 {15.0f, 7.0f},
+                                                 {18.0f, 9.0f},
+                                                 {21.0f, 10.0f},
+                                                 {24.0f, 9.0f},
+                                                 {27.0f, 7.0f},
+                                                 {30.0f, 5.0f},
+                                                 // Middle transition
+                                                 {33.0f, 5.0f},
+                                                 // Second curve (lower - mirror of first)
+                                                 {36.0f, 7.0f},
+                                                 {39.0f, 9.0f},
+                                                 {42.0f, 10.0f},
+                                                 {45.0f, 9.0f},
+                                                 {48.0f, 7.0f},
+                                                 {51.0f, 5.0f},
+                                                 {54.0f, 3.0f},
+                                                 {57.0f, 1.0f},
+                                                 {60.0f, 0.0f},
+                                                 // Straight extension to zigzag
+                                                 {63.0f, 0.0f},
+                                                 // Extended with sharp zigzag turns
+                                                 // First sharp turn (will use turn_first=true)
+                                                 {68.0f, 10.0f},
+                                                 {73.0f, 20.0f},
+                                                 // Second sharp turn (will use turn_first=true)
+                                                 {78.0f, 20.0f},
+                                                 {83.0f, 10.0f},
+                                                 {88.0f, 0.0f},
+                                                 // Third sharp turn (will use turn_first=false)
+                                                 {93.0f, 0.0f},
+                                                 {98.0f, -10.0f},
+                                                 {103.0f, -20.0f},
+                                                 // Fourth sharp turn (will use turn_first=false)
+                                                 {108.0f, -20.0f},
+                                                 {113.0f, -10.0f},
+                                                 {118.0f, 0.0f},
+                                                 // Fifth sharp turn (will use turn_first=false)
+                                                 {123.0f, 0.0f},
+                                                 {128.0f, 10.0f},
+                                                 {133.0f, 20.0f},
+                                                 // Final straight
+                                                 {138.0f, 20.0f}};
 
-    drivekit::PathGoal path(s_curve_path, 2.0f, 2.0f, false);
+    drivekit::PathGoal path(extended_path, 2.0f, 2.0f, false);
     husky.tracker->set_path(path);
     husky.tracker->smoothen(25.0f);
 
-    std::cout << "Starting MPPI path following on the S-curve path..." << std::endl;
+    std::cout << "Starting MPPI path following on the '3' shape with zigzag turns..." << std::endl;
 
     auto start_time = std::chrono::steady_clock::now();
     float dt = 0.016f;
@@ -84,18 +129,11 @@ int main(int argc, char *argv[]) {
     float max_cte = 0.0f;
     float total_cte = 0.0f;
     int cte_samples = 0;
-    bool using_drive_config = false;
-    const float heading_threshold = 0.15f;
+
+    // Start with turn_first enabled
+    husky.state.turn_first = true;
 
     while (!husky.tracker->is_path_completed()) {
-        auto current_time = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-
-        if (elapsed > 300) {
-            std::cout << "Timeout reached!" << std::endl;
-            break;
-        }
-
         simulator.tick(dt);
         simulator.tock(5);
 
@@ -104,29 +142,35 @@ int main(int argc, char *argv[]) {
         total_cte += static_cast<float>(status.cross_track_error);
         cte_samples++;
 
-        float heading = std::abs(status.heading_error);
-        if (heading < heading_threshold && !using_drive_config) {
-            mppi_controller->set_mppi_config(drive_config);
-            using_drive_config = true;
-        } else if (heading >= heading_threshold && using_drive_config) {
-            mppi_controller->set_mppi_config(turn_config);
-            using_drive_config = false;
+        // Update turn_first based on position along path
+        // "3" shape (x < 64): turn_first=true (turn then go)
+        // First two sharp zigzag turns (64 <= x < 91): turn_first=false (smooth)
+        // Last three sharp zigzag turns (x >= 91): turn_first=true (turn then go)
+        auto pos = husky.get_position();
+        if (pos.point.x < 85.0f) {
+            husky.state.turn_first = true;
+        } else {
+            husky.state.turn_first = false;
         }
 
-        if (step_count % 120 == 0) {
-            auto pos = husky.get_position();
+        if (step_count % 60 == 0) {
+            double linear_vel, angular_vel;
+            husky.get_velocity(linear_vel, angular_vel);
             std::cout << "Step " << step_count / 60 << "s: "
-                      << "Robot(" << pos.point.x << ", " << pos.point.y << "), "
+                      << "Pos(" << pos.point.x << ", " << pos.point.y << "), "
                       << "Yaw=" << pos.angle.yaw << ", "
+                      << "LinVel=" << linear_vel << ", "
+                      << "AngVel=" << angular_vel << ", "
                       << "CTE=" << status.cross_track_error << "m, "
-                      << "Heading Err=" << (status.heading_error * 180.0 / M_PI) << "deg" << std::endl;
+                      << "HeadErr=" << (status.heading_error * 180.0 / M_PI) << "deg, "
+                      << "turn_first=" << (husky.state.turn_first ? "ON" : "OFF") << std::endl;
         }
 
         step_count++;
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    std::cout << "\n=== MPPI Husky S-Curve Results ===" << std::endl;
+    std::cout << "\n=== MPPI Husky Figure-8 + Zigzag Results ===" << std::endl;
     if (husky.tracker->is_path_completed()) {
         std::cout << "Path completed successfully." << std::endl;
     } else {
