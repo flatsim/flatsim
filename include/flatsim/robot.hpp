@@ -104,6 +104,12 @@ namespace fs {
         // Apply braking force to stop the robot
         void brake();
 
+        // Speed control - scale velocity commands (0.0 to 1.0)
+        void set_speed(float scale) { state.speed_scale = std::clamp(scale, 0.0f, 1.0f); }
+        float get_speed() const { return state.speed_scale; }
+        void speed_up(float delta = 0.1f) { set_speed(state.speed_scale + delta); }
+        void slow_down(float delta = 0.1f) { set_speed(state.speed_scale - delta); }
+
         // Get the collision filter for this robot (used for LIDAR to ignore own body)
         const muli::CollisionFilter &get_filter() const { return filter; }
 

@@ -405,11 +405,12 @@ namespace fs {
             }
             nav_debug_count++;
 
-            // Apply velocity command directly
+            // Apply velocity command with speed scaling
             // Note: Robot uses opposite angular velocity convention (positive = CW)
             // while navcon uses standard convention (positive = CCW)
-            controls.set_linear(velocity_cmd.linear_velocity);
-            controls.set_angular(-velocity_cmd.angular_velocity); // Invert for robot's convention
+            float scale = std::clamp(state.speed_scale, 0.0f, 1.0f);
+            controls.set_linear(velocity_cmd.linear_velocity * scale);
+            controls.set_angular(-velocity_cmd.angular_velocity * scale); // Invert for robot's convention
         }
     }
 

@@ -83,8 +83,9 @@ namespace fs {
         bool online = true;
         RobotRole role = RobotRole::MASTER;
         OP mode = OP::IDLE;
-        bool turn_first = false; // For diff/skid: rotate in place before translating
-        bool allow_move = true;  // Allow movement (false = send zero velocity for collision avoidance)
+        bool turn_first = false;  // For diff/skid: rotate in place before translating
+        bool allow_move = true;   // Allow movement (false = send zero velocity for collision avoidance)
+        float speed_scale = 1.0f; // Scale factor for velocity commands (0.0 - 1.0)
     };
 
 } // namespace fs
