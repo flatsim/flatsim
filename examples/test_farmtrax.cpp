@@ -130,7 +130,7 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
         }
 
         rec->log_static(robot_id + "/lidar",
-                        rerun::LineStrips3D(lines).with_colors(all_beam_colors).with_radii({0.05f}));
+                        rerun::LineStrips3D(lines).with_colors(all_beam_colors).with_radii({0.01f}));
 
         if (debug_output) {
             std::cout << robot_id << " LIDAR: " << data.ranges.size() << " beams, min_fwd=" << std::fixed

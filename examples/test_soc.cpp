@@ -40,9 +40,8 @@ int main(int argc, char *argv[]) {
         // Spawn tractor at path start, pointing along +X (adjust yaw if needed)
         auto tractor_info = fs::Loader::load_from_json(
             "examples/machines/tractor.json",
-            concord::Pose{
-                concord::Point{0.0f, 0.0f},
-                concord::Euler{0.0f, 0.0f, -1.5708f}}); // -90 deg to match tractor's default orientation
+            concord::Pose{concord::Point{0.0f, 0.0f},
+                          concord::Euler{0.0f, 0.0f, -1.5708f}}); // -90 deg to match tractor's default orientation
         simulator.add_robot(tractor_info);
     } catch (const std::exception &e) {
         std::cerr << "Failed to load tractor: " << e.what() << std::endl;
@@ -72,19 +71,19 @@ int main(int argc, char *argv[]) {
         soc_config.num_samples = 2000; // More samples = smoother control
         soc_config.temperature = 0.1;  // Lower temperature = more stable/less noisy
         soc_config.guide_temperature = 1.0;
-        soc_config.steering_noise = 0.15;     // Lower steering noise to reduce jitter
-        soc_config.acceleration_noise = 0.1;  // Lower accel noise for smoother speed
+        soc_config.steering_noise = 0.15;    // Lower steering noise to reduce jitter
+        soc_config.acceleration_noise = 0.1; // Lower accel noise for smoother speed
         soc_config.initial_steer_variance = 0.1;
         soc_config.min_steer_variance = 1e-4;
         soc_config.max_steer_variance = 0.5;
-        soc_config.weight_cte = 200.0;        // Cross-track error
-        soc_config.weight_epsi = 180.0;       // Heading error
+        soc_config.weight_cte = 200.0;  // Cross-track error
+        soc_config.weight_epsi = 180.0; // Heading error
         soc_config.weight_vel = 1.0;
-        soc_config.weight_steering = 80.0;    // Higher steering penalty = smoother turns
-        soc_config.weight_acceleration = 20.0;// Higher accel penalty = smoother speed
-        soc_config.ref_velocity = 0.6;        // Slower nominal speed to avoid overshoot
-        soc_config.guide_iterations = 2;
-        soc_config.guide_step_size = 0.2;
+        soc_config.weight_steering = 80.0;     // Higher steering penalty = smoother turns
+        soc_config.weight_acceleration = 20.0; // Higher accel penalty = smoother speed
+        soc_config.ref_velocity = 0.6;         // Slower nominal speed to avoid overshoot
+        soc_config.svgd_iterations = 2;
+        soc_config.svgd_step_size = 0.2;
 
         soc_controller->set_soc_config(soc_config);
 
