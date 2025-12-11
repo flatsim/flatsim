@@ -20,14 +20,14 @@
 
 // Different colors for each robot
 const std::vector<pigment::RGB> ROBOT_COLORS = {
-    pigment::RGB{255, 0, 0},   // Red
-    pigment::RGB{0, 255, 0},   // Green
-    pigment::RGB{0, 0, 255},   // Blue
-    pigment::RGB{255, 255, 0}, // Yellow
-    pigment::RGB{255, 0, 255}, // Magenta
-    pigment::RGB{0, 255, 255}, // Cyan
-    pigment::RGB{255, 128, 0}, // Orange
-    pigment::RGB{128, 0, 255}, // Purple
+    pigment::RGB{90, 196, 185}, // #5AC4B9 - Turquoise
+    pigment::RGB{90, 153, 196}, // #5A99C4 - Sky Blue
+    pigment::RGB{90, 101, 196}, // #5A65C4 - Periwinkle
+    pigment::RGB{90, 196, 185}, // #5AC4B9 (repeat)
+    pigment::RGB{90, 153, 196}, // #5A99C4 (repeat)
+    pigment::RGB{90, 101, 196}, // #5A65C4 (repeat)
+    pigment::RGB{90, 196, 185}, // #5AC4B9 (repeat)
+    pigment::RGB{90, 153, 196}, // #5A99C4 (repeat)
 };
 
 // Calculate distance between two robots
@@ -93,25 +93,19 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
         all_beam_ends.push_back({end_x, end_y, 0.5f});
 
         // Color coding:
-        // - Forward beams with hit: RED
-        // - Forward beams without hit: GREEN
-        // - Side beams with hit: ORANGE
-        // - Side beams without hit: CYAN (dim)
-        if (is_forward) {
-            if (is_valid_hit) {
-                all_beam_colors.push_back(rerun::Color(255, 0, 0, 255)); // Red - forward hit
-                if (range < min_forward_distance) {
-                    min_forward_distance = range;
-                }
-            } else {
-                all_beam_colors.push_back(rerun::Color(0, 255, 0, 200)); // Green - forward clear
+        // - Beams with hit (obstacle): Mix tractor color with red (toned down red toward tractor color)
+        // - Beams without hit (clear): Tractor's color with transparency
+        if (is_valid_hit) {
+            // Mix tractor color with red (70% red, 30% tractor color for a toned-down red)
+            pigment::RGB red_color{255, 0, 0};
+            auto mixed_color = color.mix(red_color, 0.5);
+            all_beam_colors.push_back(rerun::Color(mixed_color.r, mixed_color.g, mixed_color.b, 255));
+            if (is_forward && range < min_forward_distance) {
+                min_forward_distance = range;
             }
         } else {
-            if (is_valid_hit) {
-                all_beam_colors.push_back(rerun::Color(255, 165, 0, 150)); // Orange - side hit
-            } else {
-                all_beam_colors.push_back(rerun::Color(0, 200, 200, 100)); // Cyan - side clear
-            }
+            // Use tractor's color for clear beams
+            all_beam_colors.push_back(rerun::Color(color.r, color.g, color.b, 150));
         }
 
         // Track overall minimum
