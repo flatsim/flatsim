@@ -170,32 +170,41 @@ namespace fs {
         // Calculate end point of ray
         muli::Vec2 ray_end = sensor_pos + beam_direction * max_range;
 
-        // Perform raycast
+        // Perform raycast - use RayCastAny to check ALL hits and filter out own body
         double closest_distance = max_range;
-        bool hit_found = false;
 
-        hit_found = physics_world->RayCastClosest(
+        physics_world->RayCastAny(
             sensor_pos, ray_end, 0.0f,
-            [&](muli::Collider *collider, const muli::Vec2 &point, const muli::Vec2 &normal, float fraction) -> void {
-                // Calculate distance to hit point
-                muli::Vec2 hit_vector = point - sensor_pos;
-                double distance = hit_vector.Length();
+            [&](muli::Collider *collider, muli::Vec2 point, muli::Vec2 normal, float fraction) -> float {
+                // Check if this collider belongs to our own robot (same bit in filter)
+                const auto &collider_filter = collider->GetFilter();
+                if ((collider_filter.bit & filter.bit) != 0) {
+                    // Same robot - skip this hit, continue raycasting
+                    return 1.0f; // Return 1.0 to continue with full ray length
+                }
 
-                // Check if hit is within valid range
-                if (distance >= min_range && distance <= max_range) {
+                // Different robot/object - this is a valid hit
+                double distance = fraction * max_range;
+                if (distance < closest_distance) {
                     closest_distance = distance;
                 }
+
+                // Return fraction to clip ray at this point (optimization)
+                return fraction;
             });
 
+        // If no valid hit found, return max_range
+        if (closest_distance >= max_range) {
+            return max_range;
+        }
+
         // Apply environmental effects if enabled
-        if (simulate_weather && hit_found) {
+        if (simulate_weather) {
             closest_distance = apply_environmental_effects(closest_distance, angle);
         }
 
         // Add measurement noise
-        if (hit_found) {
-            closest_distance = add_measurement_noise(closest_distance);
-        }
+        closest_distance = add_measurement_noise(closest_distance);
 
         return closest_distance;
     }
@@ -259,18 +268,12 @@ namespace fs {
     }
 
     void LIDARSensor::update_sector_2d_scan(double dt) {
-        // Similar to circular scan but with limited FOV
-        if (!scan_in_progress) {
-            start_scan();
-            current_scan_angle = -horizontal_fov / 2.0; // Start from left edge
-        }
+        // Always do a complete scan each update for real-time use
+        start_scan();
+        current_scan_angle = -horizontal_fov / 2.0; // Start from left edge
 
-        // Calculate how many beams to process this update
-        double beams_per_second = num_horizontal_beams * update_frequency;
-        double beams_this_update = beams_per_second * dt;
-        int beams_to_process = std::max(1, static_cast<int>(beams_this_update));
-
-        for (int i = 0; i < beams_to_process && current_beam_index < num_horizontal_beams; ++i) {
+        // Process ALL beams in one update
+        for (int i = 0; i < num_horizontal_beams; ++i) {
             // Calculate beam angle (relative to sensor)
             double angle = current_scan_angle;
 

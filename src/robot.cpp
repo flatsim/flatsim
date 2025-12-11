@@ -25,17 +25,18 @@ namespace fs {
     }
 
     void Robot::tick(float dt) {
-        // Optimize sensor updates - use manager
-        sensors.update_all(info.bound.pose, dt);
-
         if (!chassis.exists()) {
             throw NullPointerException("chassis");
         }
 
+        // Update pose from physics FIRST
         this->info.bound.pose.point.x = chassis.get_transform().position.x;
         this->info.bound.pose.point.y = chassis.get_transform().position.y;
         // Physics engine gives angle 90 degrees off - correct it
         this->info.bound.pose.angle.yaw = chassis.get_transform().rotation.GetAngle() + M_PI / 2;
+
+        // Update sensors with current pose (after pose is updated from physics)
+        sensors.update_all(info.bound.pose, dt);
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
 
         // Update navigation controller when enabled

@@ -7,6 +7,7 @@
 
 #include "concord/concord.hpp"
 #include "flatsim/core/loader.hpp"
+#include "flatsim/robot/sensor/lidar_sensor.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/simulator.hpp"
 #include "pigment/pigment.hpp"
@@ -42,6 +43,103 @@ float get_robot_size(const fs::Robot &robot) {
     float size_x = robot.info.bound.size.x;
     float size_y = robot.info.bound.size.y;
     return std::sqrt(size_x * size_x + size_y * size_y);
+}
+
+// Check if LIDAR detects an obstacle in front within the given range
+// Returns the minimum distance to an obstacle in the forward sector, or max_range if clear
+// Also visualizes ALL beams in Rerun (forward beams highlighted)
+float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, const concord::Pose &robot_pose,
+                          std::shared_ptr<rerun::RecordingStream> rec, const std::string &robot_id, pigment::RGB color,
+                          bool debug_output = false) {
+    if (!lidar) {
+        return std::numeric_limits<float>::max();
+    }
+
+    const auto &data = lidar->get_lidar_data();
+
+    // If no data yet, return max (no obstacle)
+    if (data.ranges.empty()) {
+        if (debug_output) {
+            std::cout << robot_id << " LIDAR: no data yet\n";
+        }
+        return std::numeric_limits<float>::max();
+    }
+
+    float min_distance = data.max_range;
+    float min_forward_distance = data.max_range;
+
+    // Collect ALL beams for visualization
+    std::vector<std::array<float, 3>> all_beam_starts;
+    std::vector<std::array<float, 3>> all_beam_ends;
+    std::vector<rerun::Color> all_beam_colors;
+
+    // LIDAR SECTOR_2D scans from -FOV/2 to +FOV/2
+    for (size_t i = 0; i < data.ranges.size(); ++i) {
+        float angle = data.angles[i]; // This is relative to sensor/robot heading
+        float range = data.ranges[i];
+        bool is_valid_hit = data.valid[i] && range < data.max_range * 0.99f;
+        bool is_forward = std::abs(angle) <= forward_angle_range;
+
+        // Transform beam to world coordinates for visualization
+        float world_angle = robot_pose.angle.yaw + angle;
+
+        // Visualize the beam
+        float start_x = robot_pose.point.x;
+        float start_y = robot_pose.point.y;
+        float end_x = start_x + range * std::cos(world_angle);
+        float end_y = start_y + range * std::sin(world_angle);
+
+        all_beam_starts.push_back({start_x, start_y, 0.5f});
+        all_beam_ends.push_back({end_x, end_y, 0.5f});
+
+        // Color coding:
+        // - Forward beams with hit: RED
+        // - Forward beams without hit: GREEN
+        // - Side beams with hit: ORANGE
+        // - Side beams without hit: CYAN (dim)
+        if (is_forward) {
+            if (is_valid_hit) {
+                all_beam_colors.push_back(rerun::Color(255, 0, 0, 255)); // Red - forward hit
+                if (range < min_forward_distance) {
+                    min_forward_distance = range;
+                }
+            } else {
+                all_beam_colors.push_back(rerun::Color(0, 255, 0, 200)); // Green - forward clear
+            }
+        } else {
+            if (is_valid_hit) {
+                all_beam_colors.push_back(rerun::Color(255, 165, 0, 150)); // Orange - side hit
+            } else {
+                all_beam_colors.push_back(rerun::Color(0, 200, 200, 100)); // Cyan - side clear
+            }
+        }
+
+        // Track overall minimum
+        if (is_valid_hit && range < min_distance) {
+            min_distance = range;
+        }
+    }
+
+    // Visualize ALL beams in Rerun as line strips
+    if (rec && !all_beam_starts.empty()) {
+        std::vector<rerun::LineStrip3D> lines;
+        for (size_t i = 0; i < all_beam_starts.size(); ++i) {
+            lines.push_back(
+                rerun::LineStrip3D({rerun::Vec3D(all_beam_starts[i][0], all_beam_starts[i][1], all_beam_starts[i][2]),
+                                    rerun::Vec3D(all_beam_ends[i][0], all_beam_ends[i][1], all_beam_ends[i][2])}));
+        }
+
+        rec->log_static(robot_id + "/lidar",
+                        rerun::LineStrips3D(lines).with_colors(all_beam_colors).with_radii({0.05f}));
+
+        if (debug_output) {
+            std::cout << robot_id << " LIDAR: " << data.ranges.size() << " beams, min_fwd=" << std::fixed
+                      << std::setprecision(2) << min_forward_distance << "m, min_all=" << min_distance
+                      << "m, max_range=" << data.max_range << "m\n";
+        }
+    }
+
+    return min_forward_distance;
 }
 
 // Generate smooth path with Dubins curves between swath endpoints
@@ -234,6 +332,23 @@ int main() {
         // Update robot color after loading
         tractor.update_color(ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
+        // Add LIDAR sensor for collision detection
+        // Using SECTOR_2D pattern with 60 degree FOV, 15m range, 5 degree resolution
+        // min_range must be larger than robot size to avoid self-detection
+        float robot_size = get_robot_size(tractor);
+        auto lidar = std::make_unique<fs::LIDARSensor>(simulator.get_world().get_world(),
+                                                       fs::LIDARSensor::ScanPattern::SECTOR_2D,
+                                                       10.0,              // 10 Hz update rate
+                                                       robot_size + 0.5f, // min range > robot size
+                                                       15.0,              // 15m max range
+                                                       45.0,              // 60 degree FOV (30 deg each side)
+                                                       3.0                // 4 degree resolution = 15 rays
+        );
+        lidar->configure_noise(0.0, 0.0, 0.0);             // No noise for debugging
+        lidar->set_collision_filter(tractor.get_filter()); // Use robot's filter to ignore own body
+        tractor.sensors.add(std::move(lidar));
+        std::cout << "Added LIDAR sensor to Robot " << m << " (filter bit=" << tractor.get_filter().bit << ")\n";
+
         // Configure MPPI controller
         tractor.tracker->set_controller_type(drivekit::TrackerType::MPPI);
         auto mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker->get_controller());
@@ -286,35 +401,34 @@ int main() {
             break;
         }
 
-        // Collision avoidance: check distances between robots
+        // Collision avoidance: use LIDAR to detect obstacles in front
         for (int m = 0; m < num_machines; ++m) {
             if (m >= simulator.num_robots()) continue;
 
             auto &robot_m = simulator.get_robot(m);
-            auto pos_m = robot_m.get_position();
             float size_m = get_robot_size(robot_m);
+
+            // Get LIDAR sensor and check for obstacles
+            auto *lidar = robot_m.sensors.get<fs::LIDARSensor>();
+            float safe_distance = 2.0f * size_m; // Stop if obstacle within 2x robot size
 
             bool should_stop = false;
 
-            // Check against all higher priority (lower index) robots
-            for (int n = 0; n < m; ++n) {
-                if (n >= simulator.num_robots()) continue;
+            if (lidar) {
+                // Check LIDAR for obstacles in forward sector (within ~30 degrees)
+                auto pos_m = robot_m.get_position();
+                // Debug output for first 10 steps
+                bool debug = (step_count < 10);
+                // Use the robot's actual seqid for Rerun entity path
+                float min_obstacle_dist =
+                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot_m.info.seqid, robot_m.info.color, debug);
 
-                auto &robot_n = simulator.get_robot(n);
-                auto pos_n = robot_n.get_position();
-                float size_n = get_robot_size(robot_n);
-
-                // Safe distance is 4x the larger robot's size (2x each robot)
-                float safe_distance = 4.0f * std::max(size_m, size_n);
-                float current_distance = calculate_distance(pos_m, pos_n);
-
-                if (current_distance < safe_distance) {
+                if (min_obstacle_dist < safe_distance) {
                     should_stop = true;
                     if (!robot_stopped[m]) {
-                        std::cout << "Robot " << m << " stopping (too close to Robot " << n << ", dist=" << std::fixed
-                                  << std::setprecision(1) << current_distance << "m, safe=" << safe_distance << "m)\n";
+                        std::cout << "Robot " << m << " stopping (LIDAR detected obstacle at " << std::fixed
+                                  << std::setprecision(1) << min_obstacle_dist << "m, safe=" << safe_distance << "m)\n";
                     }
-                    break;
                 }
             }
 
@@ -448,29 +562,26 @@ int main() {
             break;
         }
 
-        // Collision avoidance during return (same logic as before)
+        // Collision avoidance during return (using LIDAR)
         for (int m = 0; m < num_machines; ++m) {
             if (m >= simulator.num_robots()) continue;
 
             auto &robot_m = simulator.get_robot(m);
-            auto pos_m = robot_m.get_position();
             float size_m = get_robot_size(robot_m);
+
+            // Get LIDAR sensor and check for obstacles
+            auto *lidar = robot_m.sensors.get<fs::LIDARSensor>();
+            float safe_distance = 2.0f * size_m;
 
             bool should_stop = false;
 
-            for (int n = 0; n < m; ++n) {
-                if (n >= simulator.num_robots()) continue;
-
-                auto &robot_n = simulator.get_robot(n);
-                auto pos_n = robot_n.get_position();
-                float size_n = get_robot_size(robot_n);
-
-                float safe_distance = 4.0f * std::max(size_m, size_n);
-                float current_distance = calculate_distance(pos_m, pos_n);
-
-                if (current_distance < safe_distance) {
+            if (lidar) {
+                auto pos_m = robot_m.get_position();
+                // Use the robot's actual seqid for Rerun entity path
+                float min_obstacle_dist =
+                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot_m.info.seqid, robot_m.info.color);
+                if (min_obstacle_dist < safe_distance) {
                     should_stop = true;
-                    break;
                 }
             }
 

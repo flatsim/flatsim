@@ -104,6 +104,9 @@ namespace fs {
         // Apply braking force to stop the robot
         void brake();
 
+        // Get the collision filter for this robot (used for LIDAR to ignore own body)
+        const muli::CollisionFilter &get_filter() const { return filter; }
+
         /**
          * @brief Check if a point is within the robot's forward line of sight
          * @param point The point to check
