@@ -7,37 +7,8 @@
 #include "flatsim/core/loader.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/world.hpp"
 #include "rerun/recording_stream.hpp"
-
-namespace {
-    // Dynamic obstacle (moves when robot gets close)
-    struct DynamicObstacle {
-        size_t id;
-        double x, y;
-        double vx, vy;
-        double size;
-        double activation_distance; // Start moving when robot is this close
-        bool is_active;
-
-        void update(double dt, double robot_x, double robot_y) {
-            double dist = std::sqrt((x - robot_x) * (x - robot_x) + (y - robot_y) * (y - robot_y));
-            if (dist < activation_distance) {
-                is_active = true;
-            }
-            if (is_active) {
-                x += vx * dt;
-                y += vy * dt;
-            }
-        }
-    };
-
-    // Static obstacle (doesn't move)
-    struct StaticObstacle {
-        size_t id;
-        double x, y;
-        double size;
-    };
-} // namespace
 
 int main(int argc, char *argv[]) {
     std::cout << "=== MCA (Monte Carlo Approximation / DRA-MPPI) Risk-Aware Path Following Test ===" << std::endl;
@@ -87,27 +58,36 @@ int main(int argc, char *argv[]) {
     if (mca_controller) {
         auto mca_config = mca_controller->get_mca_config();
 
-        // Configure MCA parameters
-        mca_config.horizon_steps = 20;       // Prediction horizon steps
+        // Configure MCA parameters - tuned for smooth early avoidance
+        // Lookahead distance = ref_velocity * dt * horizon_steps
+        // We want ~15m lookahead for early smooth turns: 3.0 * 0.2 * 25 = 15m
+        mca_config.horizon_steps = 25;       // Longer prediction horizon
         mca_config.dt = 0.2;                 // Time step (seconds)
-        mca_config.num_samples = 400;        // MPPI trajectory samples
-        mca_config.num_mc_samples = 20000;   // Monte Carlo samples for collision probability
-        mca_config.temperature = 1.0;        // Temperature for weighting
-        mca_config.steering_noise = 0.5;     // Steering noise for sampling
-        mca_config.acceleration_noise = 0.3; // Acceleration noise for sampling
-        mca_config.ref_velocity = 0.6;       // Reference normalized speed (~60% throttle)
+        mca_config.num_samples = 400;        // More trajectory samples for smoother control
+        mca_config.num_mc_samples = 2000;    // Monte Carlo samples
+        mca_config.temperature = 0.3;        // Lower = more decisive/smoother
+        mca_config.steering_noise = 0.4;     // Lower noise = smoother trajectories
+        mca_config.acceleration_noise = 0.3; // Lower noise = smoother speed
+        mca_config.ref_velocity = 3.0;       // Higher ref velocity for longer lookahead
 
-        // Cost weights
-        mca_config.weight_cte = 100.0;        // Cross-track error
-        mca_config.weight_epsi = 100.0;       // Heading error
-        mca_config.weight_vel = 1.0;          // Velocity tracking
-        mca_config.weight_steering = 10.0;    // Steering effort
-        mca_config.weight_acceleration = 5.0; // Acceleration effort
+        // Cost weights - tuned for smooth avoidance
+        mca_config.weight_cte = 50.0;          // Lower = allow more deviation for smooth avoidance
+        mca_config.weight_epsi = 50.0;         // Lower = allow heading changes
+        mca_config.weight_vel = 1.0;           // Velocity tracking
+        mca_config.weight_steering = 30.0;     // Higher = penalize sharp turns, prefer smooth curves
+        mca_config.weight_acceleration = 10.0; // Higher = smoother speed changes
 
-        // Risk-aware cost weights
-        mca_config.weight_soft_risk = 100.0; // Linear penalty on collision probability
-        mca_config.weight_hard_risk = 1e6;   // Hard constraint violation penalty
-        mca_config.risk_threshold = 0.05;    // Maximum allowable collision probability (5%)
+        // Risk-aware cost weights - start avoiding earlier
+        mca_config.weight_soft_risk = 800.0; // High penalty encourages early avoidance
+        mca_config.weight_hard_risk = 1e7;   // Very high hard constraint violation penalty
+        mca_config.risk_threshold = 0.01;    // Very low threshold = very conservative (1%)
+
+        // Velocity scaling when near obstacles
+        mca_config.min_velocity_scale = 0.2; // Slow to 20% when high risk
+        mca_config.risk_slowdown_gain = 6.0; // Moderate slowdown
+
+        // Robot size safety margin (tractor is ~2.8m long, so add extra buffer)
+        mca_config.robot_radius_margin = 1.0; // Extra 1.0m margin for early detection
 
         mca_controller->set_mca_config(mca_config);
 
@@ -144,24 +124,25 @@ int main(int argc, char *argv[]) {
                                       .with_colors(rerun::Color(150, 150, 150))
                                       .with_radii(0.05f));
 
-    // Create static obstacles (RED - don't move) - IN THE PATH
-    std::vector<StaticObstacle> static_obstacles;
-    static_obstacles.push_back({1, 15.0, 0.0, 1.2});  // In the center of path
-    static_obstacles.push_back({2, 30.0, 0.8, 1.2});  // Slightly off-center
-    static_obstacles.push_back({3, 45.0, -0.8, 1.2}); // Other side
+    // Add obstacles to the world using the new obstacle system
+    auto &world = simulator.get_world();
 
-    // Create dynamic obstacles (GREEN - move when robot gets close)
-    std::vector<DynamicObstacle> dynamic_obstacles;
+    // Add static obstacles (RED - don't move) - IN THE PATH
+    world.add_obstacle(fs::StaticObstacle{1, concord::Point{15.0, 0.0}, 0.6, 0.1});  // In center of path
+    world.add_obstacle(fs::StaticObstacle{2, concord::Point{30.0, 0.8}, 0.6, 0.1});  // Slightly off-center
+    world.add_obstacle(fs::StaticObstacle{3, concord::Point{45.0, -0.8}, 0.6, 0.1}); // Other side
+
+    // Add dynamic obstacles (GREEN - move when robot gets close)
     // Obstacle 1: Crosses path from below at x=20, activates when robot within 10m
-    dynamic_obstacles.push_back({1, 20.0, -4.0, 0.0, 0.6, 0.8, 10.0, false});
+    world.add_obstacle(fs::DynamicObstacle{1, concord::Point{20.0, -4.0}, 0.0, 0.6, 0.4, 10.0, 0.3});
     // Obstacle 2: Moves towards robot (head-on) at x=40, activates when robot within 15m
-    dynamic_obstacles.push_back({2, 40.0, 0.0, -0.8, 0.0, 0.8, 15.0, false});
+    world.add_obstacle(fs::DynamicObstacle{2, concord::Point{40.0, 0.0}, -0.8, 0.0, 0.4, 15.0, 0.3});
     // Obstacle 3: Crosses path from above at x=35, activates when robot within 10m
-    dynamic_obstacles.push_back({3, 35.0, 4.0, 0.0, -0.6, 0.8, 10.0, false});
+    world.add_obstacle(fs::DynamicObstacle{3, concord::Point{35.0, 4.0}, 0.0, -0.6, 0.4, 10.0, 0.3});
 
-    std::cout << "\nObstacles:" << std::endl;
-    std::cout << "  Static obstacles: " << static_obstacles.size() << " (RED boxes)" << std::endl;
-    std::cout << "  Dynamic obstacles: " << dynamic_obstacles.size() << " (GREEN boxes)" << std::endl;
+    std::cout << "\nObstacles added to world:" << std::endl;
+    std::cout << "  Static obstacles: " << world.get_static_obstacles().size() << " (RED boxes)" << std::endl;
+    std::cout << "  Dynamic obstacles: " << world.get_dynamic_obstacles().size() << " (GREEN boxes)" << std::endl;
 
     std::cout << "\nStarting MCA path following with obstacle avoidance..." << std::endl;
     std::cout << "Watch for:" << std::endl;
@@ -186,92 +167,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // Get robot position
-        auto pos = tractor.get_position();
-
-        // Update dynamic obstacle positions
-        for (auto &dyn : dynamic_obstacles) {
-            dyn.update(dt, pos.point.x, pos.point.y);
-        }
-
-        // Visualize static obstacles (RED boxes)
-        for (const auto &obs : static_obstacles) {
-            std::string name = "obstacles/static_" + std::to_string(obs.id);
-            rec->log_static(
-                name, rerun::Boxes3D::from_centers_and_half_sizes(
-                          {{float(obs.x), float(obs.y), 0.0f}}, {{float(obs.size / 2.0), float(obs.size / 2.0), 0.3f}})
-                          .with_colors(rerun::Color(255, 0, 0)));
-        }
-
-        // Visualize dynamic obstacles (GREEN boxes)
-        for (const auto &dyn : dynamic_obstacles) {
-            std::string name = "obstacles/dynamic_" + std::to_string(dyn.id);
-            rec->log_static(
-                name, rerun::Boxes3D::from_centers_and_half_sizes(
-                          {{float(dyn.x), float(dyn.y), 0.0f}}, {{float(dyn.size / 2.0), float(dyn.size / 2.0), 0.3f}})
-                          .with_colors(rerun::Color(0, 255, 0)));
-        }
-
-        // Build WorldConstraints with obstacle predictions for MCA
-        drivekit::WorldConstraints world_constraints;
-
-        // Add dynamic obstacles with Gaussian predictions
-        for (const auto &dyn : dynamic_obstacles) {
-            drivekit::Obstacle obs;
-            obs.id = dyn.id;
-            obs.radius = dyn.size / 2.0;
-
-            drivekit::Obstacle::GaussianMode mode;
-            mode.weight = 1.0;
-            auto mca_config = mca_controller->get_mca_config();
-            for (size_t t = 0; t <= mca_config.horizon_steps; ++t) {
-                double pred_time = t * mca_config.dt;
-                mode.mean_x.push_back(dyn.x + dyn.vx * pred_time);
-                mode.mean_y.push_back(dyn.y + dyn.vy * pred_time);
-                mode.std_x.push_back(0.3); // Position uncertainty
-                mode.std_y.push_back(0.3);
-            }
-            obs.modes.push_back(mode);
-            world_constraints.obstacles.push_back(obs);
-        }
-
-        // Add static obstacles (zero velocity prediction)
-        for (const auto &stat : static_obstacles) {
-            drivekit::Obstacle obs;
-            obs.id = 1000 + stat.id; // Offset ID to avoid collision
-            obs.radius = stat.size / 2.0;
-
-            drivekit::Obstacle::GaussianMode mode;
-            mode.weight = 1.0;
-            auto mca_config = mca_controller->get_mca_config();
-            for (size_t t = 0; t <= mca_config.horizon_steps; ++t) {
-                mode.mean_x.push_back(stat.x);
-                mode.mean_y.push_back(stat.y);
-                mode.std_x.push_back(0.1); // Less uncertainty for static
-                mode.std_y.push_back(0.1);
-            }
-            obs.modes.push_back(mode);
-            world_constraints.obstacles.push_back(obs);
-        }
-
-        // Visualize predicted trajectories (yellow lines)
-        for (const auto &obs : world_constraints.obstacles) {
-            std::string name = "predictions/pred_" + std::to_string(obs.id);
-            if (!obs.modes.empty()) {
-                const auto &mode = obs.modes[0];
-                std::vector<rerun::Position3D> traj_points;
-                for (size_t t = 0; t < mode.mean_x.size(); ++t) {
-                    traj_points.push_back({float(mode.mean_x[t]), float(mode.mean_y[t]), 0.0f});
-                }
-                if (!traj_points.empty()) {
-                    rec->log_static(name, rerun::LineStrips3D(rerun::components::LineStrip3D(traj_points))
-                                              .with_colors(rerun::Color(255, 255, 0))
-                                              .with_radii(0.02f));
-                }
-            }
-        }
-
-        // Run simulation tick with world constraints
+        // Run simulation tick - this now handles obstacle updates and world constraints internally
         simulator.tick(dt);
         simulator.tock(1);
 
@@ -283,6 +179,7 @@ int main(int argc, char *argv[]) {
 
         // Print progress every 2 seconds
         if (step_count % 20 == 0) { // Every ~2 seconds at 10 Hz
+            auto pos = tractor.get_position();
             std::cout << "Step " << step_count / 10 << "s: "
                       << "Robot(" << pos.point.x << "," << pos.point.y << "), "
                       << "Yaw=" << pos.angle.yaw << ", "
@@ -313,8 +210,6 @@ int main(int argc, char *argv[]) {
     std::cout << "\nLegend:" << std::endl;
     std::cout << "  RED boxes = static obstacles (don't move)" << std::endl;
     std::cout << "  GREEN boxes = dynamic obstacles (moving)" << std::endl;
-    std::cout << "  YELLOW lines = predicted obstacle trajectories" << std::endl;
-    std::cout << "  CYAN line = robot's planned trajectory" << std::endl;
 
     return 0;
 }

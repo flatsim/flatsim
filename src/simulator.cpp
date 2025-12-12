@@ -39,6 +39,13 @@ namespace fs {
 
         // World tick
         world->tick(dt);
+
+        // Update dynamic obstacles based on first robot's position
+        if (!robots.empty() && robots[0]) {
+            auto pos = robots[0]->get_position();
+            world->update_obstacles(dt, pos.point.x, pos.point.y);
+        }
+
         // Process robots in parallel - pure physics, thread-safe
         std::for_each(std::execution::par, robots.begin(), robots.end(), [dt](auto &robott) {
             if (!robott) return;

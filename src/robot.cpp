@@ -392,8 +392,20 @@ namespace fs {
         nav_state.turn_first = state.turn_first;
         nav_state.allow_move = state.allow_move;
 
-        // Compute control command
-        auto velocity_cmd = tracker->tick(nav_state, dt);
+        // Get world constraints from simulator (obstacles, etc.) - only if obstacles exist
+        const drivekit::WorldConstraints *world_constraints_ptr = nullptr;
+        drivekit::WorldConstraints world_constraints;
+        if (simulator && simulator->world) {
+            const auto &static_obs = simulator->world->get_static_obstacles();
+            const auto &dynamic_obs = simulator->world->get_dynamic_obstacles();
+            if (!static_obs.empty() || !dynamic_obs.empty()) {
+                world_constraints = simulator->world->get_world_constraints(25, 0.2);
+                world_constraints_ptr = &world_constraints;
+            }
+        }
+
+        // Compute control command with world constraints (nullptr if no obstacles)
+        auto velocity_cmd = tracker->tick(nav_state, dt, world_constraints_ptr);
 
         if (velocity_cmd.valid) {
             // Debug output every 50 calls
