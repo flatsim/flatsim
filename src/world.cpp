@@ -71,21 +71,21 @@ namespace fs {
         auto linestring = rerun::components::GeoLineString::from_lat_lon(wgs_corners_);
         rec->log_static("border", rerun::GeoLineStrings(linestring).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
-        // Visualize static obstacles (RED boxes)
+        // Visualize static obstacles (RED flat squares)
         for (const auto &obs : static_obstacles) {
             std::string name = "obstacles/static_" + std::to_string(obs.id);
             rec->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes(
                                       {{float(obs.position.x), float(obs.position.y), 0.0f}},
-                                      {{float(obs.radius), float(obs.radius), 0.3f}})
+                                      {{float(obs.radius), float(obs.radius), 0.0f}})
                                       .with_colors(rerun::Color(255, 0, 0)));
         }
 
-        // Visualize dynamic obstacles (GREEN boxes)
+        // Visualize dynamic obstacles (GREEN flat squares)
         for (const auto &obs : dynamic_obstacles) {
             std::string name = "obstacles/dynamic_" + std::to_string(obs.id);
             rec->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes(
                                       {{float(obs.position.x), float(obs.position.y), 0.0f}},
-                                      {{float(obs.radius), float(obs.radius), 0.3f}})
+                                      {{float(obs.radius), float(obs.radius), 0.0f}})
                                       .with_colors(rerun::Color(0, 255, 0)));
         }
     }
