@@ -266,9 +266,6 @@ int main() {
     // Track which machines were successfully loaded
     std::vector<int> active_machines;
 
-    // Store spawn positions for return-to-home
-    std::vector<concord::Point> spawn_positions;
-
     // Load tractors and assign paths
     for (int m = 0; m < num_machines; ++m) {
         if (res.swaths_per_machine.at(m).empty()) {
@@ -322,7 +319,6 @@ int main() {
             }
 
             simulator.add_robot(tractor_info);
-            spawn_positions.push_back(concord::Point{spawn_x, spawn_y});
             std::cout << "Loaded tractor " << m << " at (" << spawn_x << ", " << spawn_y << ") with color ("
                       << (int)tractor_info.color.r << ", " << (int)tractor_info.color.g << ", "
                       << (int)tractor_info.color.b << ")\n";
@@ -492,157 +488,7 @@ int main() {
     }
 
     std::cout << "Total field work time: " << step_count / 60.0f << " seconds\n";
-
-    // ========================================================================
-    // Return to Home Phase
-    // ========================================================================
-    std::cout << "\n=== Returning all machines to home positions ===" << std::endl;
-
-    // Set return-to-home paths for all robots
-    for (int m = 0; m < num_machines; ++m) {
-        if (m >= simulator.num_robots() || m >= static_cast<int>(spawn_positions.size())) continue;
-
-        auto &tractor = simulator.get_robot(m);
-        auto current_pos = tractor.get_position();
-
-        // Create path from current position back to spawn position
-        std::vector<concord::Point> return_path;
-        return_path.push_back(current_pos.point);
-        return_path.push_back(spawn_positions[m]);
-
-        // Generate Dubins curve for smooth return
-        farmtrax::turners::Dubins dubins(turning_radius);
-
-        // Calculate current heading
-        float current_yaw = current_pos.angle.yaw;
-
-        // Calculate heading towards home
-        float dx = spawn_positions[m].x - current_pos.point.x;
-        float dy = spawn_positions[m].y - current_pos.point.y;
-        float target_yaw = std::atan2(dy, dx);
-
-        concord::Pose start_pose;
-        start_pose.point = current_pos.point;
-        start_pose.angle.yaw = current_yaw;
-
-        concord::Pose end_pose;
-        end_pose.point = spawn_positions[m];
-        end_pose.angle.yaw = target_yaw;
-
-        auto dubins_path = dubins.plan_path(start_pose, end_pose, 0.5f);
-
-        std::vector<concord::Point> smooth_return_path;
-        for (const auto &wp : dubins_path.waypoints) {
-            smooth_return_path.push_back(wp.point);
-        }
-
-        if (smooth_return_path.empty()) {
-            smooth_return_path = return_path; // Fallback to direct path
-        }
-
-        // Reset robot state and set new path
-        tractor.state.allow_move = true;
-        drivekit::PathGoal return_goal(smooth_return_path, 2.0f, 2.0f, false);
-        tractor.tracker->set_path(return_goal);
-        tractor.tracker->smoothen(25.0f);
-
-        std::cout << "Robot " << m << " returning home from (" << std::fixed << std::setprecision(1)
-                  << current_pos.point.x << ", " << current_pos.point.y << ") to (" << spawn_positions[m].x << ", "
-                  << spawn_positions[m].y << ")\n";
-    }
-
-    // Reset tracking state
-    std::fill(robot_stopped.begin(), robot_stopped.end(), false);
-    all_completed = false;
-    step_count = 0;
-    start_time = std::chrono::steady_clock::now();
-
-    // Return-to-home simulation loop
-    while (!all_completed) {
-        auto current_time = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-
-        if (elapsed > 300) { // 5 minute timeout for return
-            std::cout << "Return timeout reached!\n";
-            break;
-        }
-
-        // Collision avoidance during return (using LIDAR)
-        for (int m = 0; m < num_machines; ++m) {
-            if (m >= simulator.num_robots()) continue;
-
-            auto &robot_m = simulator.get_robot(m);
-            float size_m = get_robot_size(robot_m);
-
-            // Get LIDAR sensor and check for obstacles
-            auto *lidar = robot_m.sensors.get<fs::LIDARSensor>();
-            float safe_distance = 2.0f * size_m;
-
-            bool should_stop = false;
-
-            if (lidar) {
-                auto pos_m = robot_m.get_position();
-                // Use the robot's actual seqid for Rerun entity path
-                float min_obstacle_dist =
-                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot_m.info.seqid, robot_m.info.color);
-                if (min_obstacle_dist < safe_distance) {
-                    should_stop = true;
-                }
-            }
-
-            if (should_stop && !robot_stopped[m]) {
-                robot_m.state.allow_move = false;
-                robot_m.brake();
-                robot_stopped[m] = true;
-            } else if (!should_stop && robot_stopped[m]) {
-                robot_m.state.allow_move = true;
-                robot_stopped[m] = false;
-            }
-
-            if (robot_stopped[m]) {
-                robot_m.brake();
-            }
-        }
-
-        simulator.tick(dt);
-        simulator.tock(5);
-
-        // Check if all machines reached home
-        all_completed = true;
-        for (int m = 0; m < num_machines; ++m) {
-            if (m >= simulator.num_robots()) continue;
-            auto &tractor = simulator.get_robot(m);
-            if (!tractor.tracker->is_path_completed()) {
-                all_completed = false;
-            }
-        }
-
-        // Print progress every 5 seconds
-        if (step_count % 300 == 0) {
-            std::cout << "\nReturn time: " << elapsed << "s\n";
-            for (int m = 0; m < num_machines; ++m) {
-                if (m >= simulator.num_robots()) continue;
-                auto &tractor = simulator.get_robot(m);
-                auto pos = tractor.get_position();
-                auto completed = tractor.tracker->is_path_completed();
-                std::string status = completed ? "[HOME]" : (robot_stopped[m] ? "[STOPPED]" : "[RETURNING]");
-                std::cout << "  Machine " << m << ": (" << std::fixed << std::setprecision(1) << pos.point.x << ", "
-                          << pos.point.y << ") " << status << "\n";
-            }
-        }
-
-        step_count++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-    }
-
-    if (all_completed) {
-        std::cout << "\n=== All machines returned home! ===" << std::endl;
-    } else {
-        std::cout << "\n=== Return phase ended (timeout or incomplete) ===" << std::endl;
-    }
-
-    std::cout << "Return time: " << step_count / 60.0f << " seconds\n";
-    std::cout << "Check Rerun visualization for complete field coverage and return patterns\n";
+    std::cout << "Check Rerun visualization for complete field coverage\n";
 
     return 0;
 }
