@@ -137,6 +137,7 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
 }
 
 // Generate smooth path with Dubins curves between swath endpoints
+// Only traverse actual Swath types (AB-lines), skip Connection/Around/Headland types
 std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths,
                                                  float turning_radius, float step_size = 0.5f) {
     std::vector<concord::Point> path;
@@ -145,8 +146,18 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
 
     farmtrax::turners::Dubins dubins(turning_radius);
 
-    for (size_t i = 0; i < swaths.size(); ++i) {
-        const auto &swath = swaths[i];
+    // Filter to only include actual working swaths (not connections)
+    std::vector<std::shared_ptr<const farmtrax::Swath>> working_swaths;
+    for (const auto &swath : swaths) {
+        if (swath->type == farmtrax::SwathType::Swath) {
+            working_swaths.push_back(swath);
+        }
+    }
+
+    if (working_swaths.empty()) return path;
+
+    for (size_t i = 0; i < working_swaths.size(); ++i) {
+        const auto &swath = working_swaths[i];
 
         // Add start point of swath
         path.push_back(swath->line.getStart());
@@ -155,8 +166,8 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
         path.push_back(swath->line.getEnd());
 
         // If there's a next swath, generate Dubins curve to connect them
-        if (i + 1 < swaths.size()) {
-            const auto &next_swath = swaths[i + 1];
+        if (i + 1 < working_swaths.size()) {
+            const auto &next_swath = working_swaths[i + 1];
 
             // Calculate heading at end of current swath
             float dx_curr = swath->line.getEnd().x - swath->line.getStart().x;
@@ -177,7 +188,7 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
             end_pose.point = next_swath->line.getStart();
             end_pose.angle.yaw = yaw_start;
 
-            // Generate Dubins path
+            // Generate Dubins path for the turn
             auto dubins_path = dubins.plan_path(start_pose, end_pose, step_size);
 
             // Add Dubins waypoints (skip first and last as they're already in the path)
