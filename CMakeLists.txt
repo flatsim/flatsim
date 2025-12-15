@@ -64,43 +64,35 @@ include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
 find_package(rerun_sdk REQUIRED)
-find_package(TBB REQUIRED)
 find_package(ZeroMQ REQUIRED)
 find_package(cppzmq REQUIRED)
 find_package(Boost REQUIRED COMPONENTS json)
 
-list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json TBB::tbb)
+list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json)
 
-# FetchContent_Declare(concord GIT_REPOSITORY https://github.com/onlyhead/concord.git GIT_TAG 2.3.2)
-# FetchContent_MakeAvailable(concord)
-add_subdirectory(xtra/concord concord)
+FetchContent_Declare(concord GIT_REPOSITORY https://github.com/robolibs/concord.git GIT_TAG 2.5.0)
+FetchContent_MakeAvailable(concord)
 list(APPEND ext_deps concord::concord)
 
-FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/onlyhead/pigment.git GIT_TAG 0.3.1)
+FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/robolibs/pigment.git GIT_TAG 0.3.1)
 FetchContent_MakeAvailable(pigment)
 list(APPEND ext_deps pigment::pigment)
 
-FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/onlyhead/entropy.git GIT_TAG 1.0.0)
+FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/robolibs/entropy.git GIT_TAG 1.1.0)
 FetchContent_MakeAvailable(entropy)
 list(APPEND ext_deps entropy::entropy)
 
-FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/onlyhead/zoneout.git GIT_TAG 1.1.0)
+FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/robolibs/zoneout.git GIT_TAG 1.4.0)
 FetchContent_MakeAvailable(zoneout)
 list(APPEND ext_deps zoneout::zoneout)
 
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/onlyhead/farmtrax.git GIT_TAG 1.0.1)
+FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/robolibs/farmtrax.git GIT_TAG 1.1.1)
 FetchContent_MakeAvailable(farmtrax)
 list(APPEND ext_deps farmtrax::farmtrax)
 
-# FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/drivekit.git GIT_TAG 0.1.6)
-# FetchContent_MakeAvailable(drivekit)
-add_subdirectory(xtra/drivekit drivekit)
+FetchContent_Declare(drivekit GIT_REPOSITORY https://github.com/robolibs/drivekit.git GIT_TAG 0.2.1)
+FetchContent_MakeAvailable(drivekit)
 list(APPEND ext_deps drivekit::drivekit)
-
-# FetchContent_Declare(waypoint GIT_REPOSITORY https://github.com/onlyhead/waypoint.git GIT_TAG 0.1.6)
-# FetchContent_MakeAvailable(waypoint)
-add_subdirectory(xtra/waypoint waypoint)
-list(APPEND ext_deps waypoint::waypoint)
 
 # --------------------------------------------------------------------------------------------------
 add_library(${project_name} INTERFACE)

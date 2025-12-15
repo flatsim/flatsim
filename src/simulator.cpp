@@ -1,7 +1,6 @@
 #include "flatsim/simulator.hpp"
 #include <chrono>
 #include <cmath>
-#include <execution>
 
 namespace fs {
     Simulator::Simulator(std::shared_ptr<rerun::RecordingStream> rec) : rec(rec) {}
@@ -46,11 +45,11 @@ namespace fs {
             world->update_obstacles(dt, pos.point.x, pos.point.y);
         }
 
-        // Process robots in parallel - pure physics, thread-safe
-        std::for_each(std::execution::par, robots.begin(), robots.end(), [dt](auto &robott) {
-            if (!robott) return;
+        // Process robots
+        for (auto &robott : robots) {
+            if (!robott) continue;
             robott->tick(dt);
-        });
+        }
 
         // Send physics states to robot processes
         if (dispatcher && dispatcher->is_ready()) {

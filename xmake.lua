@@ -96,7 +96,7 @@ package("pigment")
             os.mkdir(path.directory(sourcedir))
             os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "0.3.1",
                             "-c", "advice.detachedHead=false",
-                            "https://github.com/onlyhead/pigment.git", sourcedir})
+                            "https://github.com/robolibs/pigment.git", sourcedir})
         end
     end)
 
@@ -117,9 +117,101 @@ package("entropy")
         if not os.isdir(sourcedir) then
             print("Fetching entropy from git...")
             os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.0.0",
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.1.0",
                             "-c", "advice.detachedHead=false",
-                            "https://github.com/onlyhead/entropy.git", sourcedir})
+                            "https://github.com/robolibs/entropy.git", sourcedir})
+        end
+    end)
+
+    on_install(function (package)
+        local configs = {}
+        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        import("package.tools.cmake").install(package, configs)
+    end)
+package_end()
+
+-- Define concord package (from git)
+package("concord")
+    add_deps("cmake")
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/concord-src"))
+
+    on_fetch(function (package)
+        local sourcedir = package:sourcedir()
+        if not os.isdir(sourcedir) then
+            print("Fetching concord from git...")
+            os.mkdir(path.directory(sourcedir))
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "2.5.0",
+                            "-c", "advice.detachedHead=false",
+                            "https://github.com/robolibs/concord.git", sourcedir})
+        end
+    end)
+
+    on_install(function (package)
+        local configs = {}
+        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        import("package.tools.cmake").install(package, configs)
+    end)
+package_end()
+
+-- Define farmtrax package (from git)
+package("farmtrax")
+    add_deps("cmake")
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/farmtrax-src"))
+
+    on_fetch(function (package)
+        local sourcedir = package:sourcedir()
+        if not os.isdir(sourcedir) then
+            print("Fetching farmtrax from git...")
+            os.mkdir(path.directory(sourcedir))
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.1.1",
+                            "-c", "advice.detachedHead=false",
+                            "https://github.com/robolibs/farmtrax.git", sourcedir})
+        end
+    end)
+
+    on_install(function (package)
+        local configs = {}
+        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        import("package.tools.cmake").install(package, configs)
+    end)
+package_end()
+
+-- Define zoneout package (from git)
+package("zoneout")
+    add_deps("cmake")
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/zoneout-src"))
+
+    on_fetch(function (package)
+        local sourcedir = package:sourcedir()
+        if not os.isdir(sourcedir) then
+            print("Fetching zoneout from git...")
+            os.mkdir(path.directory(sourcedir))
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "1.4.0",
+                            "-c", "advice.detachedHead=false",
+                            "https://github.com/robolibs/zoneout.git", sourcedir})
+        end
+    end)
+
+    on_install(function (package)
+        local configs = {}
+        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        import("package.tools.cmake").install(package, configs)
+    end)
+package_end()
+
+-- Define drivekit package (from git)
+package("drivekit")
+    add_deps("cmake")
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/drivekit-src"))
+
+    on_fetch(function (package)
+        local sourcedir = package:sourcedir()
+        if not os.isdir(sourcedir) then
+            print("Fetching drivekit from git...")
+            os.mkdir(path.directory(sourcedir))
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "0.2.1",
+                            "-c", "advice.detachedHead=false",
+                            "https://github.com/robolibs/drivekit.git", sourcedir})
         end
     end)
 
@@ -161,20 +253,14 @@ package_end()
 
 -- Add required packages
 add_requires("muli", "pigment", "entropy")
+add_requires("concord", "farmtrax", "drivekit", "zoneout")
 add_requires("rerun_sdk")
 
 -- Use pkgconfig to find system packages
 add_requires("pkgconfig::libzmq", {alias = "zeromq"})
 add_requires("pkgconfig::cppzmq", {alias = "cppzmq"})
-add_requires("tbb", {system = true})
 -- Boost needs explicit library specification
 add_requires("boost", {system = true})
-
--- Add drivekit, waypoint, concord and farmtrax subdirectories
-includes("xtra/drivekit")
-includes("xtra/waypoint")
-includes("xtra/concord")
-includes("xtra/farmtrax")
 
 if has_config("examples") then
     add_requires("cli11")
@@ -201,11 +287,10 @@ target("flatsim_internal")
     add_headerfiles("include/(flatsim/**.hpp)")
     add_includedirs("include", {public = true})
 
-    -- Link dependencies
-    add_packages("muli", "pigment", "entropy")
-    add_deps("concord", "farmtrax")
-    add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq")
-    add_deps("drivekit", "waypoint")
+    -- Link dependencies (order matters: libraries with dependencies come first)
+    add_packages("drivekit", "farmtrax", "zoneout")
+    add_packages("concord", "entropy", "pigment")
+    add_packages("muli", "rerun_sdk", "zeromq", "cppzmq")
 
     -- Explicitly link only boost_json (avoid pulling in all boost libs)
     add_linkdirs(path.join(os.getenv("CMAKE_PREFIX_PATH") or "", "lib"))
@@ -241,8 +326,8 @@ if has_config("examples") then
             add_files(filepath)
             add_deps("flatsim_internal")
             add_packages("muli", "pigment", "entropy")
-            add_deps("farmtrax")
-            add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq", "cli11")
+            add_packages("concord", "zoneout", "farmtrax", "drivekit")
+            add_packages("rerun_sdk", "zeromq", "cppzmq", "cli11")
             add_includedirs("include")
 
             -- Link boost_json explicitly
@@ -262,9 +347,10 @@ if has_config("tests") then
             set_kind("binary")
             add_files(filepath)
             add_deps("flatsim_internal")
-            add_packages("muli", "pigment", "entropy")
-            add_deps("farmtrax")
-            add_packages("rerun_sdk", "tbb", "zeromq", "cppzmq", "doctest")
+            -- Link order matters: libraries with dependencies come first
+            add_packages("drivekit", "farmtrax", "zoneout")
+            add_packages("concord", "entropy", "pigment")
+            add_packages("muli", "rerun_sdk", "zeromq", "cppzmq", "doctest")
             add_includedirs("include")
 
             -- Link boost_json explicitly
