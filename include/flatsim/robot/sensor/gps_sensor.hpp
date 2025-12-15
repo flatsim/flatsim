@@ -66,6 +66,52 @@ namespace fs {
         double position_noise_std; // Standard deviation for position noise
         double velocity_noise_std; // Standard deviation for velocity noise
 
+        // NMEA generation
+        std::string current_nmea_sentence;
+        int nmea_sentence_index = 0; // Cycles through different NMEA types
+
+        /**
+         * @brief Write NMEA string to shared memory
+         */
+        bool write_to_shm() override;
+
+        /**
+         * @brief Get metadata for NMEA format
+         */
+        std::string get_metadata() const override;
+
+        /**
+         * @brief Generate NMEA sentence from current GPS data
+         * @param sentence_type Type of NMEA sentence (GGA, RMC, GNS, GST, GSV, etc.)
+         * @return Generated NMEA sentence string
+         */
+        std::string generate_nmea_sentence(const std::string &sentence_type);
+
+        /**
+         * @brief Calculate NMEA checksum
+         */
+        std::string nmea_checksum(const std::string &body) const;
+
+        /**
+         * @brief Format latitude for NMEA (ddmm.mmmmmm format)
+         */
+        std::string format_lat_nmea(double lat_deg, char &hemisphere) const;
+
+        /**
+         * @brief Format longitude for NMEA (dddmm.mmmmmm format)
+         */
+        std::string format_lon_nmea(double lon_deg, char &hemisphere) const;
+
+        /**
+         * @brief Get current UTC time string for NMEA
+         */
+        std::string get_utc_time() const;
+
+        /**
+         * @brief Get current UTC date string for NMEA
+         */
+        std::string get_utc_date() const;
+
       public:
         /**
          * @brief Construct a new GPS Sensor
@@ -118,6 +164,13 @@ namespace fs {
          * @param vel_noise Velocity noise standard deviation (m/s)
          */
         void configure_noise(double pos_noise, double vel_noise);
+
+        /**
+         * @brief Feed raw NMEA sentence to the sensor
+         * @param nmea_sentence Raw NMEA string (e.g. "$GPGGA,...*XX\r\n")
+         * @return true if sentence was accepted and written to SHM
+         */
+        bool feed_nmea(const std::string &nmea_sentence);
 
       private:
         /**

@@ -31,9 +31,201 @@ namespace fs {
             // Mark data as valid
             data_valid = true;
 
+            // Generate NMEA sentence (cycle through different types)
+            const char *sentence_types[] = {"GGA", "RMC", "GNS", "GST", "GSV", "PHTG"};
+            int type_count = 6;
+            std::string sentence_type = sentence_types[nmea_sentence_index % type_count];
+            current_nmea_sentence = generate_nmea_sentence(sentence_type);
+            nmea_sentence_index++;
+
+            // Write to shared memory if enabled
+            if (shm_enabled && !current_nmea_sentence.empty()) {
+                write_to_shm();
+            }
+
             // Schedule next update
             next_update_time = last_update_time + (1.0 / update_frequency);
         }
+    }
+
+    bool GPSSensor::write_to_shm() {
+        if (!is_data_valid() || !is_shm_enabled()) {
+            return false;
+        }
+
+        if (current_nmea_sentence.empty()) {
+            return false;
+        }
+
+        // Write raw NMEA string to shared memory
+        return write_shm_data(current_nmea_sentence.c_str(), current_nmea_sentence.size());
+    }
+
+    std::string GPSSensor::get_metadata() const {
+        std::string metadata;
+        metadata += "GPS/GNSS NMEA Format Description\n";
+        metadata += "================================\n\n";
+        metadata += "Format: Raw NMEA-0183 strings\n";
+        metadata += "Encoding: ASCII text\n\n";
+        metadata += "Structure:\n";
+        metadata += "----------\n";
+        metadata += "Each update contains a single NMEA sentence as a null-terminated ASCII string.\n\n";
+        metadata += "Common NMEA sentence types:\n";
+        metadata += "  - $GPGGA: Global Positioning System Fix Data\n";
+        metadata += "  - $GPRMC: Recommended Minimum Specific GNSS Data\n";
+        metadata += "  - $GNGNS: GNSS Fix Data (combined constellations)\n";
+        metadata += "  - $GPGST: Position Error Statistics\n\n";
+        metadata += "Example sentences:\n";
+        metadata += "  $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47\n";
+        metadata += "  $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\n\n";
+        metadata += "Reading from shared memory:\n";
+        metadata += "---------------------------\n";
+        metadata += "The data following the header is a null-terminated ASCII string.\n";
+        metadata += "Example C code:\n";
+        metadata += "  char nmea[256];\n";
+        metadata += "  memcpy(nmea, shm_data_ptr, data_size);\n";
+        metadata += "  nmea[data_size] = '\\0';\n";
+        metadata += "  printf(\"NMEA: %s\\n\", nmea);\n";
+        return metadata;
+    }
+
+    std::string GPSSensor::nmea_checksum(const std::string &body) const {
+        uint8_t cs = 0;
+        for (char ch : body) {
+            cs ^= static_cast<uint8_t>(ch);
+        }
+        char buf[3];
+        snprintf(buf, sizeof(buf), "%02X", cs);
+        return std::string(buf);
+    }
+
+    std::string GPSSensor::format_lat_nmea(double lat_deg, char &hemisphere) const {
+        hemisphere = (lat_deg >= 0) ? 'N' : 'S';
+        double lat_abs = std::abs(lat_deg);
+        int deg = static_cast<int>(lat_abs);
+        double minutes = (lat_abs - deg) * 60.0;
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%02d%011.8f", deg, minutes);
+        return std::string(buf);
+    }
+
+    std::string GPSSensor::format_lon_nmea(double lon_deg, char &hemisphere) const {
+        hemisphere = (lon_deg >= 0) ? 'E' : 'W';
+        double lon_abs = std::abs(lon_deg);
+        int deg = static_cast<int>(lon_abs);
+        double minutes = (lon_abs - deg) * 60.0;
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%03d%011.8f", deg, minutes);
+        return std::string(buf);
+    }
+
+    std::string GPSSensor::get_utc_time() const {
+        auto now = std::chrono::system_clock::now();
+        time_t tt = std::chrono::system_clock::to_time_t(now);
+        tm utc_tm;
+        gmtime_r(&tt, &utc_tm);
+
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d%02d%02d.%03d", utc_tm.tm_hour, utc_tm.tm_min, utc_tm.tm_sec,
+                 static_cast<int>(ms.count()));
+        return std::string(buf);
+    }
+
+    std::string GPSSensor::get_utc_date() const {
+        auto now = std::chrono::system_clock::now();
+        time_t tt = std::chrono::system_clock::to_time_t(now);
+        tm utc_tm;
+        gmtime_r(&tt, &utc_tm);
+
+        char buf[8];
+        snprintf(buf, sizeof(buf), "%02d%02d%02d", utc_tm.tm_mday, utc_tm.tm_mon + 1, utc_tm.tm_year % 100);
+        return std::string(buf);
+    }
+
+    std::string GPSSensor::generate_nmea_sentence(const std::string &sentence_type) {
+        char lat_hemi, lon_hemi;
+        std::string lat_str = format_lat_nmea(current_data.latitude, lat_hemi);
+        std::string lon_str = format_lon_nmea(current_data.longitude, lon_hemi);
+        std::string time_str = get_utc_time();
+        std::string date_str = get_utc_date();
+
+        std::string body;
+
+        if (sentence_type == "GGA") {
+            // $GPGGA,time,lat,N/S,lon,E/W,quality,numSV,HDOP,alt,M,geoidSep,M,,*checksum
+            int fix_quality = (current_data.rtk_status == GPSData::RTKStatus::RTK_FIXED)   ? 4
+                              : (current_data.rtk_status == GPSData::RTKStatus::RTK_FLOAT) ? 5
+                                                                                           : 1;
+
+            char buf[256];
+            snprintf(buf, sizeof(buf), "GPGGA,%s,%s,%c,%s,%c,%d,%02d,%.1f,%.2f,M,0.0,M,,", time_str.c_str(),
+                     lat_str.c_str(), lat_hemi, lon_str.c_str(), lon_hemi, fix_quality, current_data.num_satellites,
+                     0.8, current_data.altitude);
+            body = buf;
+
+        } else if (sentence_type == "RMC") {
+            // $GPRMC,time,status,lat,N/S,lon,E/W,speed,track,date,magvar,*checksum
+            double speed_knots = std::sqrt(current_data.velocity_north * current_data.velocity_north +
+                                           current_data.velocity_east * current_data.velocity_east) *
+                                 1.94384; // m/s to knots
+            double track = std::atan2(current_data.velocity_east, current_data.velocity_north) * 180.0 / M_PI;
+            if (track < 0) track += 360.0;
+
+            char buf[256];
+            snprintf(buf, sizeof(buf), "GPRMC,%s,A,%s,%c,%s,%c,%.1f,%.1f,%s,,", time_str.c_str(), lat_str.c_str(),
+                     lat_hemi, lon_str.c_str(), lon_hemi, speed_knots, track, date_str.c_str());
+            body = buf;
+
+        } else if (sentence_type == "GNS") {
+            // $GNGNS,time,lat,N/S,lon,E/W,mode,numSV,HDOP,alt,sep,,,*checksum
+            char buf[256];
+            snprintf(buf, sizeof(buf), "GNGNS,%s,%s,%c,%s,%c,RRNNN,%.1f,%.2f,0.0,,,", time_str.c_str(), lat_str.c_str(),
+                     lat_hemi, lon_str.c_str(), lon_hemi, 0.8, current_data.altitude);
+            body = buf;
+
+        } else if (sentence_type == "GST") {
+            // $GPGST,time,rms,major,minor,orient,lat_err,lon_err,alt_err*checksum
+            char buf[256];
+            snprintf(
+                buf, sizeof(buf), "GPGST,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f", time_str.c_str(),
+                current_data.horizontal_accuracy, current_data.horizontal_accuracy, current_data.horizontal_accuracy,
+                0.0, // orientation
+                current_data.horizontal_accuracy, current_data.horizontal_accuracy, current_data.vertical_accuracy);
+            body = buf;
+
+        } else if (sentence_type == "GSV") {
+            // $GPGSV,numMsgs,msgNum,numSats,satId,elev,azim,snr,...*checksum
+            // Simple single message with one satellite
+            char buf[256];
+            snprintf(buf, sizeof(buf), "GPGSV,1,1,%02d,11,45,120,40", current_data.num_satellites);
+            body = buf;
+
+        } else if (sentence_type == "PHTG") {
+            // $PHTG,TimeTag,System,Service,AuthResult,Status,Warning*checksum
+            // TimeTag in dd:mm:yyyy,hh:mm:ss.ss format
+            auto now = std::chrono::system_clock::now();
+            time_t tt = std::chrono::system_clock::to_time_t(now);
+            tm utc_tm;
+            gmtime_r(&tt, &utc_tm);
+
+            char timetag[64];
+            snprintf(timetag, sizeof(timetag), "%02d:%02d:%04d,%02d:%02d:%02d.00", utc_tm.tm_mday, utc_tm.tm_mon + 1,
+                     utc_tm.tm_year + 1900, utc_tm.tm_hour, utc_tm.tm_min, utc_tm.tm_sec);
+
+            char buf[256];
+            snprintf(buf, sizeof(buf), "PHTG,%s,GAL,HAS,0,0", timetag);
+            body = buf;
+
+        } else {
+            return ""; // Unknown sentence type
+        }
+
+        std::string checksum = nmea_checksum(body);
+        return "$" + body + "*" + checksum + "\r\n";
     }
 
     void GPSSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }

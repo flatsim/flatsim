@@ -31,7 +31,7 @@ set(link_options
 )
 
 option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
-set(HAS_RERUN ON)
+set(HAS_RERUN ON CACHE BOOL "Enable Rerun visualization" FORCE)
 
 string(TOUPPER ${project_name} project_name_upper)
 option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)

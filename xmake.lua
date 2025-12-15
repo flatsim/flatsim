@@ -218,6 +218,7 @@ package("drivekit")
     on_install(function (package)
         local configs = {}
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        table.insert(configs, "-DHAS_RERUN=ON")
         import("package.tools.cmake").install(package, configs)
     end)
 package_end()
