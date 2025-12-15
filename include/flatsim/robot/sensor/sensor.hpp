@@ -29,6 +29,13 @@ namespace fs {
         virtual void set_robot_pose(const concord::Pose &pose) {};
 
         /**
+         * @brief Set physics data for sensors that need velocity/acceleration
+         * @param linear_vel Linear velocity in world frame (x, y)
+         * @param angular_vel Angular velocity (rad/s)
+         */
+        virtual void set_physics_data(double linear_vel_x, double linear_vel_y, double angular_vel) {};
+
+        /**
          * @brief Get the current sensor data
          * @return Sensor-specific data structure
          */

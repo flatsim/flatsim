@@ -70,8 +70,12 @@ namespace fs {
         IMUData current_data;
         double update_frequency; // Hz
         double next_update_time;
-        concord::Pose robot_pose; // Current robot pose
-        concord::Pose last_pose;  // Previous robot pose for velocity calculation
+        concord::Pose robot_pose;                    // Current robot pose
+        concord::Pose last_pose;                     // Previous robot pose for velocity calculation
+        double linear_vel_x, linear_vel_y;           // Current linear velocity from physics (world frame)
+        double angular_vel;                          // Current angular velocity from physics
+        double last_linear_vel_x, last_linear_vel_y; // Previous velocities for acceleration calculation
+        double last_angular_vel;                     // Previous angular velocity
 
         // Sensor parameters
         double accel_noise_std; // Accelerometer noise (m/s²)
@@ -113,10 +117,13 @@ namespace fs {
         // Sensor interface implementation
         void update(double dt) override;
         void set_robot_pose(const concord::Pose &pose) override;
+        void set_physics_data(double linear_vel_x, double linear_vel_y, double angular_vel) override;
         void *get_data() override;
         std::string get_type() const override;
         bool is_data_valid() const override;
         double get_frequency() const override;
+        bool write_to_shm() override;
+        std::string get_metadata() const override;
 
         // IMU-specific methods
 

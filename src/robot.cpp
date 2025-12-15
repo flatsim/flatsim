@@ -35,8 +35,17 @@ namespace fs {
         // Physics engine gives angle 90 degrees off - correct it
         this->info.bound.pose.angle.yaw = chassis.get_transform().rotation.GetAngle() + M_PI / 2;
 
-        // Update sensors with current pose (after pose is updated from physics)
-        sensors.update_all(info.bound.pose, dt);
+        // Get physics data for sensors (velocity from rigid body)
+        double linear_vel_x = 0.0, linear_vel_y = 0.0, angular_vel = 0.0;
+        if (const auto *body = chassis.get_body()) {
+            const auto &vel = body->GetLinearVelocity();
+            linear_vel_x = vel.x;
+            linear_vel_y = vel.y;
+            angular_vel = body->GetAngularVelocity();
+        }
+
+        // Update sensors with current pose and physics data
+        sensors.update_all_with_physics(info.bound.pose, linear_vel_x, linear_vel_y, angular_vel, dt);
         // Note: WGS coordinates can be calculated via point.toWGS(datum) when needed
 
         // Update navigation controller when enabled

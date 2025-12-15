@@ -18,7 +18,8 @@ namespace fs {
           ,
           magnetic_intensity(50.0) // 50 μT (typical Earth field strength)
           ,
-          last_update_real_time(0.0) {
+          last_update_real_time(0.0), linear_vel_x(0.0), linear_vel_y(0.0), angular_vel(0.0), last_linear_vel_x(0.0),
+          last_linear_vel_y(0.0), last_angular_vel(0.0) {
         // Initialize with gravity pointing down
         current_data.accel_z = -9.81; // Gravity in body frame (assuming Z-up)
 
@@ -69,6 +70,11 @@ namespace fs {
             // Mark data as valid
             data_valid = true;
 
+            // Write to shared memory if enabled
+            if (shm_enabled) {
+                write_to_shm();
+            }
+
             // Schedule next update
             next_update_time = last_update_time + (1.0 / update_frequency);
 
@@ -78,6 +84,12 @@ namespace fs {
     }
 
     void IMUSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }
+
+    void IMUSensor::set_physics_data(double vel_x, double vel_y, double ang_vel) {
+        linear_vel_x = vel_x;
+        linear_vel_y = vel_y;
+        angular_vel = ang_vel;
+    }
 
     void *IMUSensor::get_data() { return &current_data; }
 
@@ -143,37 +155,22 @@ namespace fs {
             return;
         }
 
-        // Calculate linear acceleration from position change
-        static double last_vel_x = 0.0, last_vel_y = 0.0, last_vel_z = 0.0;
-
-        // Estimate velocity from position change
-        double vel_x = (robot_pose.point.x - last_pose.point.x) / dt;
-        double vel_y = (robot_pose.point.y - last_pose.point.y) / dt;
-        double vel_z = (robot_pose.point.z - last_pose.point.z) / dt;
-
-        // Calculate acceleration from velocity change
-        double accel_x = (vel_x - last_vel_x) / dt;
-        double accel_y = (vel_y - last_vel_y) / dt;
-        double accel_z = (vel_z - last_vel_z) / dt;
+        // Calculate acceleration from velocity change (using physics engine velocities)
+        double accel_world_x = (linear_vel_x - last_linear_vel_x) / dt;
+        double accel_world_y = (linear_vel_y - last_linear_vel_y) / dt;
 
         // Transform from world frame to body frame
-        // For simplicity, assume robot orientation matches robot_pose angle
         double cos_yaw = std::cos(robot_pose.angle.yaw);
         double sin_yaw = std::sin(robot_pose.angle.yaw);
-        double cos_pitch = std::cos(robot_pose.angle.pitch);
-        double sin_pitch = std::sin(robot_pose.angle.pitch);
-        double cos_roll = std::cos(robot_pose.angle.roll);
-        double sin_roll = std::sin(robot_pose.angle.roll);
 
-        // Rotation matrix from world to body (simplified)
-        current_data.accel_x = accel_x * cos_yaw + accel_y * sin_yaw;
-        current_data.accel_y = -accel_x * sin_yaw + accel_y * cos_yaw;
-        current_data.accel_z = accel_z + 9.81; // Add gravity (in body frame, gravity points down)
+        // Rotation from world to body frame (2D, around Z axis)
+        current_data.accel_x = accel_world_x * cos_yaw + accel_world_y * sin_yaw;
+        current_data.accel_y = -accel_world_x * sin_yaw + accel_world_y * cos_yaw;
+        current_data.accel_z = 9.81; // Gravity in body frame (IMU measures specific force, not acceleration)
 
         // Update for next iteration
-        last_vel_x = vel_x;
-        last_vel_y = vel_y;
-        last_vel_z = vel_z;
+        last_linear_vel_x = linear_vel_x;
+        last_linear_vel_y = linear_vel_y;
     }
 
     void IMUSensor::calculate_angular_velocities(double dt) {
@@ -181,23 +178,14 @@ namespace fs {
             return;
         }
 
-        // Calculate angular velocities from orientation change
-        double delta_roll = robot_pose.angle.roll - last_pose.angle.roll;
-        double delta_pitch = robot_pose.angle.pitch - last_pose.angle.pitch;
-        double delta_yaw = robot_pose.angle.yaw - last_pose.angle.yaw;
+        // Use angular velocity directly from physics engine
+        // In 2D physics (muli), we only have Z-axis rotation
+        current_data.gyro_x = 0.0;         // No roll in 2D
+        current_data.gyro_y = 0.0;         // No pitch in 2D
+        current_data.gyro_z = angular_vel; // Yaw rate from physics
 
-        // Handle angle wrapping
-        while (delta_roll > M_PI) delta_roll -= 2.0 * M_PI;
-        while (delta_roll < -M_PI) delta_roll += 2.0 * M_PI;
-        while (delta_pitch > M_PI) delta_pitch -= 2.0 * M_PI;
-        while (delta_pitch < -M_PI) delta_pitch += 2.0 * M_PI;
-        while (delta_yaw > M_PI) delta_yaw -= 2.0 * M_PI;
-        while (delta_yaw < -M_PI) delta_yaw += 2.0 * M_PI;
-
-        // Calculate angular velocities in body frame
-        current_data.gyro_x = delta_roll / dt;
-        current_data.gyro_y = delta_pitch / dt;
-        current_data.gyro_z = delta_yaw / dt;
+        // Update for next iteration
+        last_angular_vel = angular_vel;
     }
 
     void IMUSensor::calculate_magnetic_field() {
@@ -364,6 +352,75 @@ namespace fs {
             current_data.quat_y /= norm;
             current_data.quat_z /= norm;
         }
+    }
+
+    bool IMUSensor::write_to_shm() {
+        if (!is_data_valid() || !is_shm_enabled()) {
+            return false;
+        }
+
+        // Pack IMU data into binary format (15 doubles = 120 bytes)
+        struct {
+            double accel_x, accel_y, accel_z;
+            double gyro_x, gyro_y, gyro_z;
+            double mag_x, mag_y, mag_z;
+            double quat_w, quat_x, quat_y, quat_z;
+            double roll, pitch, yaw;
+        } binary_data;
+
+        binary_data.accel_x = current_data.accel_x;
+        binary_data.accel_y = current_data.accel_y;
+        binary_data.accel_z = current_data.accel_z;
+        binary_data.gyro_x = current_data.gyro_x;
+        binary_data.gyro_y = current_data.gyro_y;
+        binary_data.gyro_z = current_data.gyro_z;
+        binary_data.mag_x = current_data.mag_x;
+        binary_data.mag_y = current_data.mag_y;
+        binary_data.mag_z = current_data.mag_z;
+        binary_data.quat_w = current_data.quat_w;
+        binary_data.quat_x = current_data.quat_x;
+        binary_data.quat_y = current_data.quat_y;
+        binary_data.quat_z = current_data.quat_z;
+        binary_data.roll = current_data.roll;
+        binary_data.pitch = current_data.pitch;
+        binary_data.yaw = current_data.yaw;
+
+        return write_shm_data(&binary_data, sizeof(binary_data));
+    }
+
+    std::string IMUSensor::get_metadata() const {
+        std::string metadata;
+        metadata += "IMU Binary Format Description\n";
+        metadata += "==============================\n\n";
+        metadata += "Format: Binary packed struct\n";
+        metadata += "Total size: 120 bytes (15 doubles)\n\n";
+        metadata += "Structure:\n";
+        metadata += "----------\n";
+        metadata += "Offset | Size | Type   | Field\n";
+        metadata += "-------|------|--------|------------------\n";
+        metadata += "0      | 8    | double | accel_x (m/s²)\n";
+        metadata += "8      | 8    | double | accel_y (m/s²)\n";
+        metadata += "16     | 8    | double | accel_z (m/s²)\n";
+        metadata += "24     | 8    | double | gyro_x (rad/s)\n";
+        metadata += "32     | 8    | double | gyro_y (rad/s)\n";
+        metadata += "40     | 8    | double | gyro_z (rad/s)\n";
+        metadata += "48     | 8    | double | mag_x (μT)\n";
+        metadata += "56     | 8    | double | mag_y (μT)\n";
+        metadata += "64     | 8    | double | mag_z (μT)\n";
+        metadata += "72     | 8    | double | quat_w\n";
+        metadata += "80     | 8    | double | quat_x\n";
+        metadata += "88     | 8    | double | quat_y\n";
+        metadata += "96     | 8    | double | quat_z\n";
+        metadata += "104    | 8    | double | roll (rad)\n";
+        metadata += "112    | 8    | double | pitch (rad)\n";
+        metadata += "120    | 8    | double | yaw (rad)\n\n";
+        metadata += "Example C code:\n";
+        metadata += "  struct imu_data { double accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z,\n";
+        metadata += "                    mag_x, mag_y, mag_z, quat_w, quat_x, quat_y, quat_z,\n";
+        metadata += "                    roll, pitch, yaw; };\n";
+        metadata += "  struct imu_data imu;\n";
+        metadata += "  memcpy(&imu, shm_data_ptr, sizeof(imu));\n";
+        return metadata;
     }
 
 } // namespace fs

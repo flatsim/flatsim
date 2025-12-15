@@ -72,6 +72,17 @@ namespace fs {
         void update_all(const concord::Pose &pose, double dt);
 
         /**
+         * @brief Update all sensors with robot pose and physics data
+         * @param pose Current robot pose
+         * @param linear_vel_x Linear velocity X (world frame)
+         * @param linear_vel_y Linear velocity Y (world frame)
+         * @param angular_vel Angular velocity (rad/s)
+         * @param dt Time delta in seconds
+         */
+        void update_all_with_physics(const concord::Pose &pose, double linear_vel_x, double linear_vel_y,
+                                     double angular_vel, double dt);
+
+        /**
          * @brief Check if manager has any sensors
          * @return true if sensors exist
          */

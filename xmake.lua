@@ -234,7 +234,8 @@ package("rerun_sdk")
         end
 
         local result = {}
-        result.links = {"rerun_sdk", "rerun_c__linux_x64", "arrow", "arrow_bundled_dependencies"}
+        -- result.links = {"rerun_sdk", "rerun_c__linux_x64", "arrow", "arrow_bundled_dependencies"}
+        result.links = {"rerun_sdk", "rerun_c", "arrow", "arrow_bundled_dependencies"}
         result.linkdirs = {path.join(home, ".local/lib")}
         result.includedirs = {path.join(home, ".local/include")}
 

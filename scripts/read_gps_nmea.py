@@ -73,14 +73,24 @@ def monitor_gps(shm_path, show_all=False):
             else:
                 # Show summary every 60 frames (~1 second at 60Hz)
                 if frame_count % 60 == 0:
-                    # Parse first GGA for position
+                    # Parse GGA for position and RMC for speed/heading
                     gga_line = next((l for l in lines if 'GGA' in l), None)
+                    rmc_line = next((l for l in lines if 'RMC' in l), None)
+                    
+                    lat = lon = fix = speed = heading = "?"
+                    
                     if gga_line:
                         fields = gga_line.split(',')
                         lat = fields[2] if len(fields) > 2 else "?"
                         lon = fields[4] if len(fields) > 4 else "?"
                         fix = fields[6] if len(fields) > 6 else "?"
-                        print(f"Frame {frame_count:5d} | Seq {seq:6d} | Rate: {rate:.1f} Hz | Lat: {lat} Lon: {lon} Fix: {fix}")
+                    
+                    if rmc_line:
+                        fields = rmc_line.split(',')
+                        speed = fields[7] if len(fields) > 7 else "?"  # Speed in knots
+                        heading = fields[8] if len(fields) > 8 else "?"  # Track/heading in degrees
+                    
+                    print(f"Frame {frame_count:5d} | Seq {seq:6d} | Rate: {rate:.1f} Hz | Lat: {lat} Lon: {lon} Fix: {fix} | Speed: {speed} kts | Heading: {heading}°")
             
             last_seq = seq
         

@@ -31,6 +31,17 @@ namespace fs {
         }
     }
 
+    void SensorManager::update_all_with_physics(const concord::Pose &pose, double linear_vel_x, double linear_vel_y,
+                                                double angular_vel, double dt) {
+        for (auto &sensor : sensors) {
+            if (sensor) {
+                sensor->set_robot_pose(pose);
+                sensor->set_physics_data(linear_vel_x, linear_vel_y, angular_vel);
+                sensor->update(dt);
+            }
+        }
+    }
+
     bool SensorManager::enable_fifo_output(const std::string &uuid) {
         robot_uuid = uuid;
         bool all_success = true;
