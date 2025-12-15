@@ -138,5 +138,16 @@ namespace fs {
          * @return Vector of pointers to robots in line of sight
          */
         std::vector<Robot *> get_robots_in_sight(float sight_distance = 0.0f, float half_angle = 0.52f) const;
+
+        /**
+         * @brief Enable FIFO output for all sensors
+         * @return true if all FIFOs were created successfully
+         */
+        bool enable_sensor_fifo_output() { return sensors.enable_fifo_output(info.uuid); }
+
+        /**
+         * @brief Disable FIFO output for all sensors
+         */
+        void disable_sensor_fifo_output() { sensors.disable_fifo_output(); }
     };
 } // namespace fs

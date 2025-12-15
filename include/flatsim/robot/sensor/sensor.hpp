@@ -1,7 +1,9 @@
 #pragma once
 
 #include "flatsim/robot/types.hpp"
+#include <fstream>
 #include <memory>
+#include <string>
 
 namespace fs {
     /**
@@ -50,8 +52,64 @@ namespace fs {
          */
         virtual double get_frequency() const = 0;
 
+        /**
+         * @brief Enable shared memory output
+         * @param robot_uuid Robot UUID for naming shared memory segment
+         * @return true if shared memory was created successfully
+         */
+        bool enable_shm_output(const std::string &robot_uuid);
+
+        /**
+         * @brief Disable shared memory output
+         */
+        void disable_shm_output();
+
+        /**
+         * @brief Check if shared memory output is enabled
+         * @return true if shared memory output is enabled
+         */
+        bool is_shm_enabled() const { return shm_enabled; }
+
       protected:
         double last_update_time = 0.0;
         bool data_valid = false;
+
+        // Shared memory output (single frame, overwritten each update)
+        bool shm_enabled = false;
+        std::string shm_name;
+        std::string metadata_path;
+        int shm_fd = -1;
+        void *shm_ptr = nullptr;
+        size_t shm_size = 0;
+        uint64_t sequence_number = 0;
+
+        // Maximum shared memory size per sensor
+        static constexpr size_t MAX_SHM_SIZE = 2 * 1024 * 1024; // 2MB max
+
+        /**
+         * @brief Write data to shared memory (must be implemented by derived classes)
+         * @return true if data was written successfully
+         */
+        virtual bool write_to_shm() { return false; }
+
+        /**
+         * @brief Get metadata describing binary format (must be implemented by derived classes)
+         * @return String describing the binary serialization format
+         */
+        virtual std::string get_metadata() const { return ""; }
+
+        /**
+         * @brief Helper to write binary data to shared memory ring buffer
+         * @param data Pointer to binary data
+         * @param size Size of data in bytes
+         * @return true if write was successful
+         */
+        bool write_shm_data(const void *data, size_t size);
+
+        /**
+         * @brief Helper to create/update metadata file
+         * @return true if metadata file was written successfully
+         */
+        bool update_metadata_file();
     };
 } // namespace fs

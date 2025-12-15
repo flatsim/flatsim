@@ -316,5 +316,15 @@ namespace fs {
          * @brief Initialize scan parameters based on pattern
          */
         void initialize_scan_parameters();
+
+        /**
+         * @brief Write LIDAR data to shared memory in binary format
+         */
+        bool write_to_shm() override;
+
+        /**
+         * @brief Get metadata describing LIDAR binary format
+         */
+        std::string get_metadata() const override;
     };
 } // namespace fs

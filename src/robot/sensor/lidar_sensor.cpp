@@ -61,6 +61,11 @@ namespace fs {
             // Mark data as valid
             data_valid = true;
 
+            // Write to FIFO if enabled
+            if (shm_enabled) {
+                write_to_shm();
+            }
+
             // Schedule next update
             next_update_time = last_update_time + (1.0 / update_frequency);
         }
@@ -480,6 +485,97 @@ namespace fs {
         // Ensure minimum values
         if (num_horizontal_beams < 1) num_horizontal_beams = 1;
         if (num_vertical_layers < 1) num_vertical_layers = 1;
+    }
+
+    bool LIDARSensor::write_to_shm() {
+        if (!is_data_valid() || !is_shm_enabled()) {
+            return false;
+        }
+
+        // Binary format: header + data arrays
+        // Header: num_ranges (uint32_t)
+        // Arrays: ranges[], angles[], valid[] (as uint8_t), intensities[]
+
+        uint32_t num_ranges = static_cast<uint32_t>(current_data.ranges.size());
+        if (num_ranges == 0) {
+            return false;
+        }
+
+        // Calculate total size
+        size_t header_size = sizeof(uint32_t);
+        size_t ranges_size = num_ranges * sizeof(double);
+        size_t angles_size = num_ranges * sizeof(double);
+        size_t valid_size = num_ranges * sizeof(uint8_t);
+        size_t intensities_size = num_ranges * sizeof(double);
+        size_t total_size = header_size + ranges_size + angles_size + valid_size + intensities_size;
+
+        // Allocate buffer
+        std::vector<uint8_t> buffer(total_size);
+        uint8_t *ptr = buffer.data();
+
+        // Write header
+        std::memcpy(ptr, &num_ranges, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+
+        // Write ranges array
+        std::memcpy(ptr, current_data.ranges.data(), ranges_size);
+        ptr += ranges_size;
+
+        // Write angles array
+        std::memcpy(ptr, current_data.angles.data(), angles_size);
+        ptr += angles_size;
+
+        // Write valid array (convert bool to uint8_t)
+        for (size_t i = 0; i < num_ranges; ++i) {
+            uint8_t valid_byte = current_data.valid[i] ? 1 : 0;
+            std::memcpy(ptr, &valid_byte, sizeof(uint8_t));
+            ptr += sizeof(uint8_t);
+        }
+
+        // Write intensities array
+        std::memcpy(ptr, current_data.intensities.data(), intensities_size);
+
+        // Write to shared memory
+        return write_shm_data(buffer.data(), total_size);
+    }
+
+    std::string LIDARSensor::get_metadata() const {
+        std::string metadata;
+        metadata += "LIDAR Binary Format Description\n";
+        metadata += "================================\n\n";
+        metadata += "Byte order: Little-endian\n";
+        metadata += "Floating point: IEEE 754 double precision (8 bytes)\n\n";
+        metadata += "Structure:\n";
+        metadata += "----------\n";
+        metadata += "Header:\n";
+        metadata += "  - num_ranges: uint32_t (4 bytes) - Number of range measurements\n\n";
+        metadata += "Data Arrays (all of length num_ranges):\n";
+        metadata += "  1. ranges: double[] - Distance measurements in meters\n";
+        metadata += "     - Offset: 4 bytes\n";
+        metadata += "     - Size: num_ranges * 8 bytes\n\n";
+        metadata += "  2. angles: double[] - Beam angles in radians\n";
+        metadata += "     - Offset: 4 + (num_ranges * 8) bytes\n";
+        metadata += "     - Size: num_ranges * 8 bytes\n\n";
+        metadata += "  3. valid: uint8_t[] - Validity flags (0=invalid, 1=valid)\n";
+        metadata += "     - Offset: 4 + (num_ranges * 16) bytes\n";
+        metadata += "     - Size: num_ranges bytes\n\n";
+        metadata += "  4. intensities: double[] - Return signal intensities (0.0 to 1.0)\n";
+        metadata += "     - Offset: 4 + (num_ranges * 16) + num_ranges bytes\n";
+        metadata += "     - Size: num_ranges * 8 bytes\n\n";
+        metadata += "Total size: 4 + (num_ranges * 25) bytes\n\n";
+        metadata += "Example C code to read:\n";
+        metadata += "-----------------------\n";
+        metadata += "uint32_t num_ranges;\n";
+        metadata += "read(fd, &num_ranges, 4);\n";
+        metadata += "double *ranges = malloc(num_ranges * sizeof(double));\n";
+        metadata += "double *angles = malloc(num_ranges * sizeof(double));\n";
+        metadata += "uint8_t *valid = malloc(num_ranges);\n";
+        metadata += "double *intensities = malloc(num_ranges * sizeof(double));\n";
+        metadata += "read(fd, ranges, num_ranges * 8);\n";
+        metadata += "read(fd, angles, num_ranges * 8);\n";
+        metadata += "read(fd, valid, num_ranges);\n";
+        metadata += "read(fd, intensities, num_ranges * 8);\n";
+        return metadata;
     }
 
 } // namespace fs

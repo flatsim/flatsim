@@ -96,6 +96,9 @@ namespace fs {
             throw NullPointerException("recording stream");
         }
 
+        // Set robot UUID in sensor manager for auto-FIFO
+        sensors.set_robot_uuid(robo.uuid);
+
         // Initialize chassis manager
         chassis.init(this, rec, world, filter, robo);
 

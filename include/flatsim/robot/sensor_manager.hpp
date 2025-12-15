@@ -19,6 +19,7 @@ namespace fs {
     class SensorManager {
       private:
         std::vector<std::unique_ptr<Sensor>> sensors;
+        std::string robot_uuid;
 
       public:
         SensorManager() = default;
@@ -31,7 +32,13 @@ namespace fs {
         SensorManager &operator=(SensorManager &&) = default;
 
         /**
-         * @brief Add a sensor to the manager
+         * @brief Set the robot UUID (must be called before adding sensors for auto-FIFO)
+         * @param uuid Robot UUID
+         */
+        void set_robot_uuid(const std::string &uuid) { robot_uuid = uuid; }
+
+        /**
+         * @brief Add a sensor to the manager (auto-enables FIFO if robot_uuid is set)
          * @param sensor Unique pointer to sensor
          */
         void add(std::unique_ptr<Sensor> sensor);
@@ -80,6 +87,18 @@ namespace fs {
          * @brief Clear all sensors
          */
         void clear() { sensors.clear(); }
+
+        /**
+         * @brief Enable FIFO output for all sensors
+         * @param robot_uuid Robot UUID for creating directory structure
+         * @return true if all FIFOs were created successfully
+         */
+        bool enable_fifo_output(const std::string &robot_uuid);
+
+        /**
+         * @brief Disable FIFO output for all sensors
+         */
+        void disable_fifo_output();
     };
 
 } // namespace fs
