@@ -14,37 +14,35 @@ namespace fs {
     void GPSSensor::update(double dt) {
         last_update_time += dt;
 
-        // Check if it's time for an update based on frequency
-        if (last_update_time >= next_update_time) {
-            // Convert robot pose to GPS coordinates
-            convert_enu_to_wgs84(robot_pose);
+        // UPDATE EVERY TICK - NO FREQUENCY CHECK
+        // Convert robot pose to GPS coordinates
+        convert_enu_to_wgs84(robot_pose);
 
-            // Add measurement noise
-            add_measurement_noise();
+        // Add measurement noise
+        add_measurement_noise();
 
-            // Update RTK status
-            update_rtk_status();
+        // Update RTK status
+        update_rtk_status();
 
-            // Update timestamp
-            current_data.timestamp = std::chrono::system_clock::now();
+        // Update timestamp
+        current_data.timestamp = std::chrono::system_clock::now();
 
-            // Mark data as valid
-            data_valid = true;
+        // Mark data as valid
+        data_valid = true;
 
-            // Generate NMEA sentence (cycle through different types)
-            const char *sentence_types[] = {"GGA", "RMC", "GNS", "GST", "GSV", "PHTG"};
-            int type_count = 6;
-            std::string sentence_type = sentence_types[nmea_sentence_index % type_count];
-            current_nmea_sentence = generate_nmea_sentence(sentence_type);
-            nmea_sentence_index++;
-
-            // Write to shared memory if enabled
-            if (shm_enabled && !current_nmea_sentence.empty()) {
-                write_to_shm();
+        // Generate ALL NMEA sentences and concatenate them (each has \r\n already)
+        const char *sentence_types[] = {"GGA", "RMC", "GNS", "GST", "GSV", "PHTG"};
+        current_nmea_sentence.clear();
+        for (const char *type : sentence_types) {
+            std::string sentence = generate_nmea_sentence(type);
+            if (!sentence.empty()) {
+                current_nmea_sentence += sentence; // Each sentence already has \r\n
             }
+        }
 
-            // Schedule next update
-            next_update_time = last_update_time + (1.0 / update_frequency);
+        // Write all sentences at once to shared memory
+        if (shm_enabled && !current_nmea_sentence.empty()) {
+            write_to_shm();
         }
     }
 

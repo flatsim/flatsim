@@ -39,6 +39,10 @@ int main(int argc, char *argv[]) {
     }
 
     auto &tractor = simulator.get_robot(0);
+
+    // Override UUID with a memorable name for easy testing
+    tractor.info.uuid = "test_gps_nmea";
+
     std::cout << "Tractor loaded: " << tractor.info.name << " (UUID: " << tractor.info.uuid << ")" << std::endl;
 
     // Add GPS sensor
