@@ -70,6 +70,9 @@ namespace fs {
         std::string current_nmea_sentence;
         int nmea_sentence_index = 0; // Cycles through different NMEA types
 
+        // PHTG generation
+        bool phtg = false;
+
         /**
          * @brief Write NMEA string to shared memory
          */
@@ -171,6 +174,11 @@ namespace fs {
          * @return true if sentence was accepted and written to SHM
          */
         bool feed_nmea(const std::string &nmea_sentence);
+
+        /**
+         * @brief Set PHTG status
+         */
+        void set_phtg_status(bool enable);
 
       private:
         /**

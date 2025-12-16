@@ -116,6 +116,8 @@ int main(int argc, char *argv[]) {
 
     int step_count = 0;
 
+    bool phtg = false;
+
     while (true) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
@@ -145,6 +147,13 @@ int main(int argc, char *argv[]) {
                 std::cout << "GPS: lat=" << gps_data.latitude << ", lon=" << gps_data.longitude
                           << ", RTK=" << static_cast<int>(gps_data.rtk_status) << ", Sats=" << gps_data.num_satellites
                           << std::endl;
+            }
+
+            // every 10 seconds set PHTG status
+
+            if (step_count % 600 == 0) {
+                phtg = !phtg;
+                gps_sensor->set_phtg_status(phtg);
             }
 
             auto *imu_sensor = tractor.sensors.get<fs::IMUSensor>();

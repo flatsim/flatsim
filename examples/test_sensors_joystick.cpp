@@ -90,6 +90,11 @@ int main(int argc, char *argv[]) {
     float throttle = 0.0f;
     int step_count = 0;
 
+    bool phtg = false;
+
+    auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
+    auto *imu_sensor = tractor.sensors.get<fs::IMUSensor>();
+
     while (true) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
@@ -117,12 +122,10 @@ int main(int argc, char *argv[]) {
                 } else if (type == JS_EVENT_BUTTON && e.number < num_buttons) {
                     int button = int(e.number);
                     bool pressed = e.value != 0;
-
-                    if (pressed && button == 0) {
-                        // Button 0 = stop
-                        steering = 0.0f;
-                        throttle = 0.0f;
-                        std::cout << "Button 0: Stop" << std::endl;
+                    if (pressed && button == 1) {
+                        // Button 1 = HAS
+                        phtg = !phtg;
+                        std::cout << "Button 1: PHTG =" << phtg << std::endl;
                     }
                 }
             }
@@ -148,7 +151,6 @@ int main(int argc, char *argv[]) {
             std::cout << "Velocity: linear=" << linear_vel << " m/s, angular=" << angular_vel << " rad/s" << std::endl;
 
             // GPS data
-            auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
             if (gps_sensor) {
                 auto gps_data = gps_sensor->get_gps_data();
                 std::cout << "GPS: lat=" << gps_data.latitude << ", lon=" << gps_data.longitude
@@ -157,7 +159,6 @@ int main(int argc, char *argv[]) {
             }
 
             // IMU data
-            auto *imu_sensor = tractor.sensors.get<fs::IMUSensor>();
             if (imu_sensor) {
                 auto imu_data = imu_sensor->get_imu_data();
                 std::cout << "IMU: accel=(" << imu_data.accel_x << "," << imu_data.accel_y << "," << imu_data.accel_z
@@ -166,6 +167,8 @@ int main(int argc, char *argv[]) {
                           << ", yaw=" << imu_data.yaw << " rad" << std::endl;
             }
         }
+
+        gps_sensor->set_phtg_status(phtg);
 
         step_count++;
         std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS

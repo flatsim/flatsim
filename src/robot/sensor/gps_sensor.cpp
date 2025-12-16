@@ -213,9 +213,10 @@ namespace fs {
             char timetag[64];
             snprintf(timetag, sizeof(timetag), "%02d:%02d:%04d,%02d:%02d:%02d.00", utc_tm.tm_mday, utc_tm.tm_mon + 1,
                      utc_tm.tm_year + 1900, utc_tm.tm_hour, utc_tm.tm_min, utc_tm.tm_sec);
+            std::string pth_str = phtg ? "1" : "0";
 
             char buf[256];
-            snprintf(buf, sizeof(buf), "PHTG,%s,GAL,HAS,0,0", timetag);
+            snprintf(buf, sizeof(buf), "PHTG,%s,GAL,HAS,%s,0", timetag, pth_str.c_str());
             body = buf;
 
         } else {
@@ -233,6 +234,8 @@ namespace fs {
     std::string GPSSensor::get_type() const { return "GPS"; }
 
     bool GPSSensor::is_data_valid() const { return data_valid; }
+
+    void GPSSensor::set_phtg_status(bool enable) { phtg = enable; }
 
     double GPSSensor::get_frequency() const { return update_frequency; }
 
