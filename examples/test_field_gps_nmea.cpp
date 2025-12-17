@@ -303,6 +303,7 @@ int main() {
     float dt = 0.016f; // 60 FPS
     int step_count = 0;
     int last_reset_step = -1000;
+    bool phtg = false;
 
     std::cout << "\n*** GPS will output continuously - Press Ctrl+C to stop ***\n" << std::endl;
 
@@ -313,9 +314,22 @@ int main() {
         simulator.tick(dt);
         simulator.tock(5);
 
-        // Dynamic path update: Check if we're at the second-to-last waypoint
+        // Get robot reference
         auto &tractor = simulator.get_robot(0);
         auto pos = tractor.get_position();
+
+        // Toggle PHTG status every 10 seconds (600 steps at 60 FPS)
+        if (step_count % 600 == 0) {
+            auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
+            if (gps_sensor) {
+                phtg = !phtg;
+                gps_sensor->set_phtg_status(phtg);
+                std::cout << "\n*** PHTG status toggled to: " << (phtg ? "ENABLED" : "DISABLED") << " ***\n"
+                          << std::endl;
+            }
+        }
+
+        // Dynamic path update: Check if we're at the second-to-last waypoint
         auto second_to_last = path[path.size() - 2];
         float dist =
             std::sqrt(std::pow(pos.point.x - second_to_last.x, 2) + std::pow(pos.point.y - second_to_last.y, 2));
