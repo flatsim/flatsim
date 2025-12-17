@@ -1,7 +1,7 @@
 #include "flatsim/simulator.hpp"
 #include <iostream>
 
-namespace fs::simulator {
+namespace simulator {
 
     Simulator::Simulator(Conn conn, const std::string &address, const WorldSettings &settings)
         : ctx_(1), conn_(conn), address_(address), world_settings_(settings) {
@@ -56,4 +56,4 @@ namespace fs::simulator {
         // Visualization updates go here
     }
 
-} // namespace fs::simulator
+} // namespace simulator

@@ -3,20 +3,20 @@
 #include <memory>
 #include <zmq.hpp>
 
-namespace fs::robot {
+namespace agent {
 
-    class Robot {
+    class Agent {
       private:
         zmq::context_t ctx_;
         std::unique_ptr<zmq::socket_t> socket_;
         std::string address_;
 
       public:
-        Robot(const std::string &address = "");
-        ~Robot();
+        Agent(const std::string &address = "");
+        ~Agent();
 
         void tick(float dt);
         void tock();
     };
 
-} // namespace fs::robot
+} // namespace agent

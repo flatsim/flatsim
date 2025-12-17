@@ -5,7 +5,7 @@
 
 #include "muli/world.h"
 
-namespace fs::simulator {
+namespace simulator {
 
     enum class Conn { TCP, IPC };
 
@@ -36,4 +36,4 @@ namespace fs::simulator {
         muli::World &get_world() { return *world_; }
     };
 
-} // namespace fs::simulator
+} // namespace simulator
