@@ -83,7 +83,13 @@ def write_nonblocking(fd, data: bytes):
     try:
         os.write(fd, data)
     except OSError as e:
-        if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK, errno.EIO, errno.ENXIO, errno.EPIPE):
+        if e.errno in (
+            errno.EAGAIN,
+            errno.EWOULDBLOCK,
+            errno.EIO,
+            errno.ENXIO,
+            errno.EPIPE,
+        ):
             pass  # No reader or would block - just discard
         else:
             raise
@@ -376,7 +382,9 @@ def main(serial_port, baud, shm_path=None):
                     t_str, d_str, now = now_utc()
                     sentences = [
                         build_gga(BASE_LAT_DEG, BASE_LON_DEG, BASE_ALT_M),
-                        build_rmc(BASE_LAT_DEG, BASE_LON_DEG, BASE_SOG_KNOTS, BASE_COG_DEG),
+                        build_rmc(
+                            BASE_LAT_DEG, BASE_LON_DEG, BASE_SOG_KNOTS, BASE_COG_DEG
+                        ),
                         build_gns(BASE_LAT_DEG, BASE_LON_DEG, BASE_ALT_M),
                         build_gst(BASE_LAT_DEG, BASE_LON_DEG),
                         build_gsv(),
@@ -407,18 +415,21 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "-p", "--port",
+        "-p",
+        "--port",
         default=DEFAULT_SERIAL_PORT,
         help="Serial port path",
     )
     parser.add_argument(
-        "-b", "--baud",
+        "-b",
+        "--baud",
         type=int,
         default=DEFAULT_SERIAL_BAUD,
         help="Baud rate",
     )
     parser.add_argument(
-        "-s", "--shm",
+        "-s",
+        "--shm",
         dest="shm_path",
         help="GPS shared memory path (auto-detected if not specified)",
     )
@@ -436,5 +447,9 @@ if __name__ == "__main__":
         if not os.path.exists(shm_path):
             print(f"Error: {shm_path} not found!")
             sys.exit(1)
+
+    # Default to field_gps_tractor if no UUID specified
+    if shm_path is None:
+        shm_path = "/dev/shm/flatsim_field_gps_tractor_GPS"
 
     main(args.port, args.baud, shm_path)
