@@ -73,11 +73,12 @@ def monitor_gps(shm_path, show_all=False):
             else:
                 # Show summary every 60 frames (~1 second at 60Hz)
                 if frame_count % 60 == 0:
-                    # Parse GGA for position and RMC for speed/heading
+                    # Parse GGA for position, RMC for speed/heading, PHTG for status
                     gga_line = next((l for l in lines if 'GGA' in l), None)
                     rmc_line = next((l for l in lines if 'RMC' in l), None)
+                    phtg_line = next((l for l in lines if 'PHTG' in l), None)
                     
-                    lat = lon = fix = speed = heading = "?"
+                    lat = lon = fix = speed = heading = phtg_status = "?"
                     
                     if gga_line:
                         fields = gga_line.split(',')
@@ -90,7 +91,11 @@ def monitor_gps(shm_path, show_all=False):
                         speed = fields[7] if len(fields) > 7 else "?"  # Speed in knots
                         heading = fields[8] if len(fields) > 8 else "?"  # Track/heading in degrees
                     
-                    print(f"Frame {frame_count:5d} | Seq {seq:6d} | Rate: {rate:.1f} Hz | Lat: {lat} Lon: {lon} Fix: {fix} | Speed: {speed} kts | Heading: {heading}°")
+                    if phtg_line:
+                        fields = phtg_line.split(',')
+                        phtg_status = fields[5] if len(fields) > 5 else "?"  # AuthResult field (0 or 1) - field 6
+                    
+                    print(f"Frame {frame_count:5d} | Seq {seq:6d} | Rate: {rate:.1f} Hz | Lat: {lat} Lon: {lon} Fix: {fix} | Speed: {speed} kts | Heading: {heading}° | PHTG: {phtg_status}")
             
             last_seq = seq
         

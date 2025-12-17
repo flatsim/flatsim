@@ -203,20 +203,23 @@ namespace fs {
             body = buf;
 
         } else if (sentence_type == "PHTG") {
-            // $PHTG,TimeTag,System,Service,AuthResult,Status,Warning*checksum
-            // TimeTag in dd:mm:yyyy,hh:mm:ss.ss format
+            // $PHTG,date,time,System,Service,AuthResult,Status*checksum
+            // Date: dd:mm:yyyy, Time: hh:mm:ss.ss
             auto now = std::chrono::system_clock::now();
             time_t tt = std::chrono::system_clock::to_time_t(now);
             tm utc_tm;
             gmtime_r(&tt, &utc_tm);
 
-            char timetag[64];
-            snprintf(timetag, sizeof(timetag), "%02d:%02d:%04d,%02d:%02d:%02d.00", utc_tm.tm_mday, utc_tm.tm_mon + 1,
-                     utc_tm.tm_year + 1900, utc_tm.tm_hour, utc_tm.tm_min, utc_tm.tm_sec);
-            std::string pth_str = phtg ? "1" : "0";
+            char date_str[32];
+            char time_str[32];
+            snprintf(date_str, sizeof(date_str), "%02d:%02d:%04d", utc_tm.tm_mday, utc_tm.tm_mon + 1,
+                     utc_tm.tm_year + 1900);
+            snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d.00", utc_tm.tm_hour, utc_tm.tm_min, utc_tm.tm_sec);
+
+            int pth_status = phtg ? 1 : 0;
 
             char buf[256];
-            snprintf(buf, sizeof(buf), "PHTG,%s,GAL,HAS,%s,0", timetag, pth_str.c_str());
+            snprintf(buf, sizeof(buf), "PHTG,%s,%s,GAL,HAS,%d,0", date_str, time_str, pth_status);
             body = buf;
 
         } else {

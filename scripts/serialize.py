@@ -237,12 +237,12 @@ def build_gsv() -> str:
     return f"${body}*{cs}\r\n"
 
 
-def build_phtg(now: datetime) -> str:
+def build_phtg(now: datetime, auth_result: int = PHTG_AUTH_RESULT) -> str:
     """Build the proprietary authentication NMEA message"""
     date_part = now.strftime("%d:%m:%Y")
     time_part = now.strftime("%H:%M:%S") + ".00"
     timetag = f"{date_part},{time_part}"
-    body = f"PHTG,{timetag},{PHTG_SYSTEM},{PHTG_SERVICE},{PHTG_AUTH_RESULT},{PHTG_WARNING}"
+    body = f"PHTG,{timetag},{PHTG_SYSTEM},{PHTG_SERVICE},{auth_result},{PHTG_WARNING}"
     cs = nmea_checksum(body)
     return f"${body}*{cs}\r\n"
 
@@ -267,13 +267,14 @@ def read_gps_shm(shm_path):
 
 
 def parse_nmea_for_coords(nmea_data):
-    """Parse NMEA data to extract lat, lon, alt, speed, heading"""
+    """Parse NMEA data to extract lat, lon, alt, speed, heading, phtg status"""
     lines = [l for l in nmea_data.split("\n") if l.strip()]
     lat = BASE_LAT_DEG
     lon = BASE_LON_DEG
     alt = BASE_ALT_M
     sog = BASE_SOG_KNOTS
     cog = BASE_COG_DEG
+    phtg_status = PHTG_AUTH_RESULT
 
     gga_line = next((l for l in lines if "GGA" in l), None)
     if gga_line:
@@ -301,7 +302,16 @@ def parse_nmea_for_coords(nmea_data):
             if fields[8]:
                 cog = float(fields[8])
 
-    return lat, lon, alt, sog, cog
+    phtg_line = next((l for l in lines if "PHTG" in l), None)
+    if phtg_line:
+        fields = phtg_line.split(",")
+        if len(fields) > 5 and fields[5]:
+            try:
+                phtg_status = int(fields[5])
+            except ValueError:
+                pass
+
+    return lat, lon, alt, sog, cog, phtg_status
 
 
 def main(serial_port, baud, shm_path=None):
@@ -339,7 +349,7 @@ def main(serial_port, baud, shm_path=None):
                 seq, ts_ns, nmea = read_gps_shm(shm_path)
 
                 if seq is not None and nmea and seq != last_seq:
-                    lat, lon, alt, sog, cog = parse_nmea_for_coords(nmea)
+                    lat, lon, alt, sog, cog, phtg_status = parse_nmea_for_coords(nmea)
                     t_str, d_str, now = now_utc()
 
                     sentences = [
@@ -348,7 +358,7 @@ def main(serial_port, baud, shm_path=None):
                         build_gns(lat, lon, alt),
                         build_gst(lat, lon),
                         build_gsv(),
-                        build_phtg(now),
+                        build_phtg(now, phtg_status),
                     ]
 
                     for s in sentences:

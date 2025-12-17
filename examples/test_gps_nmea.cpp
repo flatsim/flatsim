@@ -129,6 +129,17 @@ int main(int argc, char *argv[]) {
         bool path_completed = tractor.tracker->is_path_completed();
         bool goal_reached = tractor.tracker->is_goal_reached();
 
+        // Toggle PHTG status every 10 seconds (600 steps at 60 FPS)
+        if (step_count % 600 == 0) {
+            auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
+            if (gps_sensor) {
+                phtg = !phtg;
+                gps_sensor->set_phtg_status(phtg);
+                std::cout << "\n*** PHTG status toggled to: " << (phtg ? "ENABLED" : "DISABLED") << " ***\n"
+                          << std::endl;
+            }
+        }
+
         // Print detailed status every 2 seconds
         if (step_count % 120 == 0) { // Every 2 seconds at 60 FPS
             auto pos = tractor.get_position();
@@ -146,14 +157,7 @@ int main(int argc, char *argv[]) {
                 auto gps_data = gps_sensor->get_gps_data();
                 std::cout << "GPS: lat=" << gps_data.latitude << ", lon=" << gps_data.longitude
                           << ", RTK=" << static_cast<int>(gps_data.rtk_status) << ", Sats=" << gps_data.num_satellites
-                          << std::endl;
-            }
-
-            // every 10 seconds set PHTG status
-
-            if (step_count % 600 == 0) {
-                phtg = !phtg;
-                gps_sensor->set_phtg_status(phtg);
+                          << ", PHTG=" << (phtg ? "ON" : "OFF") << std::endl;
             }
 
             auto *imu_sensor = tractor.sensors.get<fs::IMUSensor>();
