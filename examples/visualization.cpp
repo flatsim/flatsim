@@ -4,17 +4,24 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <rerun.hpp>
 #include <thread>
 
 int main() {
-    std::cout << "[Example] Visualization demo with tick/tock pattern" << std::endl;
+    std::cout << "[Example] Visualization demo with tick/tock pattern + Rerun" << std::endl;
+
+    // Setup Rerun
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
+    rec->spawn().exit_on_failure();
+    std::cout << "[Rerun] Visualization started" << std::endl;
 
     std::atomic<bool> running{true};
     const int viz_fps = 30;
     const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
 
-    // Start simulator in main thread
-    simulator::Simulator sim(simulator::Conn::IPC);
+    // Start simulator with rerun
+    simulator::WorldSettings ws{100.0f, 100.0f};
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
     // Create a test machine
     types::Machine machine;

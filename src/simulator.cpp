@@ -5,8 +5,9 @@
 
 namespace simulator {
 
-    Simulator::Simulator(Conn conn, const std::string &address, const WorldSettings &settings)
-        : ctx_(1), conn_(conn), address_(address), world_settings_(settings) {
+    Simulator::Simulator(Conn conn, const std::string &address, const WorldSettings &settings,
+                         std::shared_ptr<rerun::RecordingStream> rec)
+        : ctx_(1), conn_(conn), address_(address), world_settings_(settings), rec_(rec) {
 
         // Setup ZMQ
         socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
@@ -25,7 +26,7 @@ namespace simulator {
         // Setup physics world with World wrapper
         types::WorldSettings ws;
         ws.size = concord::Size(world_settings_.width, world_settings_.height, 0.0);
-        world_ = std::make_unique<World>(ws);
+        world_ = std::make_unique<World>(ws, rec_);
     }
 
     Simulator::~Simulator() {

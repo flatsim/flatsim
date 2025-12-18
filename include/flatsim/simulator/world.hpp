@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <rerun.hpp>
 #include <vector>
 
 #include "flatsim/simulator/world/obstacle.hpp"
@@ -19,8 +20,11 @@ namespace simulator {
 
         size_t next_obstacle_id_ = 1;
 
+        // Rerun visualization
+        std::shared_ptr<rerun::RecordingStream> rec_;
+
       public:
-        World(const types::WorldSettings &settings = {});
+        World(const types::WorldSettings &settings = {}, std::shared_ptr<rerun::RecordingStream> rec = nullptr);
         ~World();
 
         // Physics tick (simulation step)

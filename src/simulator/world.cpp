@@ -4,7 +4,8 @@
 
 namespace simulator {
 
-    World::World(const types::WorldSettings &settings) : settings_(settings) {
+    World::World(const types::WorldSettings &settings, std::shared_ptr<rerun::RecordingStream> rec)
+        : settings_(settings), rec_(rec) {
         muli::WorldSettings muli_settings;
         muli_settings.world_bounds = muli::AABB(
             muli::Vec2(-static_cast<float>(settings_.size.x) / 2.0f, -static_cast<float>(settings_.size.y) / 2.0f),
@@ -21,7 +22,43 @@ namespace simulator {
     void World::tick(float dt) { physics_->Step(dt); }
 
     void World::tock() {
-        // Visualization updates go here (if needed)
+        if (!rec_) return;
+
+        // Visualize world boundaries
+        float w = static_cast<float>(settings_.size.x);
+        float h = static_cast<float>(settings_.size.y);
+        std::vector<std::array<float, 3>> corners = {
+            {-w / 2.0f, -h / 2.0f, 0.0f},
+            {w / 2.0f, -h / 2.0f, 0.0f},
+            {w / 2.0f, h / 2.0f, 0.0f},
+            {-w / 2.0f, h / 2.0f, 0.0f},
+            {-w / 2.0f, -h / 2.0f, 0.0f} // Close the loop
+        };
+
+        auto border = rerun::components::LineStrip3D(corners);
+        rec_->log_static("world/border", rerun::LineStrips3D(border).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+
+        // Visualize static obstacles (RED circles)
+        for (const auto &obs : static_obstacles_) {
+            std::string name = "world/obstacles/static_" + std::to_string(obs.id());
+            float x = static_cast<float>(obs.position().x);
+            float y = static_cast<float>(obs.position().y);
+            float r = static_cast<float>(obs.radius());
+
+            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0.0f}}, {{r, r, 0.0f}})
+                                       .with_colors(rerun::Color(255, 0, 0)));
+        }
+
+        // Visualize dynamic obstacles (GREEN circles)
+        for (const auto &obs : dynamic_obstacles_) {
+            std::string name = "world/obstacles/dynamic_" + std::to_string(obs.id());
+            float x = static_cast<float>(obs.position().x);
+            float y = static_cast<float>(obs.position().y);
+            float r = static_cast<float>(obs.radius());
+
+            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0.0f}}, {{r, r, 0.0f}})
+                                       .with_colors(rerun::Color(0, 255, 0)));
+        }
     }
 
     size_t World::add_obstacle(const types::StaticObstacle &obs) {
