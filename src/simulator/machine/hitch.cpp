@@ -48,4 +48,12 @@ namespace simulator {
         }
     }
 
+    void Hitch::tick(float dt) {
+        // Future: Monitor joint health, forces, etc.
+    }
+
+    void Hitch::tock() {
+        // Future: Visualization, debug rendering
+    }
+
 } // namespace simulator

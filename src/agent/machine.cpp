@@ -41,4 +41,38 @@ namespace agent {
         return nullptr;
     }
 
+    void Machine::tick(float dt) {
+        // Tick all wheels
+        for (auto &wheel : wheels_) {
+            wheel.tick(dt);
+        }
+
+        // Tick all karosseries
+        for (auto &karosserie : karosseries_) {
+            karosserie.tick(dt);
+        }
+
+        // Tick all hitches
+        for (auto &hitch : hitches_) {
+            hitch.tick(dt);
+        }
+    }
+
+    void Machine::tock() {
+        // Tock all wheels
+        for (auto &wheel : wheels_) {
+            wheel.tock();
+        }
+
+        // Tock all karosseries
+        for (auto &karosserie : karosseries_) {
+            karosserie.tock();
+        }
+
+        // Tock all hitches
+        for (auto &hitch : hitches_) {
+            hitch.tock();
+        }
+    }
+
 } // namespace agent

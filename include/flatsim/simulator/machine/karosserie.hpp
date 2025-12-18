@@ -17,6 +17,10 @@ namespace simulator {
         // Create collider attached to parent body
         void create(muli::RigidBody *parent_body, const muli::CollisionFilter &filter);
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Accessors
         muli::Collider *collider() const { return collider_; }
         const types::Karosserie &config() const { return config_; }

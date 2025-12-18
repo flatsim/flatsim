@@ -74,6 +74,32 @@ namespace types {
     };
 
     // ============================================================================
+    // World Types
+    // ============================================================================
+
+    struct WorldSettings {
+        concord::Size size = concord::Size(100.0, 100.0, 0.0); // World bounds
+        concord::Datum datum;                                  // GPS reference point
+    };
+
+    struct StaticObstacle {
+        size_t id = 0;
+        concord::Point position;
+        double radius = 0.5;      // Obstacle radius (m)
+        double uncertainty = 0.1; // Position uncertainty std dev (m)
+    };
+
+    struct DynamicObstacle {
+        size_t id = 0;
+        concord::Point position;
+        concord::Point velocity;           // Velocity (m/s)
+        double radius = 0.5;               // Obstacle radius (m)
+        double uncertainty = 0.3;          // Position uncertainty std dev (m)
+        double activation_distance = 10.0; // Distance to activate movement
+        bool is_active = false;
+    };
+
+    // ============================================================================
     // Serializable Types for ZMQ (cista)
     // ============================================================================
 

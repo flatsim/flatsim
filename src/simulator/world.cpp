@@ -1,0 +1,90 @@
+#include "flatsim/simulator/world.hpp"
+#include <algorithm>
+#include <iostream>
+
+namespace simulator {
+
+    World::World(const types::WorldSettings &settings) : settings_(settings) {
+        muli::WorldSettings muli_settings;
+        muli_settings.world_bounds = muli::AABB(
+            muli::Vec2(-static_cast<float>(settings_.size.x) / 2.0f, -static_cast<float>(settings_.size.y) / 2.0f),
+            muli::Vec2(static_cast<float>(settings_.size.x) / 2.0f, static_cast<float>(settings_.size.y) / 2.0f));
+        muli_settings.apply_gravity = false;
+        muli_settings.gravity = muli::Vec2(0.0f, 0.0f);
+
+        physics_ = std::make_unique<muli::World>(muli_settings);
+        std::cout << "[World] Created (" << settings_.size.x << "x" << settings_.size.y << ")" << std::endl;
+    }
+
+    World::~World() = default;
+
+    void World::tick(float dt) { physics_->Step(dt); }
+
+    void World::tock() {
+        // Visualization updates go here (if needed)
+    }
+
+    size_t World::add_obstacle(const types::StaticObstacle &obs) {
+        types::StaticObstacle config = obs;
+        if (config.id == 0) {
+            config.id = next_obstacle_id_++;
+        }
+
+        StaticObstacle obstacle(config);
+        obstacle.create(*physics_);
+        static_obstacles_.push_back(std::move(obstacle));
+
+        return config.id;
+    }
+
+    size_t World::add_obstacle(const types::DynamicObstacle &obs) {
+        types::DynamicObstacle config = obs;
+        if (config.id == 0) {
+            config.id = next_obstacle_id_++;
+        }
+
+        DynamicObstacle obstacle(config);
+        obstacle.create(*physics_);
+        dynamic_obstacles_.push_back(std::move(obstacle));
+
+        return config.id;
+    }
+
+    void World::remove_obstacle(size_t id) {
+        // Remove from static obstacles
+        auto static_it = std::find_if(static_obstacles_.begin(), static_obstacles_.end(),
+                                      [id](const StaticObstacle &obs) { return obs.id() == id; });
+        if (static_it != static_obstacles_.end()) {
+            static_it->destroy(*physics_);
+            static_obstacles_.erase(static_it);
+            return;
+        }
+
+        // Remove from dynamic obstacles
+        auto dynamic_it = std::find_if(dynamic_obstacles_.begin(), dynamic_obstacles_.end(),
+                                       [id](const DynamicObstacle &obs) { return obs.id() == id; });
+        if (dynamic_it != dynamic_obstacles_.end()) {
+            dynamic_it->destroy(*physics_);
+            dynamic_obstacles_.erase(dynamic_it);
+        }
+    }
+
+    void World::clear_obstacles() {
+        for (auto &obs : static_obstacles_) {
+            obs.destroy(*physics_);
+        }
+        static_obstacles_.clear();
+
+        for (auto &obs : dynamic_obstacles_) {
+            obs.destroy(*physics_);
+        }
+        dynamic_obstacles_.clear();
+    }
+
+    void World::update_obstacles(float dt, double ref_x, double ref_y) {
+        for (auto &obs : dynamic_obstacles_) {
+            obs.update(dt, ref_x, ref_y);
+        }
+    }
+
+} // namespace simulator

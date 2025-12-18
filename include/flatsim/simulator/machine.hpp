@@ -39,6 +39,10 @@ namespace simulator {
         // Apply physics (friction, drag) - called each tick
         void apply_physics();
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Get state for feedback
         types::ser::MachineState get_state() const;
 

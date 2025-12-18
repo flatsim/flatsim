@@ -117,6 +117,41 @@ namespace simulator {
         }
     }
 
+    void Machine::tick(float dt) {
+        // Apply physics to all components
+        apply_physics();
+
+        // Tick all wheels
+        for (auto &wheel : wheels_) {
+            wheel.tick(dt);
+        }
+
+        // Tick all karosseries
+        for (auto &karosserie : karosseries_) {
+            karosserie.tick(dt);
+        }
+
+        // Tick all hitches
+        for (auto &hitch : hitches_) {
+            hitch.tick(dt);
+        }
+    }
+
+    void Machine::tock() {
+        // Visualization/debug for all components
+        for (auto &wheel : wheels_) {
+            wheel.tock();
+        }
+
+        for (auto &karosserie : karosseries_) {
+            karosserie.tock();
+        }
+
+        for (auto &hitch : hitches_) {
+            hitch.tock();
+        }
+    }
+
     types::ser::MachineState Machine::get_state() const {
         types::ser::MachineState ms;
         ms.uuid = config_.uuid;

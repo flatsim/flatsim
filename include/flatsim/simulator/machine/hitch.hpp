@@ -28,6 +28,10 @@ namespace simulator {
         // Check if connected
         bool is_connected() const { return connected_machine_ != nullptr; }
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Accessors
         muli::RevoluteJoint *joint() const { return joint_; }
         const types::Hitch &config() const { return config_; }

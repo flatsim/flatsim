@@ -38,6 +38,10 @@ namespace simulator {
         // Apply lateral friction and drag forces
         void apply_friction();
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Get state for feedback
         types::ser::WheelState get_state() const;
 

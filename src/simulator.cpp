@@ -22,17 +22,10 @@ namespace simulator {
         }
         socket_->set(zmq::sockopt::rcvtimeo, 0);
 
-        // Setup physics world (no gravity for top-down 2D)
-        muli::WorldSettings muli_settings;
-        muli_settings.world_bounds =
-            muli::AABB(muli::Vec2(-world_settings_.width / 2.0f, -world_settings_.height / 2.0f),
-                       muli::Vec2(world_settings_.width / 2.0f, world_settings_.height / 2.0f));
-        muli_settings.apply_gravity = false;
-        muli_settings.gravity = muli::Vec2(0.0f, 0.0f);
-
-        world_ = std::make_unique<muli::World>(muli_settings);
-        std::cout << "[Simulator] Physics world created (" << world_settings_.width << "x" << world_settings_.height
-                  << ")" << std::endl;
+        // Setup physics world with World wrapper
+        types::WorldSettings ws;
+        ws.size = concord::Size(world_settings_.width, world_settings_.height, 0.0);
+        world_ = std::make_unique<World>(ws);
     }
 
     Simulator::~Simulator() {
@@ -44,7 +37,7 @@ namespace simulator {
         uint32_t group = machine.group > 0 ? machine.group : next_group_++;
 
         Machine m(machine);
-        m.create(*world_, group);
+        m.create(world_->physics(), group);
         machines_[machine.uuid] = std::move(m);
     }
 
@@ -62,7 +55,7 @@ namespace simulator {
             return false;
         }
 
-        it->second.destroy(*world_);
+        it->second.destroy(world_->physics());
         machines_.erase(it);
         return true;
     }
@@ -83,8 +76,8 @@ namespace simulator {
             machine.apply_physics();
         }
 
-        // Step physics
-        world_->Step(dt);
+        // Tick physics world
+        world_->tick(dt);
 
         // Process ZMQ messages
         zmq::message_t request;
@@ -137,7 +130,13 @@ namespace simulator {
     }
 
     void Simulator::tock() {
-        // Visualization updates go here (if needed)
+        // Tock all machines (which tocks their components)
+        for (auto &[uuid, machine] : machines_) {
+            machine.tock();
+        }
+
+        // Tock physics world
+        world_->tock();
     }
 
 } // namespace simulator

@@ -21,4 +21,12 @@ namespace simulator {
         }
     }
 
+    void Karosserie::tick(float dt) {
+        // Future: Update sensors, compute metrics, etc.
+    }
+
+    void Karosserie::tock() {
+        // Future: Visualization, debug rendering
+    }
+
 } // namespace simulator

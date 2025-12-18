@@ -23,6 +23,10 @@ namespace agent {
         // Check if connected
         bool is_connected() const { return connected_machine_ != nullptr; }
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Accessors
         const types::Hitch &config() const { return config_; }
         Machine *connected_machine() const { return connected_machine_; }

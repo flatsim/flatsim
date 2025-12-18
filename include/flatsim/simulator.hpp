@@ -6,8 +6,8 @@
 #include <zmq.hpp>
 
 #include "flatsim/simulator/machine.hpp"
+#include "flatsim/simulator/world.hpp"
 #include "flatsim/types.hpp"
-#include "muli/world.h"
 
 namespace simulator {
 
@@ -26,8 +26,8 @@ namespace simulator {
         Conn conn_;
         std::string address_;
 
-        // Physics
-        std::unique_ptr<muli::World> world_;
+        // Physics world with obstacle management
+        std::unique_ptr<World> world_;
         WorldSettings world_settings_;
 
         // Machines: uuid -> Machine
@@ -55,7 +55,9 @@ namespace simulator {
         // Get world state for feedback
         types::ser::WorldState get_world_state() const;
 
-        muli::World &get_world() { return *world_; }
+        // Access to physics world and world wrapper
+        muli::World &get_world() { return world_->physics(); }
+        World &world() { return *world_; }
     };
 
 } // namespace simulator

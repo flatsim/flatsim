@@ -12,6 +12,10 @@ namespace agent {
         Karosserie() = default;
         Karosserie(const types::Karosserie &config);
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Accessors
         const types::Karosserie &config() const { return config_; }
     };

@@ -147,6 +147,14 @@ namespace simulator {
         }
     }
 
+    void Wheel::tick(float dt) {
+        // Future: Update sensors, compute metrics, etc.
+    }
+
+    void Wheel::tock() {
+        // Future: Visualization, debug rendering
+    }
+
     types::ser::WheelState Wheel::get_state() const {
         types::ser::WheelState ws;
         if (body_) {

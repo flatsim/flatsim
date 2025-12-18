@@ -28,6 +28,10 @@ namespace agent {
         // Find hitch by name
         Hitch *find_hitch(const std::string &name);
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         // Accessors
         const types::Machine &config() const { return config_; }
         const std::string &uuid() const { return config_.uuid; }
