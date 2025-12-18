@@ -2,6 +2,7 @@
 
 #include <cista/serialization.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "concord/concord.hpp"
@@ -24,14 +25,13 @@ namespace types {
         std::vector<bool> left_side;
     };
 
-    struct TankInfo {
+    struct Tank {
         std::string name;
         float capacity;
-        concord::Pose pose;
-        concord::Size size;
+        concord::Bound bound;
     };
 
-    struct PowerInfo {
+    struct Power {
         std::string name;
         PowerType type;
         float capacity;
@@ -47,8 +47,7 @@ namespace types {
 
     struct Wheel {
         std::string name;
-        concord::Pose pose; // LOCAL relative to machine (for definition)
-        concord::Size size;
+        concord::Bound bound;
         pigment::RGB color;
         // Physics params (Simulator uses, Agent ignores)
         float steering_max = 0.0f; // Max steering angle (radians), 0 = fixed
@@ -62,16 +61,14 @@ namespace types {
 
     struct Section {
         std::string name;
-        concord::Pose pose; // LOCAL relative to karosserie
-        concord::Size size;
+        concord::Bound bound; // LOCAL relative to karosserie
         pigment::RGB color;
         bool working = false;
     };
 
     struct Karosserie {
         std::string name;
-        concord::Pose pose; // LOCAL relative to machine
-        concord::Size size;
+        concord::Bound bound; // LOCAL relative to machine
         pigment::RGB color;
         bool has_physics = true;
         std::vector<Section> sections;
@@ -79,32 +76,35 @@ namespace types {
 
     struct Hitch {
         std::string name;
-        concord::Pose pose; // LOCAL relative to machine
-        concord::Size size;
+        concord::Bound bound; // LOCAL relative to machine
         pigment::RGB color;
         bool is_master = true; // true = can pull, false = can be pulled
         bool hooked = false;
     };
 
+    enum class Role { MASTER, FOLLOWER, SLAVE };
+
     struct Machine {
-        uint32_t rci;
-        uint32_t group;
-        std::string name;
-        std::string uuid;
-        std::string type;
+        uint rci;
+        uint group;
+        bool slave = false;
+        std::string name = "unnamed";
+        std::string uuid = "none";
+        std::string type = "none";
         std::vector<std::string> works_on;
         Capability capability;
         pigment::RGB color;
-        concord::Pose pose;
-        concord::Size size;
+        concord::Bound bound;
+        concord::Polygon outline;
         std::vector<Wheel> wheels;
         MachineControls controls;
-        std::vector<Hitch> hitches;
+        std::unordered_map<std::string, Hitch> hitches;
         std::vector<Karosserie> karosseries;
-        std::optional<TankInfo> tank;
-        std::optional<PowerInfo> power_source;
+        std::optional<Tank> tank;
+        std::optional<Power> power_source;
         MachineRole role = MachineRole::MASTER;
         float turning_radius = 1.0f;
+        std::string seqid = name;
     };
 
     struct MachineControl {
@@ -112,6 +112,17 @@ namespace types {
         std::vector<float> steering; // Per-wheel steering angles
         std::vector<float> throttle; // Per-wheel throttle values
         float brake = 0.0f;          // Brake force (0 = no brake)
+    };
+
+    enum class OP { IDLE, CHARGING, STOP, PAUSE, EMERGENCY, TRANSPORT, WORK };
+
+    struct State {
+        bool online = true;
+        Role role = Role::MASTER;
+        OP mode = OP::IDLE;
+        bool turn_first = false;  // For diff/skid: rotate in place before translating
+        bool allow_move = true;   // Allow movement (false = send zero velocity for collision avoidance)
+        float speed_scale = 1.0f; // Scale factor for velocity commands (0.0 - 1.0)
     };
 
     // ============================================================================
@@ -184,10 +195,20 @@ namespace types {
             }
         };
 
-        struct Wheel {
-            cista::raw::string name;
+        struct Bound {
             Pose pose;
             Vec2 size;
+
+            concord::Bound to_bound() const { return concord::Bound(pose.to_concord(), size.to_size()); }
+
+            static Bound from_bound(const concord::Bound &b) {
+                return {Pose::from_concord(b.pose), Vec2::from_size(b.size)};
+            }
+        };
+
+        struct Wheel {
+            cista::raw::string name;
+            Bound bound;
             Color color;
             float steering_max = 0.0f;
             float throttle_max = 1.0f;
@@ -200,8 +221,7 @@ namespace types {
             types::Wheel to_wheel() const {
                 types::Wheel w;
                 w.name = std::string(name.view());
-                w.pose = pose.to_concord();
-                w.size = size.to_size();
+                w.bound = bound.to_bound();
                 w.color = color.to_pigment();
                 w.steering_max = steering_max;
                 w.throttle_max = throttle_max;
@@ -216,8 +236,7 @@ namespace types {
             static Wheel from_wheel(const types::Wheel &w) {
                 Wheel s;
                 s.name = w.name;
-                s.pose = Pose::from_concord(w.pose);
-                s.size = Vec2::from_size(w.size);
+                s.bound = Bound::from_bound(w.bound);
                 s.color = Color::from_pigment(w.color);
                 s.steering_max = w.steering_max;
                 s.throttle_max = w.throttle_max;
@@ -232,16 +251,14 @@ namespace types {
 
         struct Section {
             cista::raw::string name;
-            Pose pose;
-            Vec2 size;
+            Bound bound;
             Color color;
             bool working = false;
 
             types::Section to_section() const {
                 types::Section s;
                 s.name = std::string(name.view());
-                s.pose = pose.to_concord();
-                s.size = size.to_size();
+                s.bound = bound.to_bound();
                 s.color = color.to_pigment();
                 s.working = working;
                 return s;
@@ -250,8 +267,7 @@ namespace types {
             static Section from_section(const types::Section &s) {
                 Section r;
                 r.name = s.name;
-                r.pose = Pose::from_concord(s.pose);
-                r.size = Vec2::from_size(s.size);
+                r.bound = Bound::from_bound(s.bound);
                 r.color = Color::from_pigment(s.color);
                 r.working = s.working;
                 return r;
@@ -260,8 +276,7 @@ namespace types {
 
         struct Karosserie {
             cista::raw::string name;
-            Pose pose;
-            Vec2 size;
+            Bound bound;
             Color color;
             bool has_physics = true;
             cista::raw::vector<Section> sections;
@@ -269,8 +284,7 @@ namespace types {
             types::Karosserie to_karosserie() const {
                 types::Karosserie k;
                 k.name = std::string(name.view());
-                k.pose = pose.to_concord();
-                k.size = size.to_size();
+                k.bound = bound.to_bound();
                 k.color = color.to_pigment();
                 k.has_physics = has_physics;
                 for (const auto &s : sections) {
@@ -282,8 +296,7 @@ namespace types {
             static Karosserie from_karosserie(const types::Karosserie &k) {
                 Karosserie r;
                 r.name = k.name;
-                r.pose = Pose::from_concord(k.pose);
-                r.size = Vec2::from_size(k.size);
+                r.bound = Bound::from_bound(k.bound);
                 r.color = Color::from_pigment(k.color);
                 r.has_physics = k.has_physics;
                 for (const auto &s : k.sections) {
@@ -295,8 +308,7 @@ namespace types {
 
         struct Hitch {
             cista::raw::string name;
-            Pose pose;
-            Vec2 size;
+            Bound bound;
             Color color;
             bool is_master = true;
             bool hooked = false;
@@ -304,8 +316,7 @@ namespace types {
             types::Hitch to_hitch() const {
                 types::Hitch h;
                 h.name = std::string(name.view());
-                h.pose = pose.to_concord();
-                h.size = size.to_size();
+                h.bound = bound.to_bound();
                 h.color = color.to_pigment();
                 h.is_master = is_master;
                 h.hooked = hooked;
@@ -315,8 +326,7 @@ namespace types {
             static Hitch from_hitch(const types::Hitch &h) {
                 Hitch r;
                 r.name = h.name;
-                r.pose = Pose::from_concord(h.pose);
-                r.size = Vec2::from_size(h.size);
+                r.bound = Bound::from_bound(h.bound);
                 r.color = Color::from_pigment(h.color);
                 r.is_master = h.is_master;
                 r.hooked = h.hooked;
@@ -324,54 +334,202 @@ namespace types {
             }
         };
 
-        struct Machine {
-            cista::raw::string uuid;
+        struct Capability {
+            cista::raw::vector<cista::raw::string> work_on;
+            cista::raw::vector<cista::raw::string> connect_to;
+            cista::raw::vector<cista::raw::string> unload_to;
+
+            types::Capability to_capability() const {
+                types::Capability c;
+                for (const auto &s : work_on) c.work_on.push_back(std::string(s.view()));
+                for (const auto &s : connect_to) c.connect_to.push_back(std::string(s.view()));
+                for (const auto &s : unload_to) c.unload_to.push_back(std::string(s.view()));
+                return c;
+            }
+
+            static Capability from_capability(const types::Capability &c) {
+                Capability r;
+                for (const auto &s : c.work_on) r.work_on.push_back(cista::raw::string(s));
+                for (const auto &s : c.connect_to) r.connect_to.push_back(cista::raw::string(s));
+                for (const auto &s : c.unload_to) r.unload_to.push_back(cista::raw::string(s));
+                return r;
+            }
+        };
+
+        struct MachineControls {
+            cista::raw::vector<float> steerings_max;
+            cista::raw::vector<float> throttles_max;
+            cista::raw::vector<float> steerings_diff;
+            cista::raw::vector<float> throttles_diff;
+            cista::raw::vector<bool> left_side;
+
+            types::MachineControls to_controls() const {
+                types::MachineControls c;
+                for (const auto &v : steerings_max) c.steerings_max.push_back(v);
+                for (const auto &v : throttles_max) c.throttles_max.push_back(v);
+                for (const auto &v : steerings_diff) c.steerings_diff.push_back(v);
+                for (const auto &v : throttles_diff) c.throttles_diff.push_back(v);
+                for (const auto &v : left_side) c.left_side.push_back(v);
+                return c;
+            }
+
+            static MachineControls from_controls(const types::MachineControls &c) {
+                MachineControls r;
+                for (const auto &v : c.steerings_max) r.steerings_max.push_back(v);
+                for (const auto &v : c.throttles_max) r.throttles_max.push_back(v);
+                for (const auto &v : c.steerings_diff) r.steerings_diff.push_back(v);
+                for (const auto &v : c.throttles_diff) r.throttles_diff.push_back(v);
+                for (const auto &v : c.left_side) r.left_side.push_back(v);
+                return r;
+            }
+        };
+
+        struct Polygon {
+            cista::raw::vector<Vec2> points;
+
+            concord::Polygon to_polygon() const {
+                std::vector<concord::Point> pts;
+                for (const auto &pt : points) pts.push_back(pt.to_point());
+                return concord::Polygon(pts);
+            }
+
+            static Polygon from_polygon(const concord::Polygon &p) {
+                Polygon r;
+                for (const auto &pt : p.getPoints()) r.points.push_back(Vec2::from_point(pt));
+                return r;
+            }
+        };
+
+        struct Tank {
             cista::raw::string name;
+            float capacity = 0.0f;
+            Bound bound;
+
+            types::Tank to_tank() const {
+                types::Tank t;
+                t.name = std::string(name.view());
+                t.capacity = capacity;
+                t.bound = bound.to_bound();
+                return t;
+            }
+
+            static Tank from_tank(const types::Tank &t) {
+                Tank r;
+                r.name = t.name;
+                r.capacity = t.capacity;
+                r.bound = Bound::from_bound(t.bound);
+                return r;
+            }
+        };
+
+        struct Power {
+            cista::raw::string name;
+            uint8_t type = 0; // 0=FUEL, 1=BATTERY
+            float capacity = 0.0f;
+            float consumption_rate = 0.0f;
+            float charge_rate = 0.0f;
+
+            types::Power to_power() const {
+                types::Power p;
+                p.name = std::string(name.view());
+                p.type = static_cast<types::PowerType>(type);
+                p.capacity = capacity;
+                p.consumption_rate = consumption_rate;
+                p.charge_rate = charge_rate;
+                return p;
+            }
+
+            static Power from_power(const types::Power &p) {
+                Power r;
+                r.name = p.name;
+                r.type = static_cast<uint8_t>(p.type);
+                r.capacity = p.capacity;
+                r.consumption_rate = p.consumption_rate;
+                r.charge_rate = p.charge_rate;
+                return r;
+            }
+        };
+
+        struct Machine {
+            uint32_t rci = 0;
             uint32_t group = 0;
-            Pose pose;
-            Vec2 size;
+            bool slave = false;
+            cista::raw::string name;
+            cista::raw::string uuid;
+            cista::raw::string type;
+            cista::raw::vector<cista::raw::string> works_on;
+            Capability capability;
             Color color;
+            Bound bound;
+            Polygon outline;
             cista::raw::vector<Wheel> wheels;
-            cista::raw::vector<Karosserie> karosseries;
+            MachineControls controls;
             cista::raw::vector<Hitch> hitches;
+            cista::raw::vector<Karosserie> karosseries;
+            bool has_tank = false;
+            Tank tank;
+            bool has_power = false;
+            Power power_source;
+            uint8_t role = 0; // 0=MASTER, 1=FOLLOWER, 2=SLAVE
+            float turning_radius = 1.0f;
+            cista::raw::string seqid;
 
             types::Machine to_machine() const {
                 types::Machine m;
-                m.uuid = std::string(uuid.view());
-                m.name = std::string(name.view());
+                m.rci = rci;
                 m.group = group;
-                m.pose = pose.to_concord();
-                m.size = size.to_size();
+                m.slave = slave;
+                m.name = std::string(name.view());
+                m.uuid = std::string(uuid.view());
+                m.type = std::string(type.view());
+                for (const auto &s : works_on) m.works_on.push_back(std::string(s.view()));
+                m.capability = capability.to_capability();
                 m.color = color.to_pigment();
-                for (const auto &w : wheels) {
-                    m.wheels.push_back(w.to_wheel());
-                }
-                for (const auto &k : karosseries) {
-                    m.karosseries.push_back(k.to_karosserie());
-                }
+                m.bound = bound.to_bound();
+                m.outline = outline.to_polygon();
+                for (const auto &w : wheels) m.wheels.push_back(w.to_wheel());
+                m.controls = controls.to_controls();
                 for (const auto &h : hitches) {
-                    m.hitches.push_back(h.to_hitch());
+                    auto hitch = h.to_hitch();
+                    m.hitches[hitch.name] = hitch;
                 }
+                for (const auto &k : karosseries) m.karosseries.push_back(k.to_karosserie());
+                if (has_tank) m.tank = tank.to_tank();
+                if (has_power) m.power_source = power_source.to_power();
+                m.role = static_cast<types::MachineRole>(role);
+                m.turning_radius = turning_radius;
+                m.seqid = std::string(seqid.view());
                 return m;
             }
 
             static Machine from_machine(const types::Machine &m) {
                 Machine r;
-                r.uuid = m.uuid;
-                r.name = m.name;
+                r.rci = m.rci;
                 r.group = m.group;
-                r.pose = Pose::from_concord(m.pose);
-                r.size = Vec2::from_size(m.size);
+                r.slave = m.slave;
+                r.name = m.name;
+                r.uuid = m.uuid;
+                r.type = m.type;
+                for (const auto &s : m.works_on) r.works_on.push_back(cista::raw::string(s));
+                r.capability = Capability::from_capability(m.capability);
                 r.color = Color::from_pigment(m.color);
-                for (const auto &w : m.wheels) {
-                    r.wheels.push_back(Wheel::from_wheel(w));
+                r.bound = Bound::from_bound(m.bound);
+                r.outline = Polygon::from_polygon(m.outline);
+                for (const auto &w : m.wheels) r.wheels.push_back(Wheel::from_wheel(w));
+                r.controls = MachineControls::from_controls(m.controls);
+                for (const auto &[name, h] : m.hitches) r.hitches.push_back(Hitch::from_hitch(h));
+                for (const auto &k : m.karosseries) r.karosseries.push_back(Karosserie::from_karosserie(k));
+                if (m.tank) {
+                    r.has_tank = true;
+                    r.tank = Tank::from_tank(*m.tank);
                 }
-                for (const auto &k : m.karosseries) {
-                    r.karosseries.push_back(Karosserie::from_karosserie(k));
+                if (m.power_source) {
+                    r.has_power = true;
+                    r.power_source = Power::from_power(*m.power_source);
                 }
-                for (const auto &h : m.hitches) {
-                    r.hitches.push_back(Hitch::from_hitch(h));
-                }
+                r.role = static_cast<uint8_t>(m.role);
+                r.turning_radius = m.turning_radius;
+                r.seqid = m.seqid;
                 return r;
             }
         };
@@ -438,6 +596,38 @@ namespace types {
         struct Response {
             bool success = false;
             WorldState state;
+        };
+
+        // Serializable State
+        struct State {
+            bool online = true;
+            uint8_t role = 0; // 0=MASTER, 1=FOLLOWER, 2=SLAVE
+            uint8_t mode = 0; // 0=IDLE, 1=CHARGING, 2=STOP, 3=PAUSE, 4=EMERGENCY, 5=TRANSPORT, 6=WORK
+            bool turn_first = false;
+            bool allow_move = true;
+            float speed_scale = 1.0f;
+
+            types::State to_state() const {
+                types::State s;
+                s.online = online;
+                s.role = static_cast<types::Role>(role);
+                s.mode = static_cast<types::OP>(mode);
+                s.turn_first = turn_first;
+                s.allow_move = allow_move;
+                s.speed_scale = speed_scale;
+                return s;
+            }
+
+            static State from_state(const types::State &s) {
+                State r;
+                r.online = s.online;
+                r.role = static_cast<uint8_t>(s.role);
+                r.mode = static_cast<uint8_t>(s.mode);
+                r.turn_first = s.turn_first;
+                r.allow_move = s.allow_move;
+                r.speed_scale = s.speed_scale;
+                return r;
+            }
         };
 
     } // namespace ser

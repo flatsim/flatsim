@@ -1,15 +1,13 @@
 #pragma once
 
-#include "flatsim/core/utils.hpp"
+#include "concord/concord.hpp"
 #include "flatsim/types.hpp"
-#include "muli/collision_filter.h"
-#include "muli/world.h"
+#include "pigment/pigment.hpp"
 #include <rerun.hpp>
 
 namespace fs {
-    class Hitch {
+    class Section {
       private:
-        std::shared_ptr<muli::World> world;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
         types::Machine *robot_info = nullptr;
@@ -20,19 +18,17 @@ namespace fs {
         concord::Bound bound;
         concord::Pose pose;
         pigment::RGB color;
-        bool hooked = false;
-        bool is_master = true; // true = master (can pull), false = slave (can be pulled)
+        bool working = false;
+        int section_id;
 
-        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
-              types::Machine *robot_info, types::State *robot_state);
+        Section(std::shared_ptr<rerun::RecordingStream> rec, types::Machine *robot_info, types::State *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master);
+                  concord::Bound section_bound, int id);
         void tick(float dt, concord::Pose trans_pose);
         void tock();
+        void teleport(concord::Pose trans_pose);
+        void toggle_work() { working = !working; }
 
-        void teleport(concord::Pose pose);
-
-        void toggle_hook() { hooked = !hooked; }
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
     };

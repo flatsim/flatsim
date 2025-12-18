@@ -1,59 +1,76 @@
 #pragma once
 
+#include "flatsim/core/utils.hpp"
 #include "flatsim/types.hpp"
 #include "muli/world.h"
+#include <rerun.hpp>
 
-namespace simulator {
+namespace fs {
+    // Remove duplicate function - use utils::deg2rad instead
+    // --- Utility functions ---
 
     class Wheel {
       private:
-        muli::RigidBody *body_ = nullptr;
-        muli::MotorJoint *motor_joint_ = nullptr;
-        muli::AngleJoint *angle_joint_ = nullptr;
-        types::Wheel config_;
+        std::shared_ptr<rerun::RecordingStream> rec;
+        std::shared_ptr<muli::World> world;
+        std::string name;
+        std::string parent_name;
+        pigment::RGB color;
+        concord::Bound bound;
+        concord::Pose pose;
+        muli::CollisionFilter filter;
+        types::Machine *robot_info = nullptr;
+        types::State *robot_state = nullptr;
 
-        // Rate-limited current values
-        float current_steering_ = 0.0f;
-        float current_throttle_ = 0.0f;
-        float steering_rate_ = 0.52f; // rad/s
-        float throttle_rate_ = 2.5f;  // 1/s
+        muli::RigidBody *wheel; // Owned by physics world
+        muli::Vec2 forward, normal;
+        float force, torque;
+        float brake, drag;
+        float friction, max_impulse;
 
-        // Cached direction vectors (updated in tick)
-        muli::Vec2 forward_ = muli::Vec2(0, 1);
-        muli::Vec2 normal_ = muli::Vec2(1, 0);
+        float throttle_val = 0.0f, steering_val = 0.0f;
+        float current_steering = 0.0f, current_throttle = 0.0f; // Actual current values
+        float steering_max, throttle_max;
+
+        // Physics-based acceleration limits
+        float steering_rate; // rad/s - how fast steering can change
+        float throttle_rate; // 1/s - how fast throttle can change
 
       public:
         Wheel() = default;
-        Wheel(const types::Wheel &config);
+        Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+              muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
+        void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
+                  concord::Bound bound, concord::Bound parent_bound, float _force, float _friction, float _maxImpulse,
+                  float _brake, float _drag, float throttle_max, float steering_max);
 
-        // Create physics body and joints, attach to parent machine body
-        void create(muli::World &world, muli::RigidBody *parent_body, const concord::Pose &world_pose,
-                    const muli::CollisionFilter &filter, float parent_mass);
-
-        // Destroy physics objects
-        void destroy(muli::World &world);
-
-        // Apply steering and throttle (rate-limited)
-        void apply_control(float target_steering, float target_throttle, float dt);
-
-        // Apply brake impulse
-        void apply_brake(float brake_force);
-
-        // Apply lateral friction and drag forces
-        void apply_friction();
-
-        // Tick/tock pattern
         void tick(float dt);
         void tock();
+        void teleport(concord::Pose pose);
+        void update(float steering, float throttle, muli::MotorJoint *joint, float dt);
+        void configure_physics_for_size();
 
-        // Get state for feedback
-        types::ser::WheelState get_state() const;
+        concord::Bound get_bound() const { return bound; }
 
-        // Accessors
-        muli::RigidBody *body() const { return body_; }
-        const types::Wheel &config() const { return config_; }
-        float current_steering() const { return current_steering_; }
-        float current_throttle() const { return current_throttle_; }
+        // Accessors for external access
+        void set_linear_damping(float damping) {
+            if (wheel) wheel->SetLinearDamping(damping);
+        }
+        void set_angular_damping(float damping) {
+            if (wheel) wheel->SetAngularDamping(damping);
+        }
+
+        // Rate limiters - control how fast wheels can change steering/throttle
+        void set_steering_rate(float rate_rad_per_sec) { steering_rate = rate_rad_per_sec; }
+        void set_throttle_rate(float rate_per_sec) { throttle_rate = rate_per_sec; }
+        float get_steering_rate() const { return steering_rate; }
+        float get_throttle_rate() const { return throttle_rate; }
+
+        muli::RigidBody *get_wheel() { return wheel; }
+        muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
+        void update_color(const pigment::RGB &new_color) { color = new_color; }
+
+        // Apply braking force to stop the wheel
+        void apply_brake(float brake_force);
     };
-
-} // namespace simulator
+} // namespace fs
