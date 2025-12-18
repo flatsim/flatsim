@@ -26,43 +26,43 @@ int main() {
     types::Machine machine;
     machine.uuid = "robot_001";
     machine.name = "TestBot";
-    machine.pose.point.x = 0.0;
-    machine.pose.point.y = 0.0;
-    machine.pose.angle.yaw = 0.0;
-    machine.size = concord::Size(1.0, 2.0, 0.0);
+    machine.bound.pose.point.x = 0.0;
+    machine.bound.pose.point.y = 0.0;
+    machine.bound.pose.angle.yaw = 0.0;
+    machine.bound.size = concord::Size(1.0, 2.0, 0.0);
     machine.color = pigment::RGB(255, 0, 0);
 
     // Add 4 wheels (front steerable, rear fixed)
     types::Wheel fl, fr, rl, rr;
 
     fl.name = "front_left";
-    fl.pose.point.x = -0.4;
-    fl.pose.point.y = 0.8;
-    fl.size = concord::Size(0.1, 0.2, 0.0);
+    fl.bound.pose.point.x = -0.4;
+    fl.bound.pose.point.y = 0.8;
+    fl.bound.size = concord::Size(0.1, 0.2, 0.0);
     fl.color = pigment::RGB(50, 50, 50);
     fl.steering_max = 0.5f; // Can steer
     fl.force = 200.0f;
 
     fr.name = "front_right";
-    fr.pose.point.x = 0.4;
-    fr.pose.point.y = 0.8;
-    fr.size = concord::Size(0.1, 0.2, 0.0);
+    fr.bound.pose.point.x = 0.4;
+    fr.bound.pose.point.y = 0.8;
+    fr.bound.size = concord::Size(0.1, 0.2, 0.0);
     fr.color = pigment::RGB(50, 50, 50);
     fr.steering_max = 0.5f;
     fr.force = 200.0f;
 
     rl.name = "rear_left";
-    rl.pose.point.x = -0.4;
-    rl.pose.point.y = -0.8;
-    rl.size = concord::Size(0.1, 0.2, 0.0);
+    rl.bound.pose.point.x = -0.4;
+    rl.bound.pose.point.y = -0.8;
+    rl.bound.size = concord::Size(0.1, 0.2, 0.0);
     rl.color = pigment::RGB(50, 50, 50);
     rl.steering_max = 0.0f; // Fixed
     rl.force = 200.0f;
 
     rr.name = "rear_right";
-    rr.pose.point.x = 0.4;
-    rr.pose.point.y = -0.8;
-    rr.size = concord::Size(0.1, 0.2, 0.0);
+    rr.bound.pose.point.x = 0.4;
+    rr.bound.pose.point.y = -0.8;
+    rr.bound.size = concord::Size(0.1, 0.2, 0.0);
     rr.color = pigment::RGB(50, 50, 50);
     rr.steering_max = 0.0f;
     rr.force = 200.0f;

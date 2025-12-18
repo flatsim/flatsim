@@ -41,8 +41,8 @@ namespace simulator {
     void Simulator::create_machine(const types::Machine &machine) {
         uint32_t group = machine.group > 0 ? machine.group : next_group_++;
 
-        Machine m(machine);
-        m.create(world_->physics(), group);
+        Machine m(rec_, world_->physics_ptr(), machine, group);
+        m.create();
         machines_[machine.uuid] = std::move(m);
     }
 
@@ -60,7 +60,7 @@ namespace simulator {
             return false;
         }
 
-        it->second.destroy(world_->physics());
+        it->second.destroy();
         machines_.erase(it);
         return true;
     }
@@ -76,9 +76,9 @@ namespace simulator {
     }
 
     void Simulator::tick(float dt) {
-        // Apply wheel physics (friction, drag) for each machine
+        // Tick all machines
         for (auto &[uuid, machine] : machines_) {
-            machine.apply_physics();
+            machine.tick(dt);
         }
 
         // Tick physics world

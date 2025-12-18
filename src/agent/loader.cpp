@@ -92,8 +92,8 @@ namespace agent {
         boost::json::object const &dims = j.at("dimensions").as_object();
         float width = get_value<float>(dims.at("width"));
         float height = get_value<float>(dims.at("height"));
-        machine.pose = spawn_pose;
-        machine.size = concord::Size(width, height, 0.0f);
+        machine.bound.pose = spawn_pose;
+        machine.bound.size = concord::Size(width, height, 0.0f);
 
         pigment::RGB machine_color = color.value_or(parse_color(j.at("color").as_object()));
         machine.color = machine_color;
@@ -204,8 +204,8 @@ namespace agent {
 
             types::Wheel w;
             w.name = get_value<std::string>(wheel.at("name"));
-            w.pose = parse_pose(wheel.at("position").as_object());
-            w.size = parse_size(wheel.at("size").as_object());
+            w.bound.pose = parse_pose(wheel.at("position").as_object());
+            w.bound.size = parse_size(wheel.at("size").as_object());
             w.color = wheel.contains("color") ? parse_color(wheel.at("color").as_object()) : pigment::RGB(0, 0, 0);
 
             machine.wheels.push_back(w);
@@ -252,8 +252,8 @@ namespace agent {
             boost::json::object const &karo = karo_val.as_object();
             types::Karosserie kaross;
             kaross.name = get_value<std::string>(karo.at("name"));
-            kaross.pose = parse_pose(karo.at("position").as_object());
-            kaross.size = parse_size(karo.at("size").as_object());
+            kaross.bound.pose = parse_pose(karo.at("position").as_object());
+            kaross.bound.size = parse_size(karo.at("size").as_object());
             kaross.color = karo.contains("color") ? parse_color(karo.at("color").as_object()) : default_color;
             kaross.has_physics = get_value_or(karo, "has_physics", true);
 
@@ -261,8 +261,8 @@ namespace agent {
             for (int i = 0; i < sections_count; i++) {
                 types::Section section;
                 section.name = "section_" + std::to_string(i);
-                section.pose = concord::Pose(0.0, 0.0, 0.0);
-                section.size = kaross.size;
+                section.bound.pose = concord::Pose(0.0, 0.0, 0.0);
+                section.bound.size = kaross.bound.size;
                 section.color = kaross.color;
                 kaross.sections.push_back(section);
             }
@@ -278,27 +278,27 @@ namespace agent {
 
             types::Hitch hitch_info;
             hitch_info.name = name;
-            hitch_info.pose = parse_pose(hitch.at("position").as_object());
-            hitch_info.size = parse_size(hitch.at("size").as_object());
+            hitch_info.bound.pose = parse_pose(hitch.at("position").as_object());
+            hitch_info.bound.size = parse_size(hitch.at("size").as_object());
             hitch_info.color = pigment::RGB(0, 0, 0);
             hitch_info.is_master = get_value_or(hitch, "is_master", true);
 
-            machine.hitches.push_back(hitch_info);
+            machine.hitches[name] = hitch_info;
         }
     }
 
     void Loader::parse_tank(types::Machine &machine, const boost::json::object &tank_json) {
-        types::TankInfo tank;
+        types::Tank tank;
         tank.name = get_value<std::string>(tank_json.at("name"));
         tank.capacity = get_value<float>(tank_json.at("capacity"));
-        tank.pose = parse_pose(tank_json.at("position").as_object());
-        tank.size = parse_size(tank_json.at("size").as_object());
+        tank.bound.pose = parse_pose(tank_json.at("position").as_object());
+        tank.bound.size = parse_size(tank_json.at("size").as_object());
 
         machine.tank = tank;
     }
 
     void Loader::parse_power(types::Machine &machine, const boost::json::object &power_json) {
-        types::PowerInfo power;
+        types::Power power;
         power.name = get_value<std::string>(power_json.at("name"));
 
         std::string type_str = get_value<std::string>(power_json.at("type"));

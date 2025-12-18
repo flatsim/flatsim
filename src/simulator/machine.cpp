@@ -4,190 +4,126 @@
 
 namespace simulator {
 
-    // Physics constants
-    constexpr float LINEAR_DAMPING = 0.3f;
-    constexpr float ANGULAR_DAMPING = 0.5f;
-
-    concord::Pose Machine::shift_pose(const concord::Pose &parent, const concord::Pose &child) {
-        float cos_a = std::cos(static_cast<float>(parent.angle.yaw));
-        float sin_a = std::sin(static_cast<float>(parent.angle.yaw));
-
-        concord::Pose result;
-        result.point.x = parent.point.x + child.point.x * cos_a - child.point.y * sin_a;
-        result.point.y = parent.point.y + child.point.x * sin_a + child.point.y * cos_a;
-        result.angle.yaw = parent.angle.yaw + child.angle.yaw;
-        return result;
+    Machine::Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+                     const types::Machine &config, uint32_t group)
+        : rec_(rec), world_(world), config_(config) {
+        // Create collision filter (use bit/mask system)
+        filter_.group = 0;
+        filter_.bit = 1 << group;
+        filter_.mask = ~(1 << group);
     }
 
-    Machine::Machine(const types::Machine &config) : config_(config) {}
-
-    void Machine::create(muli::World &world, uint32_t group) {
-        // Create collision filter (negative group = never collide with same group)
-        filter_.group = -static_cast<int>(group);
-        filter_.bit = 1;
-        filter_.mask = 0xFFFFFFFF;
-
-        // Create machine body transform
-        muli::Transform machine_tf;
-        machine_tf.position.x = static_cast<float>(config_.pose.point.x);
-        machine_tf.position.y = static_cast<float>(config_.pose.point.y);
-        machine_tf.rotation = static_cast<float>(config_.pose.angle.yaw);
-
-        // Create empty body for compound shape
-        body_ = world.CreateEmptyBody(machine_tf);
-        if (!body_) {
-            std::cerr << "[Simulator] Failed to create body for: " << config_.name << std::endl;
+    void Machine::create() {
+        if (!world_ || !rec_) {
+            std::cerr << "[Simulator] Cannot create machine - missing world or recorder" << std::endl;
             return;
         }
 
-        // Add main machine collider
-        auto *machine_collider =
-            body_->CreateBoxCollider(static_cast<float>(config_.size.x), static_cast<float>(config_.size.y));
-        body_->SetCollisionFilter(filter_);
-        machine_collider->SetFilter(filter_);
+        // Create chassis which manages all physics
+        chassis_ = std::make_unique<fs::Chassis>(world_, rec_, filter_, &config_, &state_);
+        chassis_->init(config_);
 
-        body_->SetLinearDamping(LINEAR_DAMPING);
-        body_->SetAngularDamping(ANGULAR_DAMPING);
-
-        float body_mass = body_->GetMass();
-
-        // Create wheels
-        for (const auto &wheel_cfg : config_.wheels) {
-            Wheel wheel(wheel_cfg);
-            concord::Pose wheel_pose = shift_pose(config_.pose, wheel_cfg.pose);
-            wheel.create(world, body_, wheel_pose, filter_, body_mass);
-            wheels_.push_back(std::move(wheel));
-        }
-
-        // Create karosseries
-        for (const auto &karos_cfg : config_.karosseries) {
-            Karosserie karos(karos_cfg);
-            karos.create(body_, filter_);
-            karosseries_.push_back(std::move(karos));
-        }
-
-        // Create hitches
-        for (const auto &hitch_cfg : config_.hitches) {
-            hitches_.emplace_back(hitch_cfg);
-        }
-
-        std::cout << "[Simulator] Created machine: " << config_.name << " with " << wheels_.size() << " wheels"
+        std::cout << "[Simulator] Created machine: " << config_.name << " with " << config_.wheels.size() << " wheels"
                   << std::endl;
     }
 
-    void Machine::destroy(muli::World &world) {
-        // Destroy wheels
-        for (auto &wheel : wheels_) {
-            wheel.destroy(world);
+    void Machine::destroy() {
+        if (chassis_ && chassis_->body && world_) {
+            world_->Destroy(chassis_->body);
         }
-        wheels_.clear();
-
-        // Destroy machine body
-        if (body_) {
-            world.Destroy(body_);
-            body_ = nullptr;
-        }
-
-        karosseries_.clear();
-        hitches_.clear();
+        chassis_.reset();
 
         std::cout << "[Simulator] Destroyed machine: " << config_.uuid << std::endl;
     }
 
     void Machine::apply_control(const types::MachineControl &control, float dt) {
+        if (!chassis_) return;
+
         // Apply brake if requested
         if (control.brake > 0.0f) {
-            for (auto &wheel : wheels_) {
-                wheel.apply_brake(control.brake);
-            }
+            chassis_->brake(control.brake);
             return;
         }
 
-        // Apply steering and throttle to each wheel
-        for (size_t i = 0; i < wheels_.size(); ++i) {
-            float target_steering = (i < control.steering.size()) ? control.steering[i] : 0.0f;
-            float target_throttle = (i < control.throttle.size()) ? control.throttle[i] : 0.0f;
-            wheels_[i].apply_control(target_steering, target_throttle, dt);
-        }
-    }
-
-    void Machine::apply_physics() {
-        for (auto &wheel : wheels_) {
-            wheel.apply_friction();
-        }
+        // Apply steering and throttle through chassis
+        chassis_->update(control.steering, control.throttle, dt);
     }
 
     void Machine::tick(float dt) {
-        // Apply physics to all components
-        apply_physics();
+        if (!chassis_) return;
 
-        // Tick all wheels (updates cached direction vectors)
-        for (auto &wheel : wheels_) {
-            wheel.tick(dt);
-        }
+        // Update pose from physics
+        config_.bound.pose = chassis_->get_pose();
 
-        // Tick all karosseries
-        for (auto &karosserie : karosseries_) {
-            karosserie.tick(dt);
-        }
-
-        // Tick all hitches
-        for (auto &hitch : hitches_) {
-            hitch.tick(dt);
-        }
+        // Tick chassis (updates wheels, karosseries, hitches)
+        chassis_->tick(dt);
     }
 
     void Machine::tock() {
-        // Visualization/debug for all components
-        for (auto &wheel : wheels_) {
-            wheel.tock();
-        }
+        if (!chassis_) return;
 
-        for (auto &karosserie : karosseries_) {
-            karosserie.tock();
+        // Create label with role info
+        std::string role_prefix;
+        switch (config_.role) {
+        case types::MachineRole::MASTER:
+            role_prefix = "(M)";
+            break;
+        case types::MachineRole::FOLLOWER:
+            role_prefix = "(F)";
+            break;
+        case types::MachineRole::SLAVE:
+            role_prefix = "(S)";
+            break;
         }
+        std::string label = role_prefix + config_.seqid;
 
-        for (auto &hitch : hitches_) {
-            hitch.tock();
-        }
+        chassis_->tock(label);
     }
 
     types::ser::MachineState Machine::get_state() const {
         types::ser::MachineState ms;
         ms.uuid = config_.uuid;
 
-        if (body_) {
-            ms.pose.position.x = body_->GetPosition().x;
-            ms.pose.position.y = body_->GetPosition().y;
-            ms.pose.angle = body_->GetAngle();
-            ms.velocity.x = body_->GetLinearVelocity().x;
-            ms.velocity.y = body_->GetLinearVelocity().y;
-
-            // Debug
-            static int state_count = 0;
-            if (state_count++ % 120 == 0) {
-                std::cout << "[Machine sim] get_state " << state_count << " - Pos: (" << ms.pose.position.x << ", "
-                          << ms.pose.position.y << "), Vel: (" << ms.velocity.x << ", " << ms.velocity.y << ")"
-                          << std::endl;
-            }
-            ms.angular_vel = body_->GetAngularVelocity();
-        }
-
-        // Add wheel states
-        for (const auto &wheel : wheels_) {
-            ms.wheels.push_back(wheel.get_state());
+        if (chassis_ && chassis_->body) {
+            ms.pose.position.x = chassis_->body->GetPosition().x;
+            ms.pose.position.y = chassis_->body->GetPosition().y;
+            ms.pose.angle = chassis_->body->GetAngle();
+            ms.velocity.x = chassis_->body->GetLinearVelocity().x;
+            ms.velocity.y = chassis_->body->GetLinearVelocity().y;
+            ms.angular_vel = chassis_->body->GetAngularVelocity();
         }
 
         return ms;
     }
 
-    Hitch *Machine::find_hitch(const std::string &name) {
-        for (auto &hitch : hitches_) {
-            if (hitch.config().name == name) {
+    fs::Hitch *Machine::find_hitch(const std::string &name) {
+        if (!chassis_) return nullptr;
+
+        for (auto &hitch : chassis_->hitches) {
+            if (hitch.name == name) {
                 return &hitch;
             }
         }
         return nullptr;
+    }
+
+    void Machine::teleport(const concord::Pose &pose) {
+        if (chassis_) {
+            chassis_->teleport(pose);
+        }
+    }
+
+    void Machine::brake(float brake_force) {
+        if (chassis_) {
+            chassis_->brake(brake_force);
+        }
+    }
+
+    void Machine::update_color(const pigment::RGB &new_color) {
+        config_.color = new_color;
+        if (chassis_) {
+            chassis_->update_color(new_color);
+        }
     }
 
 } // namespace simulator

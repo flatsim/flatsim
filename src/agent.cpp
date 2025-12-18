@@ -28,7 +28,7 @@ namespace agent {
         ctx_.close();
     }
 
-    void Agent::set_machine(const types::Machine &config) { machine_ = Machine(config, rec_); }
+    void Agent::set_machine(const types::Machine &config) { machine_ = Machine(rec_, config); }
 
     bool Agent::spawn() {
         types::ser::Request req;

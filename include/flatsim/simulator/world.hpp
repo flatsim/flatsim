@@ -45,6 +45,9 @@ namespace simulator {
         // Accessors
         muli::World &physics() { return *physics_; }
         const muli::World &physics() const { return *physics_; }
+        std::shared_ptr<muli::World> physics_ptr() {
+            return std::shared_ptr<muli::World>(physics_.get(), [](muli::World *) {});
+        }
         const types::WorldSettings &settings() const { return settings_; }
 
         std::vector<StaticObstacle> &static_obstacles() { return static_obstacles_; }

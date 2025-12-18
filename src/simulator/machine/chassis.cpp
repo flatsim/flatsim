@@ -26,7 +26,7 @@ namespace fs {
         // Create empty body for compound shape
         body = world->CreateEmptyBody(t);
         if (!body) {
-            throw InitializationException("Failed to create chassis body");
+            throw std::runtime_error("Failed to create chassis body");
         }
 
         // Add main chassis as first collider
