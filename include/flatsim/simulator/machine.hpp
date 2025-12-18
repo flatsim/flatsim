@@ -21,7 +21,7 @@ namespace simulator {
         types::Machine config_;
         types::State state_;
 
-        std::unique_ptr<fs::Chassis> chassis_;
+        std::unique_ptr<Chassis> chassis_;
 
       public:
         Machine() = default;
@@ -43,7 +43,7 @@ namespace simulator {
         types::ser::MachineState get_state() const;
 
         // Find hitch by name
-        fs::Hitch *find_hitch(const std::string &name);
+        Hitch *find_hitch(const std::string &name);
 
         // Accessors
         muli::RigidBody *body() const { return chassis_ ? chassis_->body : nullptr; }
@@ -52,8 +52,8 @@ namespace simulator {
         const types::State &state() const { return state_; }
         types::State &state_mut() { return state_; }
         const std::string &uuid() const { return config_.uuid; }
-        fs::Chassis *chassis() { return chassis_.get(); }
-        const fs::Chassis *chassis() const { return chassis_.get(); }
+        Chassis *chassis() { return chassis_.get(); }
+        const Chassis *chassis() const { return chassis_.get(); }
 
         // Teleport machine to new pose
         void teleport(const concord::Pose &pose);

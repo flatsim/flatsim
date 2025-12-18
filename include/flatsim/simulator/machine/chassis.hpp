@@ -10,7 +10,7 @@
 #include "muli/world.h"
 #include <rerun.hpp>
 
-namespace fs {
+namespace simulator {
 
     class Chassis {
       private:
@@ -60,4 +60,4 @@ namespace fs {
         // Apply braking to all wheels
         void brake(float brake_force);
     };
-} // namespace fs
+} // namespace simulator

@@ -6,7 +6,7 @@
 #include "muli/world.h"
 #include <rerun.hpp>
 
-namespace fs {
+namespace simulator {
     class Hitch {
       private:
         std::shared_ptr<muli::World> world;
@@ -36,4 +36,4 @@ namespace fs {
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
     };
-} // namespace fs
+} // namespace simulator

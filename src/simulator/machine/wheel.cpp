@@ -1,6 +1,6 @@
 #include "flatsim/simulator/machine/wheel.hpp"
 
-namespace fs {
+namespace simulator {
 
     Wheel::Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
                  muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state)
@@ -223,4 +223,4 @@ namespace fs {
         }
     }
 
-} // namespace fs
+} // namespace simulator

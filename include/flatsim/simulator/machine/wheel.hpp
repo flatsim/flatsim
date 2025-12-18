@@ -5,7 +5,7 @@
 #include "muli/world.h"
 #include <rerun.hpp>
 
-namespace fs {
+namespace simulator {
     // Remove duplicate function - use utils::deg2rad instead
     // --- Utility functions ---
 
@@ -73,4 +73,4 @@ namespace fs {
         // Apply braking force to stop the wheel
         void apply_brake(float brake_force);
     };
-} // namespace fs
+} // namespace simulator

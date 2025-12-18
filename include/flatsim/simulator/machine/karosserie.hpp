@@ -8,7 +8,7 @@
 #include "muli/world.h"
 #include <rerun.hpp>
 
-namespace fs {
+namespace simulator {
     class Karosserie {
       private:
         std::shared_ptr<muli::World> world;
@@ -48,4 +48,4 @@ namespace fs {
         concord::Bound get_bound() const { return bound; }
         void update_color(const pigment::RGB &new_color) { color = new_color; }
     };
-} // namespace fs
+} // namespace simulator

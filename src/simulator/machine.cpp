@@ -20,7 +20,7 @@ namespace simulator {
         }
 
         // Create chassis which manages all physics
-        chassis_ = std::make_unique<fs::Chassis>(world_, rec_, filter_, &config_, &state_);
+        chassis_ = std::make_unique<Chassis>(world_, rec_, filter_, &config_, &state_);
         chassis_->init(config_);
 
         std::cout << "[Simulator] Created machine: " << config_.name << " with " << config_.wheels.size() << " wheels"
@@ -96,7 +96,7 @@ namespace simulator {
         return ms;
     }
 
-    fs::Hitch *Machine::find_hitch(const std::string &name) {
+    Hitch *Machine::find_hitch(const std::string &name) {
         if (!chassis_) return nullptr;
 
         for (auto &hitch : chassis_->hitches) {

@@ -1,6 +1,6 @@
 #include "flatsim/simulator/machine/hitch.hpp"
 
-namespace fs {
+namespace simulator {
     Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
                  types::Machine *robot_info, types::State *robot_state)
         : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
@@ -41,4 +41,4 @@ namespace fs {
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
                 .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
-} // namespace fs
+} // namespace simulator

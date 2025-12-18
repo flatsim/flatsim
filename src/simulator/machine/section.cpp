@@ -1,7 +1,7 @@
 #include "flatsim/simulator/machine/section.hpp"
 #include "flatsim/utils.hpp"
 
-namespace fs {
+namespace simulator {
     Section::Section(std::shared_ptr<rerun::RecordingStream> rec, types::Machine *robot_info, types::State *robot_state)
         : rec(rec), robot_info(robot_info), robot_state(robot_state) {}
 
@@ -42,4 +42,4 @@ namespace fs {
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(s_th))})
                 .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
-} // namespace fs
+} // namespace simulator

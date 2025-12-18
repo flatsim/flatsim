@@ -1,6 +1,6 @@
 #include "flatsim/simulator/machine/karosserie.hpp"
 
-namespace fs {
+namespace simulator {
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
                            types::Machine *robot_info, types::State *robot_state)
         : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
@@ -136,4 +136,4 @@ namespace fs {
             }
         }
     }
-} // namespace fs
+} // namespace simulator
