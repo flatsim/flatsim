@@ -13,6 +13,38 @@ namespace types {
     // Main Types (using concord/pigment)
     // ============================================================================
 
+    enum class PowerType { FUEL, BATTERY };
+    enum class MachineRole { MASTER, FOLLOWER, SLAVE };
+
+    struct MachineControls {
+        std::vector<float> steerings_max;
+        std::vector<float> throttles_max;
+        std::vector<float> steerings_diff;
+        std::vector<float> throttles_diff;
+        std::vector<bool> left_side;
+    };
+
+    struct TankInfo {
+        std::string name;
+        float capacity;
+        concord::Pose pose;
+        concord::Size size;
+    };
+
+    struct PowerInfo {
+        std::string name;
+        PowerType type;
+        float capacity;
+        float consumption_rate;
+        float charge_rate = 0.0f;
+    };
+
+    struct Capability {
+        std::vector<std::string> work_on;
+        std::vector<std::string> connect_to;
+        std::vector<std::string> unload_to;
+    };
+
     struct Wheel {
         std::string name;
         concord::Pose pose; // LOCAL relative to machine (for definition)
@@ -55,15 +87,24 @@ namespace types {
     };
 
     struct Machine {
-        std::string uuid;
+        uint32_t rci;
+        uint32_t group;
         std::string name;
-        uint32_t group = 0; // Collision group (same group won't collide)
-        concord::Pose pose; // WORLD pose
-        concord::Size size;
+        std::string uuid;
+        std::string type;
+        std::vector<std::string> works_on;
+        Capability capability;
         pigment::RGB color;
+        concord::Pose pose;
+        concord::Size size;
         std::vector<Wheel> wheels;
-        std::vector<Karosserie> karosseries;
+        MachineControls controls;
         std::vector<Hitch> hitches;
+        std::vector<Karosserie> karosseries;
+        std::optional<TankInfo> tank;
+        std::optional<PowerInfo> power_source;
+        MachineRole role = MachineRole::MASTER;
+        float turning_radius = 1.0f;
     };
 
     struct MachineControl {
