@@ -19,11 +19,42 @@ int main() {
     const int viz_fps = 30;
     const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
 
-    // Start simulator with rerun
-    simulator::WorldSettings ws{100.0f, 100.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
+    // Start simulator in a thread
+    std::thread sim_thread([&rec, &running]() {
+        simulator::WorldSettings ws{100.0f, 100.0f};
+        simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
-    // Create a test machine
+        std::cout << "[SimThread] Starting sim loop for 500 ticks..." << std::endl;
+        for (int i = 0; i < 500 && running.load(); ++i) {
+            if (i % 60 == 0) {
+                std::cout << "[SimThread] Loop iteration " << i << std::endl;
+            }
+
+            std::cout << "[SimThread] Before tick " << i << std::endl;
+            sim.tick(0.016f);
+            std::cout << "[SimThread] After tick " << i << std::endl;
+
+            // Call tock every few ticks for visualization (30 FPS = every 2 ticks at 60 FPS)
+            if (i % 2 == 0) {
+                std::cout << "[SimThread] Before tock " << i << std::endl;
+                sim.tock();
+                std::cout << "[SimThread] After tock " << i << std::endl;
+            }
+
+            std::cout << "[SimThread] Before sleep " << i << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::cout << "[SimThread] After sleep " << i << std::endl;
+        }
+        std::cout << "[SimThread] Sim loop ended" << std::endl;
+    });
+
+    // Give simulator time to start
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Create agent with rerun
+    agent::Agent agnt("", rec);
+
+    // Create a simple 4-wheel machine
     types::Machine machine;
     machine.uuid = "robot_001";
     machine.name = "VisBot";
@@ -70,74 +101,65 @@ int main() {
 
     machine.wheels = {fl, fr, rl, rr};
 
-    sim.create_machine(machine);
-    std::cout << "[Simulator] Created machine: " << machine.name << std::endl;
+    agnt.set_machine(machine);
 
-    // Background visualization thread - calls tock() at fixed rate
-    std::thread viz_thread([&sim, &running, &viz_interval, &viz_fps]() {
-        std::cout << "[VizThread] Started visualization thread at " << viz_fps << " FPS" << std::endl;
-        while (running.load()) {
-            auto viz_start = std::chrono::steady_clock::now();
+    if (agnt.spawn()) {
+        std::cout << "[Agent] Spawn successful!" << std::endl;
 
-            // Call tock for visualization
-            sim.tock();
+        // Background visualization thread - calls tock() at fixed rate
+        std::thread viz_thread([&agnt, &running, &viz_interval, &viz_fps]() {
+            std::cout << "[VizThread] Started visualization thread at " << viz_fps << " FPS" << std::endl;
+            int frame_count = 0;
+            while (running.load()) {
+                auto viz_start = std::chrono::steady_clock::now();
 
-            // Maintain consistent frame rate
-            auto viz_end = std::chrono::steady_clock::now();
-            auto elapsed = viz_end - viz_start;
-            if (elapsed < viz_interval) {
-                std::this_thread::sleep_for(viz_interval - elapsed);
+                // Call tock for agent visualization
+                agnt.tock();
+
+                // Debug: Print position every 30 frames (once per second)
+                if (frame_count % 30 == 0) {
+                    auto pose = agnt.machine().world_pose();
+                    std::cout << "[VizThread] Frame " << frame_count << " - Robot at: (" << pose.point.x << ", "
+                              << pose.point.y << ")" << std::endl;
+                }
+                frame_count++;
+
+                // Maintain consistent frame rate
+                auto viz_end = std::chrono::steady_clock::now();
+                auto elapsed = viz_end - viz_start;
+                if (elapsed < viz_interval) {
+                    std::this_thread::sleep_for(viz_interval - elapsed);
+                }
             }
-        }
-        std::cout << "[VizThread] Stopped" << std::endl;
-    });
+            std::cout << "[VizThread] Stopped" << std::endl;
+        });
 
-    // Main physics loop - tick at full speed
-    std::cout << "[PhysicsThread] Starting physics loop" << std::endl;
-    auto last_time = std::chrono::steady_clock::now();
-    int tick_count = 0;
-    const int max_ticks = 300; // Run for ~5 seconds at 60 FPS
+        // Send control commands
+        std::cout << "[Example] Starting control loop..." << std::endl;
+        for (int i = 0; i < 250; ++i) {
+            types::MachineControl ctrl;
+            ctrl.uuid = machine.uuid;
+            ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
+            ctrl.throttle = {0.5f, 0.5f, 0.5f, 0.5f}; // Forward
 
-    // Apply some control to make the robot move
-    types::MachineControl ctrl;
-    ctrl.uuid = machine.uuid;
-    ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
-    ctrl.throttle = {0.3f, 0.3f, 0.3f, 0.3f}; // Forward
-
-    while (tick_count < max_ticks) {
-        auto now = std::chrono::steady_clock::now();
-        std::chrono::duration<float> dt = now - last_time;
-        last_time = now;
-
-        // Apply control
-        sim.apply_control(ctrl, dt.count());
-
-        // Physics tick
-        sim.tick(dt.count());
-
-        tick_count++;
-
-        // Print progress every second
-        if (tick_count % 60 == 0) {
-            auto state = sim.get_world_state();
-            if (!state.machines.empty()) {
-                auto &ms = state.machines[0];
-                std::cout << "[Physics] Tick " << tick_count << " - Position: (" << ms.pose.position.x << ", "
-                          << ms.pose.position.y << "), Velocity: (" << ms.velocity.x << ", " << ms.velocity.y << ")"
-                          << std::endl;
+            bool success = agnt.control(ctrl);
+            if (i % 60 == 0) {
+                std::cout << "[Example] Control " << i << " - Success: " << success << std::endl;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
 
-        // Sleep to maintain ~60 FPS physics
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        std::cout << "[Example] Final pose: (" << agnt.machine().world_pose().point.x << ", "
+                  << agnt.machine().world_pose().point.y << ")" << std::endl;
+
+        running.store(false);
+        viz_thread.join();
+    } else {
+        std::cout << "[Agent] Spawn failed!" << std::endl;
+        running.store(false);
     }
 
-    std::cout << "[PhysicsThread] Stopping after " << tick_count << " ticks" << std::endl;
-
-    // Stop visualization thread
-    running.store(false);
-    viz_thread.join();
-
+    sim_thread.join();
     std::cout << "[Example] Done!" << std::endl;
 
     return 0;

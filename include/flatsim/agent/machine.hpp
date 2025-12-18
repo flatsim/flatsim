@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <rerun.hpp>
 #include <string>
 #include <vector>
 
@@ -18,15 +20,21 @@ namespace agent {
         types::Machine config_;
         concord::Pose world_pose_; // Updated from simulator state
 
+        // Rerun visualization
+        std::shared_ptr<rerun::RecordingStream> rec_;
+
       public:
         Machine() = default;
-        Machine(const types::Machine &config);
+        Machine(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         // Update state from simulator feedback
         void update_state(const types::ser::MachineState &state);
 
         // Find hitch by name
         Hitch *find_hitch(const std::string &name);
+
+        // Set rerun for visualization
+        void set_rerun(std::shared_ptr<rerun::RecordingStream> rec);
 
         // Tick/tock pattern
         void tick(float dt);

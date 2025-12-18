@@ -23,9 +23,12 @@ namespace simulator {
       private:
         // ZMQ
         zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> socket_;
+        std::unique_ptr<zmq::socket_t> spawn_socket_;                           // REP - for spawn/despawn requests
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> control_sockets_; // PULL per-robot
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> state_sockets_;   // PUB per-robot
         Conn conn_;
         std::string address_;
+        int next_tcp_port_ = 5600;
 
         // Physics world with obstacle management
         std::unique_ptr<World> world_;

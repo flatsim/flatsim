@@ -162,6 +162,14 @@ namespace simulator {
             ms.pose.angle = body_->GetAngle();
             ms.velocity.x = body_->GetLinearVelocity().x;
             ms.velocity.y = body_->GetLinearVelocity().y;
+
+            // Debug
+            static int state_count = 0;
+            if (state_count++ % 120 == 0) {
+                std::cout << "[Machine sim] get_state " << state_count << " - Pos: (" << ms.pose.position.x << ", "
+                          << ms.pose.position.y << "), Vel: (" << ms.velocity.x << ", " << ms.velocity.y << ")"
+                          << std::endl;
+            }
             ms.angular_vel = body_->GetAngularVelocity();
         }
 
