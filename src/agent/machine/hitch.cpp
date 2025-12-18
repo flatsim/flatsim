@@ -20,6 +20,11 @@ namespace agent {
         float w = static_cast<float>(config_.size.x);
         float h = static_cast<float>(config_.size.y);
 
+        // Use hitch color if set, otherwise default to machine color
+        pigment::RGB color = (config_.color.r == 0 && config_.color.g == 0 && config_.color.b == 0)
+                                 ? machine_config_.color
+                                 : config_.color;
+
         std::string entity_path = machine_config_.uuid + "/chassis/hitch/" + config_.name;
         bool is_hooked = is_connected();
         rec_->log_static(
@@ -28,7 +33,7 @@ namespace agent {
                 .with_radii({{0.02f}})
                 .with_fill_mode(is_hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
-                .with_colors({rerun::Color(config_.color.r, config_.color.g, config_.color.b)}));
+                .with_colors({rerun::Color(color.r, color.g, color.b)}));
     }
 
 } // namespace agent

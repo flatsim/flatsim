@@ -36,27 +36,23 @@ namespace simulator {
         };
 
         auto border = rerun::components::LineStrip3D(corners);
-        rec_->log_static("world/border", rerun::LineStrips3D(border).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
+        rec_->log_static("border", rerun::LineStrips3D(border).with_colors({{0, 0, 255}}).with_radii({{0.2f}}));
 
-        // Visualize static obstacles (RED circles)
+        // Visualize static obstacles (RED flat squares)
         for (const auto &obs : static_obstacles_) {
-            std::string name = "world/obstacles/static_" + std::to_string(obs.id());
-            float x = static_cast<float>(obs.position().x);
-            float y = static_cast<float>(obs.position().y);
-            float r = static_cast<float>(obs.radius());
-
-            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0.0f}}, {{r, r, 0.0f}})
+            std::string name = "obstacles/static_" + std::to_string(obs.id());
+            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes(
+                                       {{float(obs.position().x), float(obs.position().y), 0.0f}},
+                                       {{float(obs.radius()), float(obs.radius()), 0.0f}})
                                        .with_colors(rerun::Color(255, 0, 0)));
         }
 
-        // Visualize dynamic obstacles (GREEN circles)
+        // Visualize dynamic obstacles (GREEN flat squares)
         for (const auto &obs : dynamic_obstacles_) {
-            std::string name = "world/obstacles/dynamic_" + std::to_string(obs.id());
-            float x = static_cast<float>(obs.position().x);
-            float y = static_cast<float>(obs.position().y);
-            float r = static_cast<float>(obs.radius());
-
-            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes({{x, y, 0.0f}}, {{r, r, 0.0f}})
+            std::string name = "obstacles/dynamic_" + std::to_string(obs.id());
+            rec_->log_static(name, rerun::Boxes3D::from_centers_and_half_sizes(
+                                       {{float(obs.position().x), float(obs.position().y), 0.0f}},
+                                       {{float(obs.radius()), float(obs.radius()), 0.0f}})
                                        .with_colors(rerun::Color(0, 255, 0)));
         }
     }

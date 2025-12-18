@@ -71,7 +71,7 @@ int main() {
     fl.pose.point.x = -0.4;
     fl.pose.point.y = 0.8;
     fl.size = concord::Size(0.1, 0.2, 0.0);
-    fl.color = pigment::RGB(50, 50, 50);
+    // fl.color defaults to (0,0,0) which will inherit machine color
     fl.steering_max = 0.5f;
     fl.force = 200.0f;
 
@@ -79,7 +79,7 @@ int main() {
     fr.pose.point.x = 0.4;
     fr.pose.point.y = 0.8;
     fr.size = concord::Size(0.1, 0.2, 0.0);
-    fr.color = pigment::RGB(50, 50, 50);
+    // fr.color defaults to (0,0,0) which will inherit machine color
     fr.steering_max = 0.5f;
     fr.force = 200.0f;
 
@@ -87,7 +87,7 @@ int main() {
     rl.pose.point.x = -0.4;
     rl.pose.point.y = -0.8;
     rl.size = concord::Size(0.1, 0.2, 0.0);
-    rl.color = pigment::RGB(50, 50, 50);
+    // rl.color defaults to (0,0,0) which will inherit machine color
     rl.steering_max = 0.0f;
     rl.force = 200.0f;
 
@@ -95,7 +95,7 @@ int main() {
     rr.pose.point.x = 0.4;
     rr.pose.point.y = -0.8;
     rr.size = concord::Size(0.1, 0.2, 0.0);
-    rr.color = pigment::RGB(50, 50, 50);
+    // rr.color defaults to (0,0,0) which will inherit machine color
     rr.steering_max = 0.0f;
     rr.force = 200.0f;
 
