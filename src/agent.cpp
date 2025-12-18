@@ -16,16 +16,16 @@ namespace agent {
         ctx_.close();
     }
 
-    void Agent::set_machine(const types::Machine &machine) { machine_ = machine; }
+    void Agent::set_machine(const types::Machine &config) { machine_ = Machine(config); }
 
     bool Agent::spawn() {
         types::ser::Request req;
         req.type = types::ser::MsgType::SPAWN;
-        req.machine = types::ser::Machine::from_machine(machine_);
+        req.machine = types::ser::Machine::from_machine(machine_.config());
 
         auto data = cista::serialize(req);
         socket_->send(zmq::buffer(data), zmq::send_flags::none);
-        std::cout << "[Agent] Sent SPAWN for: " << machine_.name << std::endl;
+        std::cout << "[Agent] Sent SPAWN for: " << machine_.config().name << std::endl;
 
         zmq::message_t reply;
         auto result = socket_->recv(reply, zmq::recv_flags::none);
@@ -36,8 +36,8 @@ namespace agent {
             if (resp && resp->success) {
                 // Update state from response
                 for (const auto &ms : resp->state.machines) {
-                    if (std::string(ms.uuid.view()) == machine_.uuid) {
-                        update_state(ms);
+                    if (std::string(ms.uuid.view()) == machine_.uuid()) {
+                        machine_.update_state(ms);
                         break;
                     }
                 }
@@ -52,7 +52,7 @@ namespace agent {
     bool Agent::despawn() {
         types::ser::Request req;
         req.type = types::ser::MsgType::DESPAWN;
-        req.uuid = machine_.uuid;
+        req.uuid = machine_.uuid();
 
         auto data = cista::serialize(req);
         socket_->send(zmq::buffer(data), zmq::send_flags::none);
@@ -84,8 +84,8 @@ namespace agent {
             auto *resp = cista::deserialize<types::ser::Response>(buffer);
             if (resp && resp->success) {
                 for (const auto &ms : resp->state.machines) {
-                    if (std::string(ms.uuid.view()) == machine_.uuid) {
-                        update_state(ms);
+                    if (std::string(ms.uuid.view()) == machine_.uuid()) {
+                        machine_.update_state(ms);
                         break;
                     }
                 }
@@ -93,16 +93,6 @@ namespace agent {
             }
         }
         return false;
-    }
-
-    void Agent::update_state(const types::ser::MachineState &state) {
-        // Update machine pose
-        machine_.pose = state.pose.to_concord();
-
-        // Update wheel poses (world poses from simulator)
-        for (size_t i = 0; i < state.wheels.size() && i < machine_.wheels.size(); ++i) {
-            machine_.wheels[i].pose = state.wheels[i].pose.to_concord();
-        }
     }
 
     void Agent::tick(float dt) { (void)dt; }

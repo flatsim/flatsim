@@ -85,8 +85,8 @@ int main() {
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
 
-        std::cout << "Final pose: (" << agent.machine().pose.point.x << ", " << agent.machine().pose.point.y << ")"
-                  << std::endl;
+        std::cout << "Final pose: (" << agent.machine().world_pose().point.x << ", "
+                  << agent.machine().world_pose().point.y << ")" << std::endl;
     } else {
         std::cout << "Spawn failed!" << std::endl;
     }

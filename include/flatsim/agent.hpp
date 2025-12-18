@@ -3,6 +3,7 @@
 #include <memory>
 #include <zmq.hpp>
 
+#include "flatsim/agent/machine.hpp"
 #include "flatsim/types.hpp"
 
 namespace agent {
@@ -12,14 +13,15 @@ namespace agent {
         zmq::context_t ctx_;
         std::unique_ptr<zmq::socket_t> socket_;
         std::string address_;
-        types::Machine machine_;
+        Machine machine_;
 
       public:
         Agent(const std::string &address = "");
         ~Agent();
 
-        void set_machine(const types::Machine &machine);
-        const types::Machine &machine() const { return machine_; }
+        void set_machine(const types::Machine &config);
+        Machine &machine() { return machine_; }
+        const Machine &machine() const { return machine_; }
 
         bool spawn();
         bool despawn();
@@ -27,9 +29,6 @@ namespace agent {
 
         void tick(float dt);
         void tock();
-
-        // Update machine state from simulator feedback
-        void update_state(const types::ser::MachineState &state);
     };
 
 } // namespace agent
