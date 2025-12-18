@@ -1,8 +1,10 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <zmq.hpp>
 
+#include "flatsim/types.hpp"
 #include "muli/world.h"
 
 namespace simulator {
@@ -26,6 +28,9 @@ namespace simulator {
         std::unique_ptr<muli::World> world_;
         WorldSettings world_settings_;
 
+        // Bodies: uuid -> rigid body
+        std::map<std::string, muli::RigidBody *> bodies_;
+
       public:
         Simulator(Conn conn, const std::string &address = "", const WorldSettings &settings = {});
         ~Simulator();
@@ -33,6 +38,7 @@ namespace simulator {
         void tick(float dt);
         void tock();
 
+        muli::RigidBody *create_body(const types::Chassis &chassis);
         muli::World &get_world() { return *world_; }
     };
 

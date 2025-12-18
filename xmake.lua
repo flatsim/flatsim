@@ -228,7 +228,7 @@ package("cista")
     set_kind("library", {headeronly = true})
     set_sourcedir(path.join(os.projectdir(), "build/_deps/cista-src"))
 
-    on_fetch(function (package)
+    on_load(function (package)
         local sourcedir = package:sourcedir()
         if not os.isdir(sourcedir) then
             print("Fetching cista from git...")
@@ -237,7 +237,7 @@ package("cista")
                             "-c", "advice.detachedHead=false",
                             "https://github.com/felixguendling/cista.git", sourcedir})
         end
-        return {includedirs = {path.join(sourcedir, "include")}}
+        package:add("includedirs", path.join(sourcedir, "include"), {public = true})
     end)
 
     on_install(function (package)
@@ -310,10 +310,11 @@ target("flatsim_internal")
     -- Add header files
     add_headerfiles("include/(flatsim/**.hpp)")
     add_includedirs("include", {public = true})
+    add_includedirs("build/_deps/cista-src/include", {public = true})
 
     -- Link dependencies (order matters: libraries with dependencies come first)
     add_packages("drivekit", "farmtrax", "zoneout")
-    add_packages("concord", "entropy", "pigment", "cista")
+    add_packages("concord", "entropy", "pigment")
     add_packages("muli", "rerun_sdk", "zeromq", "cppzmq")
 
     -- Explicitly link only boost_json (avoid pulling in all boost libs)

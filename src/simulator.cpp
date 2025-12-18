@@ -1,5 +1,6 @@
 #include "flatsim/simulator.hpp"
 #include <iostream>
+#include <vector>
 
 namespace simulator {
 
@@ -36,6 +37,19 @@ namespace simulator {
         ctx_.close();
     }
 
+    muli::RigidBody *Simulator::create_body(const types::Chassis &chassis) {
+        muli::Transform t;
+        t.position.x = static_cast<float>(chassis.pose.point.x);
+        t.position.y = static_cast<float>(chassis.pose.point.y);
+        t.rotation = static_cast<float>(chassis.pose.angle.yaw);
+
+        auto *body = world_->CreateBox(static_cast<float>(chassis.size.x), static_cast<float>(chassis.size.y), t);
+        bodies_[chassis.uuid] = body;
+
+        std::cout << "[Simulator] Created body for: " << chassis.name << std::endl;
+        return body;
+    }
+
     void Simulator::tick(float dt) {
         // Step physics
         world_->Step(dt);
@@ -44,11 +58,19 @@ namespace simulator {
         zmq::message_t request;
         auto result = socket_->recv(request, zmq::recv_flags::dontwait);
         if (result) {
-            std::string msg(static_cast<char *>(request.data()), request.size());
-            std::cout << "[Simulator] Received: " << msg << std::endl;
+            // Copy to aligned buffer for cista deserialization
+            std::vector<uint8_t> buffer(static_cast<uint8_t *>(request.data()),
+                                        static_cast<uint8_t *>(request.data()) + request.size());
 
-            std::string reply = "Hello from Simulator!";
-            socket_->send(zmq::buffer(reply), zmq::send_flags::none);
+            // Deserialize to ser::Chassis then convert to Chassis
+            auto *ser_chassis = cista::deserialize<types::ser::Chassis>(buffer);
+            if (ser_chassis) {
+                auto chassis = ser_chassis->to_chassis();
+                create_body(chassis);
+                socket_->send(zmq::buffer("OK"), zmq::send_flags::none);
+            } else {
+                socket_->send(zmq::buffer("ERROR"), zmq::send_flags::none);
+            }
         }
     }
 
