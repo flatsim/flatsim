@@ -1,8 +1,9 @@
 #pragma once
 
-#include "flatsim/core/utils.hpp"
+#include <vector>
+
 #include "flatsim/simulator/machine/section.hpp"
-#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 #include "muli/collision_filter.h"
 #include "muli/world.h"
 #include <rerun.hpp>

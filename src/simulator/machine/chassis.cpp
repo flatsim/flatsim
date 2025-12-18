@@ -36,8 +36,9 @@ namespace fs {
         body->SetCollisionFilter(filter);
         chassis_collider->SetFilter(filter);
 
-        body->SetLinearDamping(fs::constants::linearDamping);
-        body->SetAngularDamping(fs::constants::angularDamping);
+        static const types::Physics physics; // default values
+        body->SetLinearDamping(physics.linear_damping);
+        body->SetAngularDamping(physics.angular_damping);
 
         // Configure motor joint parameters for soft constraints
         float mf = 300.0f; // Max force (scaled in wheel update)
@@ -48,9 +49,9 @@ namespace fs {
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
             Wheel wheel(world, rec, filter, robot_info, robot_state);
-            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i].bound, fs::constants::force,
-                       fs::constants::friction, fs::constants::maxImpulse, fs::constants::brake, fs::constants::drag,
-                       robo.controls.throttles_max[i], robo.controls.steerings_max[i]);
+            wheel.init(color, name, std::to_string(i), bound, robo.wheels[i].bound, physics.force, physics.friction,
+                       physics.max_impulse, physics.brake, physics.drag, robo.controls.throttles_max[i],
+                       robo.controls.steerings_max[i]);
             wheels.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.get_wheel(), wheel.get_position(), mf, mt, fr, dr, jm);
@@ -61,7 +62,7 @@ namespace fs {
             angle_joints.emplace_back(anglejoing);
         }
 
-        wheel_damping(fs::constants::linearDamping, fs::constants::angularDamping);
+        wheel_damping(physics.linear_damping, physics.angular_damping);
 
         for (auto const &k : robo.karosseries) {
             Karosserie karosserie(rec, world, robot_info, robot_state);

@@ -17,6 +17,17 @@ namespace types {
     enum class PowerType { FUEL, BATTERY };
     enum class MachineRole { MASTER, FOLLOWER, SLAVE };
 
+    struct Physics {
+        float linear_damping = 0.2f;
+        float angular_damping = 0.2f;
+        float force = 30.0f; // Base force for typical wheel (0.2m radius)
+        float torque = 10.0f;
+        float friction = 1.5f;    // Base lateral friction (increased for better grip)
+        float max_impulse = 2.0f; // Base max impulse for lateral friction
+        float brake = 10.0f;
+        float drag = 0.5f; // Velocity-dependent drag coefficient
+    };
+
     struct MachineControls {
         std::vector<float> steerings_max;
         std::vector<float> throttles_max;
