@@ -18,6 +18,10 @@ namespace simulator {
         float steering_rate_ = 0.52f; // rad/s
         float throttle_rate_ = 2.5f;  // 1/s
 
+        // Cached direction vectors (updated in tick)
+        muli::Vec2 forward_ = muli::Vec2(0, 1);
+        muli::Vec2 normal_ = muli::Vec2(1, 0);
+
       public:
         Wheel() = default;
         Wheel(const types::Wheel &config);

@@ -79,16 +79,13 @@ namespace simulator {
         float throttle_change = std::clamp(throttle_error, -max_throttle_change, max_throttle_change);
         current_throttle_ += throttle_change;
 
-        // Apply throttle force
+        // Apply throttle force (use cached forward vector)
         if (std::abs(current_throttle_) > muli::epsilon) {
-            const muli::Vec2 up(0, 1);
-            muli::Vec2 forward = Mul(body_->GetRotation(), up);
-
             float wheel_radius = static_cast<float>(config_.size.x) / 2.0f;
             float scale_factor = std::sqrt(wheel_radius / 0.2f);
             float scaled_force = config_.force * scale_factor;
 
-            muli::Vec2 f = forward * (current_throttle_ * scaled_force);
+            muli::Vec2 f = forward_ * (current_throttle_ * scaled_force);
             body_->ApplyForce(body_->GetPosition(), f, true);
         }
     }
@@ -116,22 +113,17 @@ namespace simulator {
     void Wheel::apply_friction() {
         if (!body_) return;
 
-        // Get wheel orientation vectors
-        const muli::Vec2 up(0, 1);
-        const muli::Vec2 right(1, 0);
-        muli::Vec2 forward = Mul(body_->GetRotation(), up);
-        muli::Vec2 normal = Mul(body_->GetRotation(), right);
-
+        // Use cached direction vectors (updated in tick)
         // Get velocity components
         muli::Vec2 v = body_->GetLinearVelocity();
-        float vf = Dot(v, forward);
-        float vn = Dot(v, normal);
+        float vf = Dot(v, forward_);
+        float vn = Dot(v, normal_);
 
         // Apply lateral friction (prevents sliding)
         if (muli::Abs(vn) > muli::epsilon) {
             float wheel_radius = static_cast<float>(config_.size.x) / 2.0f;
             float scaled_friction = config_.friction * (1.0f + wheel_radius);
-            muli::Vec2 j = -body_->GetMass() * scaled_friction * vn * normal;
+            muli::Vec2 j = -body_->GetMass() * scaled_friction * vn * normal_;
 
             float scaled_max_impulse = config_.max_impulse * (1.0f + wheel_radius * 2.0f);
             if (muli::Length(j) > scaled_max_impulse) {
@@ -143,16 +135,22 @@ namespace simulator {
         // Apply drag force
         if (muli::Abs(vf) > muli::epsilon) {
             float drag_force = -config_.drag * vf;
-            body_->ApplyForce(body_->GetPosition(), drag_force * forward, true);
+            body_->ApplyForce(body_->GetPosition(), drag_force * forward_, true);
         }
     }
 
     void Wheel::tick(float dt) {
-        // Future: Update sensors, compute metrics, etc.
+        if (!body_) return;
+
+        // Update cached direction vectors for physics calculations
+        const muli::Vec2 up(0, 1);
+        const muli::Vec2 right(1, 0);
+        forward_ = Mul(body_->GetRotation(), up);
+        normal_ = Mul(body_->GetRotation(), right);
     }
 
     void Wheel::tock() {
-        // Future: Visualization, debug rendering
+        // Future: Visualization, debug rendering (rerun logging)
     }
 
     types::ser::WheelState Wheel::get_state() const {
