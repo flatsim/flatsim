@@ -26,7 +26,7 @@ namespace simulator {
     }
 
     void Karosserie::tock() {
-        // Future: Visualization, debug rendering
+        // Visualization/debug (future: rerun logging)
     }
 
 } // namespace simulator

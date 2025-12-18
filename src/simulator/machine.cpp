@@ -121,7 +121,7 @@ namespace simulator {
         // Apply physics to all components
         apply_physics();
 
-        // Tick all wheels
+        // Tick all wheels (updates cached direction vectors)
         for (auto &wheel : wheels_) {
             wheel.tick(dt);
         }

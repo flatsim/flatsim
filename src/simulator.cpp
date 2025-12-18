@@ -130,12 +130,12 @@ namespace simulator {
     }
 
     void Simulator::tock() {
-        // Tock all machines (which tocks their components)
+        // Visualization for all machines
         for (auto &[uuid, machine] : machines_) {
             machine.tock();
         }
 
-        // Tock physics world
+        // Visualization for world (boundaries, obstacles, etc.)
         world_->tock();
     }
 

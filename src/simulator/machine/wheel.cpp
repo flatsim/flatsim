@@ -150,7 +150,7 @@ namespace simulator {
     }
 
     void Wheel::tock() {
-        // Future: Visualization, debug rendering (rerun logging)
+        // Visualization/debug (future: rerun logging)
     }
 
     types::ser::WheelState Wheel::get_state() const {

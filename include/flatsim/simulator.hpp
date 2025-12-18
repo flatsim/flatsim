@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <rerun.hpp>
 #include <vector>
 #include <zmq.hpp>
 
@@ -36,8 +37,12 @@ namespace simulator {
         // Next collision group
         uint32_t next_group_ = 1;
 
+        // Rerun visualization
+        std::shared_ptr<rerun::RecordingStream> rec_;
+
       public:
-        Simulator(Conn conn, const std::string &address = "", const WorldSettings &settings = {});
+        Simulator(Conn conn, const std::string &address = "", const WorldSettings &settings = {},
+                  std::shared_ptr<rerun::RecordingStream> rec = nullptr);
         ~Simulator();
 
         void tick(float dt);
