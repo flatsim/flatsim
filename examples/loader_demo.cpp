@@ -1,7 +1,5 @@
-#include "flatsim/agent.hpp"
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/simulator.hpp"
-#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <rerun.hpp>
@@ -14,26 +12,8 @@ int main() {
     rec->spawn().exit_on_failure();
     std::cout << "[Rerun] Visualization started" << std::endl;
 
-    std::atomic<bool> running{true};
-
-    std::thread sim_thread([&rec, &running]() {
-        simulator::WorldSettings ws{100.0f, 100.0f};
-        simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
-
-        std::cout << "[SimThread] Starting sim loop..." << std::endl;
-        for (int i = 0; i < 500 && running.load(); ++i) {
-            sim.tick(0.016f);
-            if (i % 2 == 0) {
-                sim.tock();
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-        std::cout << "[SimThread] Sim loop ended" << std::endl;
-    });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-    agent::Agent agnt("", rec);
+    simulator::WorldSettings ws{100.0f, 100.0f};
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
     try {
         concord::Pose spawn_pose;
@@ -48,52 +28,47 @@ int main() {
         std::cout << "[Loader] UUID: " << machine.uuid << std::endl;
         std::cout << "[Loader] Wheels: " << machine.wheels.size() << std::endl;
 
-        agnt.set_machine(machine);
+        sim.create_machine(machine);
 
-        if (agnt.spawn()) {
-            std::cout << "[Agent] Spawn successful!" << std::endl;
+        const float dt = 0.016f;
+        const auto wheel_count = machine.wheels.size();
+        std::cout << "[Example] Driving in circle - steering left with forward throttle" << std::endl;
 
-            std::thread viz_thread([&agnt, &running]() {
-                while (running.load()) {
-                    agnt.tock();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(33));
-                }
-            });
+        for (int i = 0; i < 500; ++i) {
+            types::WheelControl ctrl;
+            ctrl.uuid = machine.uuid;
+            ctrl.steering.assign(wheel_count, 0.0f);
+            ctrl.throttle.assign(wheel_count, 0.6f);
 
-            std::cout << "[Example] Driving in circle - steering left with forward throttle" << std::endl;
-
-            for (int i = 0; i < 250; ++i) {
-                types::WheelControl ctrl;
-                ctrl.uuid = machine.uuid;
-
-                // Front wheels steer left (0.3 radians ~17 degrees)
-                // Rear wheels don't steer (0.0)
-                // This creates circular motion (Ackermann steering)
-                ctrl.steering = {0.3f, 0.3f, 0.0f, 0.0f};
-
-                // All wheels drive forward
-                ctrl.throttle = {0.6f, 0.6f, 0.6f, 0.6f};
-
-                agnt.control(ctrl);
-
-                if (i % 60 == 0) {
-                    auto pose = agnt.machine().world_pose();
-                    std::cout << "[Example] Frame " << i << " - Position: (" << pose.point.x << ", " << pose.point.y
-                              << ") Yaw: " << pose.angle.yaw << std::endl;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            // Best-effort: assume the first 2 wheels are steerable
+            if (wheel_count >= 2) {
+                ctrl.steering[0] = 0.3f;
+                ctrl.steering[1] = 0.3f;
             }
 
-            running.store(false);
-            viz_thread.join();
+            sim.apply_control(ctrl, dt);
+            sim.tick(dt);
+
+            if (i % 2 == 0) {
+                sim.tock();
+            }
+
+            if (i % 60 == 0) {
+                auto ws_state = sim.get_world_state();
+                for (const auto &ms : ws_state.machines) {
+                    if (std::string(ms.uuid.view()) == machine.uuid) {
+                        std::cout << "[Sim] Tick " << i << " - Position: (" << ms.pose.position.x << ", "
+                                  << ms.pose.position.y << ") yaw=" << ms.pose.angle << std::endl;
+                    }
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     } catch (const std::exception &e) {
         std::cerr << "[Error] Failed to load machine: " << e.what() << std::endl;
-        running.store(false);
     }
 
-    sim_thread.join();
     std::cout << "[Example] Done!" << std::endl;
 
     return 0;

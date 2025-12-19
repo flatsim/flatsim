@@ -9,12 +9,6 @@ namespace simulator {
                          std::shared_ptr<rerun::RecordingStream> rec)
         : ctx_(1), conn_(conn), address_(address), world_settings_(settings), rec_(rec) {
 
-        // Create default rerun recorder if none provided
-        if (!rec_) {
-            rec_ = std::make_shared<rerun::RecordingStream>("flatsim", "default");
-            rec_->spawn().exit_on_failure();
-        }
-
         // Setup ZMQ spawn socket (REP)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
 

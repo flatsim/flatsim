@@ -27,6 +27,7 @@ namespace simulator {
 
     void Section::tock() {
         if (!robot_state->online) return;
+        if (!rec) return;
 
         auto s_x = pose.point.x;
         auto s_y = pose.point.y;

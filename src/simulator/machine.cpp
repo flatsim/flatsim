@@ -14,8 +14,8 @@ namespace simulator {
     }
 
     void Machine::create() {
-        if (!world_ || !rec_) {
-            std::cerr << "[Simulator] Cannot create machine - missing world or recorder" << std::endl;
+        if (!world_) {
+            std::cerr << "[Simulator] Cannot create machine - missing world" << std::endl;
             return;
         }
 

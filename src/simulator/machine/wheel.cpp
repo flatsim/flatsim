@@ -137,6 +137,7 @@ namespace simulator {
 
     void Wheel::tock() {
         if (!robot_state->online) return;
+        if (!rec) return;
 
         auto x = wheel->GetPosition().x;
         auto y = wheel->GetPosition().y;

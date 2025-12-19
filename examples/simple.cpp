@@ -1,4 +1,3 @@
-#include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -6,23 +5,12 @@
 #include <thread>
 
 int main() {
-    // Start simulator in a thread
-    std::thread sim_thread([]() {
-        simulator::Simulator sim(simulator::Conn::IPC);
+    std::cout << "[Example] Simple single-threaded tick()/tock() demo" << std::endl;
 
-        for (int i = 0; i < 100; ++i) {
-            sim.tick(0.016f);
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-    });
+    simulator::WorldSettings ws{100.0f, 100.0f};
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws, nullptr);
 
-    // Give simulator time to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Create agent and send machine
-    agent::Agent agent;
-
-    // Create a simple 4-wheel machine
+    // Create a simple 4-wheel machine (no IPC/Agent involved)
     types::Machine machine;
     machine.uuid = "robot_001";
     machine.name = "TestBot";
@@ -69,29 +57,33 @@ int main() {
 
     machine.wheels = {fl, fr, rl, rr};
 
-    agent.set_machine(machine);
+    sim.create_machine(machine);
 
-    if (agent.spawn()) {
-        std::cout << "Spawn successful!" << std::endl;
+    const float dt = 0.016f;
+    for (int i = 0; i < 200; ++i) {
+        types::WheelControl ctrl;
+        ctrl.uuid = machine.uuid;
+        ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
+        ctrl.throttle = {0.6f, 0.6f, 0.6f, 0.6f}; // Forward
 
-        // Send some control commands
-        for (int i = 0; i < 50; ++i) {
-            types::WheelControl ctrl;
-            ctrl.uuid = machine.uuid;
-            ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
-            ctrl.throttle = {0.5f, 0.5f, 0.5f, 0.5f}; // Forward
+        sim.apply_control(ctrl, dt);
+        sim.tick(dt);
 
-            agent.control(ctrl);
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        // Call tock occasionally; in this example `rec==nullptr` so this is a no-op.
+        if (i % 2 == 0) {
+            sim.tock();
         }
 
-        std::cout << "Final pose: (" << agent.machine().world_pose().point.x << ", "
-                  << agent.machine().world_pose().point.y << ")" << std::endl;
-    } else {
-        std::cout << "Spawn failed!" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    sim_thread.join();
+    auto world_state = sim.get_world_state();
+    for (const auto &ms : world_state.machines) {
+        if (std::string(ms.uuid.view()) == machine.uuid) {
+            std::cout << "Final pose: (" << ms.pose.position.x << ", " << ms.pose.position.y << ") yaw=" << ms.pose.angle
+                      << std::endl;
+        }
+    }
 
     return 0;
 }

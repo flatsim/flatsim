@@ -27,6 +27,7 @@ namespace simulator {
 
     void Hitch::tock() {
         if (!robot_state->online) return;
+        if (!rec) return;
 
         auto k_x = pose.point.x;
         auto k_y = pose.point.y;

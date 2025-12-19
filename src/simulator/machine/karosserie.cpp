@@ -95,6 +95,7 @@ namespace simulator {
 
     void Karosserie::tock() {
         if (!robot_state->online) return;
+        if (!rec) return;
 
         // Only show karosserie if it has no sections, otherwise show individual sections
         if (!sections.empty()) {
