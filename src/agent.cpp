@@ -102,13 +102,13 @@ namespace agent {
         return false;
     }
 
-    bool Agent::control(const types::MachineControl &ctrl) {
+    bool Agent::control(const types::WheelControl &ctrl) {
         if (!spawned_) {
             return false;
         }
 
         // Serialize and send control (PUSH socket - fire and forget)
-        auto ctrl_ser = types::ser::MachineControl::from_control(ctrl);
+        auto ctrl_ser = types::ser::WheelControl::from_control(ctrl);
         auto data = cista::serialize(ctrl_ser);
         control_socket_->send(zmq::buffer(data), zmq::send_flags::dontwait);
 

@@ -36,7 +36,7 @@ namespace simulator {
         std::cout << "[Simulator] Destroyed machine: " << config_.uuid << std::endl;
     }
 
-    void Machine::apply_control(const types::MachineControl &control, float dt) {
+    void Machine::apply_control(const types::WheelControl &control, float dt) {
         if (!chassis_) return;
 
         // Apply brake if requested
@@ -45,7 +45,7 @@ namespace simulator {
             return;
         }
 
-        // Apply steering and throttle through chassis
+        // Apply per-wheel steering and throttle
         chassis_->update(control.steering, control.throttle, dt);
     }
 

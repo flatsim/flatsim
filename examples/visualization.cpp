@@ -137,7 +137,7 @@ int main() {
         // Send control commands
         std::cout << "[Example] Starting control loop..." << std::endl;
         for (int i = 0; i < 250; ++i) {
-            types::MachineControl ctrl;
+            types::WheelControl ctrl;
             ctrl.uuid = machine.uuid;
             ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
             ctrl.throttle = {0.5f, 0.5f, 0.5f, 0.5f}; // Forward

@@ -9,6 +9,12 @@ namespace simulator {
                          std::shared_ptr<rerun::RecordingStream> rec)
         : ctx_(1), conn_(conn), address_(address), world_settings_(settings), rec_(rec) {
 
+        // Create default rerun recorder if none provided
+        if (!rec_) {
+            rec_ = std::make_shared<rerun::RecordingStream>("flatsim", "default");
+            rec_->spawn().exit_on_failure();
+        }
+
         // Setup ZMQ spawn socket (REP)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
 
@@ -46,7 +52,7 @@ namespace simulator {
         machines_[machine.uuid] = std::move(m);
     }
 
-    void Simulator::apply_control(const types::MachineControl &control, float dt) {
+    void Simulator::apply_control(const types::WheelControl &control, float dt) {
         auto it = machines_.find(control.uuid);
         if (it == machines_.end()) {
             return;
@@ -153,7 +159,7 @@ namespace simulator {
             if (ctrl_result) {
                 std::vector<uint8_t> buffer(static_cast<uint8_t *>(ctrl_msg.data()),
                                             static_cast<uint8_t *>(ctrl_msg.data()) + ctrl_msg.size());
-                auto *ctrl_req = cista::deserialize<types::ser::MachineControl>(buffer);
+                auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
                 if (ctrl_req) {
                     auto control = ctrl_req->to_control();
                     apply_control(control, dt);

@@ -32,7 +32,7 @@ namespace agent {
 
         bool spawn();
         bool despawn();
-        bool control(const types::MachineControl &ctrl);
+        bool control(const types::WheelControl &ctrl);
 
         void tick(float dt);
         void tock();

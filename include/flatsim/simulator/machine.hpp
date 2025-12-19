@@ -33,7 +33,7 @@ namespace simulator {
         void destroy();
 
         // Apply control inputs
-        void apply_control(const types::MachineControl &control, float dt);
+        void apply_control(const types::WheelControl &control, float dt);
 
         // Tick/tock pattern
         void tick(float dt);

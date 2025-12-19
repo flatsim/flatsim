@@ -63,7 +63,7 @@ int main() {
             std::cout << "[Example] Driving in circle - steering left with forward throttle" << std::endl;
 
             for (int i = 0; i < 250; ++i) {
-                types::MachineControl ctrl;
+                types::WheelControl ctrl;
                 ctrl.uuid = machine.uuid;
 
                 // Front wheels steer left (0.3 radians ~17 degrees)

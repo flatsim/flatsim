@@ -118,7 +118,16 @@ namespace types {
         std::string seqid = name;
     };
 
-    struct MachineControl {
+    // Velocity control command (agent -> simulator) - bicycle model
+    struct BicycleControl {
+        std::string uuid;
+        float linear = 0.0f;  // Desired linear velocity [-1, 1] normalized
+        float angular = 0.0f; // Desired angular velocity [-1, 1] normalized
+        float brake = 0.0f;   // Brake force (0 = no brake)
+    };
+
+    // Per-wheel control command (low-level control)
+    struct WheelControl {
         std::string uuid;
         std::vector<float> steering; // Per-wheel steering angles
         std::vector<float> throttle; // Per-wheel throttle values
@@ -545,14 +554,41 @@ namespace types {
             }
         };
 
-        struct MachineControl {
+        // Serializable bicycle control (velocity-based)
+        struct BicycleControl {
+            cista::raw::string uuid;
+            float linear = 0.0f;
+            float angular = 0.0f;
+            float brake = 0.0f;
+
+            types::BicycleControl to_control() const {
+                types::BicycleControl c;
+                c.uuid = std::string(uuid.view());
+                c.linear = linear;
+                c.angular = angular;
+                c.brake = brake;
+                return c;
+            }
+
+            static BicycleControl from_control(const types::BicycleControl &c) {
+                BicycleControl r;
+                r.uuid = c.uuid;
+                r.linear = c.linear;
+                r.angular = c.angular;
+                r.brake = c.brake;
+                return r;
+            }
+        };
+
+        // Serializable per-wheel control
+        struct WheelControl {
             cista::raw::string uuid;
             cista::raw::vector<float> steering;
             cista::raw::vector<float> throttle;
             float brake = 0.0f;
 
-            types::MachineControl to_control() const {
-                types::MachineControl c;
+            types::WheelControl to_control() const {
+                types::WheelControl c;
                 c.uuid = std::string(uuid.view());
                 for (const auto &s : steering) c.steering.push_back(s);
                 for (const auto &t : throttle) c.throttle.push_back(t);
@@ -560,8 +596,8 @@ namespace types {
                 return c;
             }
 
-            static MachineControl from_control(const types::MachineControl &c) {
-                MachineControl r;
+            static WheelControl from_control(const types::WheelControl &c) {
+                WheelControl r;
                 r.uuid = c.uuid;
                 for (const auto &s : c.steering) r.steering.push_back(s);
                 for (const auto &t : c.throttle) r.throttle.push_back(t);
@@ -600,7 +636,7 @@ namespace types {
         struct Request {
             MsgType type;
             Machine machine;         // For SPAWN
-            MachineControl control;  // For CONTROL
+            WheelControl control;    // For CONTROL (per-wheel)
             cista::raw::string uuid; // For DESPAWN
         };
 

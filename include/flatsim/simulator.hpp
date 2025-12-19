@@ -55,7 +55,7 @@ namespace simulator {
         void create_machine(const types::Machine &machine);
 
         // Apply control to a machine
-        void apply_control(const types::MachineControl &control, float dt);
+        void apply_control(const types::WheelControl &control, float dt);
 
         // Destroy a machine
         bool destroy_machine(const std::string &uuid);

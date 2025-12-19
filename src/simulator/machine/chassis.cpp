@@ -48,16 +48,22 @@ namespace simulator {
         float jm = body->GetMass();
 
         for (uint i = 0; i < robo.wheels.size(); ++i) {
+            // Use wheel's own values if controls vectors are empty/insufficient
+            float throttle_max =
+                (i < robo.controls.throttles_max.size()) ? robo.controls.throttles_max[i] : robo.wheels[i].throttle_max;
+            float steering_max =
+                (i < robo.controls.steerings_max.size()) ? robo.controls.steerings_max[i] : robo.wheels[i].steering_max;
+            float steering_diff = (i < robo.controls.steerings_diff.size()) ? robo.controls.steerings_diff[i] : 0.0f;
+
             Wheel wheel(world, rec, filter, robot_info, robot_state);
             wheel.init(color, name, std::to_string(i), bound, robo.wheels[i].bound, physics.force, physics.friction,
-                       physics.max_impulse, physics.brake, physics.drag, robo.controls.throttles_max[i],
-                       robo.controls.steerings_max[i]);
+                       physics.max_impulse, physics.brake, physics.drag, throttle_max, steering_max);
             wheels.push_back(wheel);
 
             auto joint = world->CreateMotorJoint(body, wheel.get_wheel(), wheel.get_position(), mf, mt, fr, dr, jm);
             joints.emplace_back(joint);
 
-            float mm = std::abs(robo.controls.steerings_max[i] + robo.controls.steerings_diff[i]);
+            float mm = std::abs(steering_max + steering_diff);
             auto anglejoing = world->CreateLimitedAngleJoint(body, wheel.get_wheel(), -mm, mm);
             angle_joints.emplace_back(anglejoing);
         }

@@ -1,43 +1,35 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include <algorithm>
-#include <cmath>
+#include "flatsim/utils.hpp"
 #include <vector>
 
 namespace agent {
 
+    // ============================================================================
+    // ControlManager - Handles movement control and propagation through chains
+    // ============================================================================
     class ControlManager {
       private:
-        const types::Machine *machine_ = nullptr;
-        std::vector<float> steerings_;
-        std::vector<float> throttles_;
-        float last_angular_input_ = 0.0f;
-
-        static float mapper(float value, float in_min, float in_max, float out_min, float out_max) {
-            return out_min + (value - in_min) * (out_max - out_min) / (in_max - in_min);
-        }
-
-        static float ackermann_scale(float steering_angle, double chassis_width) {
-            float abs_angle = std::abs(steering_angle);
-            if (abs_angle < 1e-6f) {
-                return 1.0f;
-            }
-            float width = static_cast<float>(chassis_width);
-            float turn_radius = width / std::tan(abs_angle);
-            float scale = turn_radius / (turn_radius + width / 2.0f);
-            return std::clamp(scale, 0.5f, 1.0f);
-        }
+        const types::Machine *machine = nullptr;
+        std::vector<float> steerings, throttles;
+        std::vector<float> steerings_max, throttles_max;
+        std::vector<float> steerings_diff, throttles_diff;
+        float last_steering_input = 0.0f;
 
       public:
         ControlManager() = default;
 
-        void init(const types::Machine *machine);
-
+        void init(const types::Machine *m);
+        void reset_controls();
         void set_angular(float angular);
         void set_linear(float linear);
+        types::WheelControl get_wheel_control() const;
 
-        types::MachineControl get_control() const;
+        const std::vector<float> &get_steerings() const { return steerings; }
+        const std::vector<float> &get_throttles() const { return throttles; }
+        const std::vector<float> &get_steerings_max() const { return steerings_max; }
+        const std::vector<float> &get_throttles_max() const { return throttles_max; }
     };
 
 } // namespace agent
