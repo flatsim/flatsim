@@ -10,12 +10,14 @@ namespace agent {
     void Machine::update_state(const types::ser::MachineState &state) { world_pose_ = state.pose.to_concord(); }
 
     void Machine::tick(float dt) {
-        // Future: local logic if needed
         (void)dt;
+        // Tick is called after receiving state update from simulator
+        // Local agent-side processing can go here (e.g., sensor fusion, prediction)
     }
 
     void Machine::tock() {
-        // Future: visualization if needed
+        // Placeholder for future visualization
+        // Can be used to log pose, visualize in rerun, etc.
     }
 
 } // namespace agent

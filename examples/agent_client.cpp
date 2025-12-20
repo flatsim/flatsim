@@ -1,0 +1,84 @@
+// Standalone agent client - connects to remote simulator server
+// This process ONLY uses agent:: namespace code
+
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/control_manager.hpp"
+#include "flatsim/agent/loader.hpp"
+#include "flatsim/types.hpp"
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+int main(int argc, char **argv) {
+    std::cout << "[Client] Starting agent client..." << std::endl;
+
+    // Load machine configuration
+    std::string machine_file = "examples/machines/tractor.json";
+    if (argc > 1) {
+        machine_file = argv[1];
+    }
+
+    concord::Pose spawn_pose;
+    spawn_pose.point.x = 0.0;
+    spawn_pose.point.y = 0.0;
+    spawn_pose.angle.yaw = 0.0;
+
+    types::Machine machine_config = agent::Loader::load_from_json(machine_file, spawn_pose);
+    machine_config.uuid = "agent_001";
+    std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
+
+    // Create agent (connects to simulator via IPC)
+    agent::Agent agent("", nullptr);
+    agent.set_machine(machine_config);
+
+    // Spawn in simulator
+    std::cout << "[Client] Spawning in simulator..." << std::endl;
+    if (!agent.spawn()) {
+        std::cerr << "[Client] Failed to spawn in simulator" << std::endl;
+        std::cerr << "[Client] Is the simulator server running?" << std::endl;
+        return 1;
+    }
+    std::cout << "[Client] Spawned successfully!" << std::endl;
+
+    // Initialize control manager
+    agent::ControlManager ctrl_mgr;
+    ctrl_mgr.init(&agent.machine().config());
+
+    // Simple control loop - drive forward in a circle
+    std::cout << "[Client] Running control loop (10 seconds)..." << std::endl;
+    const float dt = 0.016f;
+    int iterations = 600; // ~10 seconds at 60 Hz
+
+    for (int i = 0; i < iterations; ++i) {
+        // Set velocity commands
+        float linear = 0.5f;  // Forward
+        float angular = 0.2f; // Slight turn
+
+        ctrl_mgr.set_linear(linear);
+        ctrl_mgr.set_angular(angular);
+
+        // Send control to simulator
+        auto wheel_ctrl = ctrl_mgr.get_wheel_control();
+        agent.control(wheel_ctrl);
+
+        // BLOCKING: Wait for state update from simulator (tick blocks until message received)
+        agent.tick(dt, 100); // 100ms timeout
+
+        // Visualization (currently empty placeholder)
+        agent.tock();
+
+        // Print pose every second
+        if (i % 60 == 0) {
+            auto pose = agent.machine().world_pose();
+            std::cout << "[Client] Pose: (" << pose.point.x << ", " << pose.point.y << ") yaw=" << pose.angle.yaw
+                      << std::endl;
+        }
+    }
+
+    // Despawn from simulator
+    std::cout << "[Client] Despawning..." << std::endl;
+    agent.despawn();
+
+    std::cout << "[Client] Done" << std::endl;
+    return 0;
+}

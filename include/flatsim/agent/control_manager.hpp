@@ -26,6 +26,10 @@ namespace agent {
         void set_linear(float linear);
         types::WheelControl get_wheel_control() const;
 
+        // Tick/tock pattern
+        void tick(float dt);
+        void tock();
+
         const std::vector<float> &get_steerings() const { return steerings; }
         const std::vector<float> &get_throttles() const { return throttles; }
         const std::vector<float> &get_steerings_max() const { return steerings_max; }

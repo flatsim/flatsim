@@ -76,6 +76,9 @@ namespace simulator {
     }
 
     void Simulator::tick(float dt) {
+        static int tick_num = 0;
+        tick_num++;
+
         // Tick all machines
         for (auto &[uuid, machine] : machines_) {
             machine.tick(dt);
@@ -83,6 +86,11 @@ namespace simulator {
 
         // Tick physics world
         world_->tick(dt);
+
+        if (tick_num % 60 == 0) {
+            std::cout << "[Simulator::tick] Tick #" << tick_num << " - " << machines_.size() << " machines"
+                      << std::endl;
+        }
 
         // Process spawn/despawn requests (REP socket)
         zmq::message_t spawn_request;
@@ -128,15 +136,35 @@ namespace simulator {
                 control_sockets_[uuid] = std::move(ctrl_sock);
                 state_sockets_[uuid] = std::move(state_sock);
 
+                std::cout << "[Simulator] Getting world state..." << std::endl;
                 resp.success = true;
                 resp.state = get_world_state();
+                std::cout << "[Simulator] Got world state, sending response..." << std::endl;
                 std::cout << "[Simulator] Spawned machine: " << uuid << std::endl;
             } else if (req->type == types::ser::MsgType::DESPAWN) {
                 std::string uuid_str(req->uuid.view());
-                resp.success = destroy_machine(uuid_str);
-                if (resp.success) {
-                    control_sockets_.erase(uuid_str);
-                    state_sockets_.erase(uuid_str);
+                std::cout << "[Simulator] Despawning machine: " << uuid_str << std::endl;
+
+                try {
+                    // Close and remove sockets first
+                    if (control_sockets_.count(uuid_str)) {
+                        std::cout << "[Simulator] Closing control socket..." << std::endl;
+                        control_sockets_[uuid_str]->close();
+                        control_sockets_.erase(uuid_str);
+                    }
+                    if (state_sockets_.count(uuid_str)) {
+                        std::cout << "[Simulator] Closing state socket..." << std::endl;
+                        state_sockets_[uuid_str]->close();
+                        state_sockets_.erase(uuid_str);
+                    }
+
+                    // Then destroy machine
+                    std::cout << "[Simulator] Destroying machine..." << std::endl;
+                    resp.success = destroy_machine(uuid_str);
+                    std::cout << "[Simulator] Despawned machine: " << uuid_str << std::endl;
+                } catch (const std::exception &e) {
+                    std::cerr << "[Simulator] Exception during despawn: " << e.what() << std::endl;
+                    resp.success = false;
                 }
             } else {
                 resp.success = false;
@@ -148,28 +176,42 @@ namespace simulator {
 
         // Process control commands from all machines (PULL sockets)
         for (auto &[uuid, socket] : control_sockets_) {
-            zmq::message_t ctrl_msg;
-            auto ctrl_result = socket->recv(ctrl_msg, zmq::recv_flags::dontwait);
-            if (ctrl_result) {
-                std::vector<uint8_t> buffer(static_cast<uint8_t *>(ctrl_msg.data()),
-                                            static_cast<uint8_t *>(ctrl_msg.data()) + ctrl_msg.size());
-                auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
-                if (ctrl_req) {
-                    auto control = ctrl_req->to_control();
-                    apply_control(control, dt);
+            if (!socket) continue; // Skip null sockets
+
+            try {
+                zmq::message_t ctrl_msg;
+                auto ctrl_result = socket->recv(ctrl_msg, zmq::recv_flags::dontwait);
+                if (ctrl_result) {
+                    std::vector<uint8_t> buffer(static_cast<uint8_t *>(ctrl_msg.data()),
+                                                static_cast<uint8_t *>(ctrl_msg.data()) + ctrl_msg.size());
+                    auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
+                    if (ctrl_req) {
+                        auto control = ctrl_req->to_control();
+                        apply_control(control, dt);
+                    }
                 }
+            } catch (const zmq::error_t &e) {
+                // Socket might be closed, ignore
             }
         }
 
         // Publish state to all machines (PUB sockets)
-        auto world_state = get_world_state();
-        for (auto &[uuid, socket] : state_sockets_) {
-            // Find this machine's state
-            for (const auto &ms : world_state.machines) {
-                if (std::string(ms.uuid.view()) == uuid) {
-                    auto data = cista::serialize(ms);
-                    socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
-                    break;
+        if (!state_sockets_.empty()) {
+            auto world_state = get_world_state();
+            for (auto &[uuid, socket] : state_sockets_) {
+                if (!socket) continue; // Skip null sockets
+
+                // Find this machine's state
+                for (const auto &ms : world_state.machines) {
+                    if (std::string(ms.uuid.view()) == uuid) {
+                        try {
+                            auto data = cista::serialize(ms);
+                            socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
+                        } catch (const zmq::error_t &e) {
+                            // Socket might be closed, ignore
+                        }
+                        break;
+                    }
                 }
             }
         }

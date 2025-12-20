@@ -1,3 +1,7 @@
+// Simple simulator-only example (no agent, no network communication)
+// This demonstrates direct simulator API usage for testing/debugging
+// For production use, see simulator_server.cpp and agent_client.cpp
+
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -5,7 +9,7 @@
 #include <thread>
 
 int main() {
-    std::cout << "[Example] Simple single-threaded tick()/tock() demo" << std::endl;
+    std::cout << "[Example] Simple simulator-only demo (direct API, no agent)" << std::endl;
 
     simulator::WorldSettings ws{100.0f, 100.0f};
     simulator::Simulator sim(simulator::Conn::IPC, "", ws, nullptr);
@@ -80,8 +84,8 @@ int main() {
     auto world_state = sim.get_world_state();
     for (const auto &ms : world_state.machines) {
         if (std::string(ms.uuid.view()) == machine.uuid) {
-            std::cout << "Final pose: (" << ms.pose.position.x << ", " << ms.pose.position.y << ") yaw=" << ms.pose.angle
-                      << std::endl;
+            std::cout << "Final pose: (" << ms.pose.position.x << ", " << ms.pose.position.y
+                      << ") yaw=" << ms.pose.angle << std::endl;
         }
     }
 

@@ -105,4 +105,15 @@ namespace agent {
         return ctrl;
     }
 
+    void ControlManager::tick(float dt) {
+        (void)dt;
+        // Placeholder for control loop processing
+        // Could implement control smoothing, filtering, etc.
+    }
+
+    void ControlManager::tock() {
+        // Placeholder for visualization
+        // Could visualize control commands, wheel angles, etc.
+    }
+
 } // namespace agent

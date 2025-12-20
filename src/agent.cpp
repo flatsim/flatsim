@@ -127,25 +127,35 @@ namespace agent {
         return true;
     }
 
-    void Agent::tick(float dt) {
-        (void)dt;
+    void Agent::tick(float dt, int timeout_ms) {
+        if (!spawned_) {
+            return;
+        }
 
-        // Receive latest state update
-        if (spawned_) {
-            zmq::message_t state_msg;
-            auto result = state_socket_->recv(state_msg, zmq::recv_flags::dontwait);
-            if (result) {
-                std::vector<uint8_t> buffer(static_cast<uint8_t *>(state_msg.data()),
-                                            static_cast<uint8_t *>(state_msg.data()) + state_msg.size());
-                auto *ms = cista::deserialize<types::ser::MachineState>(buffer);
-                if (ms && std::string(ms->uuid.view()) == machine_.uuid()) {
-                    machine_.update_state(*ms);
-                }
+        // BLOCKING: Wait for state update from simulator
+        state_socket_->set(zmq::sockopt::rcvtimeo, timeout_ms);
+        zmq::message_t state_msg;
+        auto result = state_socket_->recv(state_msg, zmq::recv_flags::none);
+
+        if (result) {
+            std::vector<uint8_t> buffer(static_cast<uint8_t *>(state_msg.data()),
+                                        static_cast<uint8_t *>(state_msg.data()) + state_msg.size());
+            auto *ms = cista::deserialize<types::ser::MachineState>(buffer);
+            if (ms && std::string(ms->uuid.view()) == machine_.uuid()) {
+                // Update machine state from simulator
+                machine_.update_state(*ms);
+
+                // Call machine tick to process state update
+                machine_.tick(dt);
             }
         }
     }
 
     void Agent::tock() {
+        if (!spawned_) {
+            return;
+        }
+
         // Call machine tock for visualization
         machine_.tock();
     }

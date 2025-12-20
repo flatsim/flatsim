@@ -34,7 +34,8 @@ namespace agent {
         bool despawn();
         bool control(const types::WheelControl &ctrl);
 
-        void tick(float dt);
+        // Tick/tock pattern - tick() blocks until state message received from simulator
+        void tick(float dt, int timeout_ms = 100);
         void tock();
     };
 
