@@ -4,6 +4,7 @@
 #include <rerun.hpp>
 #include <zmq.hpp>
 
+#include "flatsim/agent/control_manager.hpp"
 #include "flatsim/agent/machine.hpp"
 #include "flatsim/types.hpp"
 
@@ -18,6 +19,7 @@ namespace agent {
         std::unique_ptr<zmq::socket_t> heartbeat_socket_; // PUSH - for heartbeats
         std::string address_;
         Machine machine_;
+        ControlManager control_manager_;
         bool spawned_ = false;
 
         // Rerun visualization
@@ -33,7 +35,11 @@ namespace agent {
 
         bool spawn();
         bool despawn();
-        bool control(const types::WheelControl &ctrl);
+
+        // Control interface
+        void set_linear(float linear);
+        void set_angular(float angular);
+        void set_velocity(float linear, float angular);
 
         // Tick/tock pattern - tick() blocks until state message received from simulator
         void tick(float dt, int timeout_ms = 100);

@@ -2,7 +2,6 @@
 // This process ONLY uses agent:: namespace code
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/control_manager.hpp"
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -40,26 +39,14 @@ int main(int argc, char **argv) {
     }
     std::cout << "[Client] Spawned successfully!" << std::endl;
 
-    // Initialize control manager
-    agent::ControlManager ctrl_mgr;
-    ctrl_mgr.init(&agent.machine().config());
-
     // Simple control loop - drive forward in a circle
     std::cout << "[Client] Running control loop (10 seconds)..." << std::endl;
     const float dt = 0.016f;
     int iterations = 600; // ~10 seconds at 60 Hz
 
     for (int i = 0; i < iterations; ++i) {
-        // Set velocity commands
-        float linear = 0.5f;  // Forward
-        float angular = 0.2f; // Slight turn
-
-        ctrl_mgr.set_linear(linear);
-        ctrl_mgr.set_angular(angular);
-
-        // Send control to simulator
-        auto wheel_ctrl = ctrl_mgr.get_wheel_control();
-        agent.control(wheel_ctrl);
+        // Set velocity commands (controls are automatically sent in tick())
+        agent.set_velocity(0.5f, 0.2f); // Forward 0.5 m/s, turn 0.2 rad/s
 
         // BLOCKING: Wait for state update from simulator (tick blocks until message received)
         agent.tick(dt, 100); // 100ms timeout

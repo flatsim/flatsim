@@ -73,6 +73,9 @@ namespace agent {
                     }
                 }
 
+                // Initialize control manager
+                control_manager_.init(&machine_.config());
+
                 spawned_ = true;
                 std::cout << "[Agent] Spawn successful" << std::endl;
                 return true;
@@ -108,29 +111,13 @@ namespace agent {
         return false;
     }
 
-    bool Agent::control(const types::WheelControl &ctrl) {
-        if (!spawned_) {
-            return false;
-        }
+    void Agent::set_linear(float linear) { control_manager_.set_linear(linear); }
 
-        // Serialize and send control (PUSH socket - fire and forget)
-        auto ctrl_ser = types::ser::WheelControl::from_control(ctrl);
-        auto data = cista::serialize(ctrl_ser);
-        control_socket_->send(zmq::buffer(data), zmq::send_flags::dontwait);
+    void Agent::set_angular(float angular) { control_manager_.set_angular(angular); }
 
-        // Receive state update (SUB socket - non-blocking)
-        zmq::message_t state_msg;
-        auto result = state_socket_->recv(state_msg, zmq::recv_flags::dontwait);
-        if (result) {
-            std::vector<uint8_t> buffer(static_cast<uint8_t *>(state_msg.data()),
-                                        static_cast<uint8_t *>(state_msg.data()) + state_msg.size());
-            auto *ms = cista::deserialize<types::ser::MachineState>(buffer);
-            if (ms && std::string(ms->uuid.view()) == machine_.uuid()) {
-                machine_.update_state(*ms);
-            }
-        }
-
-        return true;
+    void Agent::set_velocity(float linear, float angular) {
+        control_manager_.set_linear(linear);
+        control_manager_.set_angular(angular);
     }
 
     void Agent::tick(float dt, int timeout_ms) {
@@ -138,12 +125,19 @@ namespace agent {
             return;
         }
 
+        // Get current control from control manager and send to simulator
+        auto wheel_ctrl = control_manager_.get_wheel_control();
+        auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
+        auto ctrl_data = cista::serialize(ctrl_ser);
+        control_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
+
         // Send heartbeat to simulator (non-blocking, fire-and-forget)
         static int tick_count = 0;
-        if (++tick_count % 30 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
+        if (++tick_count % 5 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
             types::ser::Request hb_req;
             hb_req.type = types::ser::MsgType::HEARTBEAT;
             hb_req.uuid = machine_.uuid();
+            std::cout << "[Agent] Sending heartbeat" << std::endl;
 
             auto hb_data = cista::serialize(hb_req);
             heartbeat_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);

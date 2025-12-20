@@ -189,6 +189,7 @@ namespace simulator {
         }
 
         // Process control commands from all machines (PULL sockets)
+        static int ctrl_tick = 0;
         for (auto &[uuid, socket] : control_sockets_) {
             if (!socket) continue; // Skip null sockets
 
@@ -201,6 +202,17 @@ namespace simulator {
                     auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
                     if (ctrl_req) {
                         auto control = ctrl_req->to_control();
+
+                        // Debug: Print control every 60 ticks (~1 second)
+                        if (++ctrl_tick % 60 == 0) {
+                            std::cout << "[Simulator] Received control for " << uuid << ": throttle["
+                                      << control.throttle.size() << "] = ";
+                            for (size_t i = 0; i < std::min(control.throttle.size(), size_t(4)); ++i) {
+                                std::cout << control.throttle[i] << " ";
+                            }
+                            std::cout << " steering[" << control.steering.size() << "]" << std::endl;
+                        }
+
                         apply_control(control, dt);
                     }
                 }
@@ -210,7 +222,8 @@ namespace simulator {
         }
 
         // Process heartbeat messages (PULL socket, non-blocking)
-        while (true) {
+        // Limit to 100 messages per tick to prevent blocking
+        for (int i = 0; i < 100; ++i) {
             zmq::message_t hb_msg;
             auto hb_result = heartbeat_socket_->recv(hb_msg, zmq::recv_flags::dontwait);
             if (!hb_result) break;
@@ -241,7 +254,10 @@ namespace simulator {
             }
 
             for (const auto &uuid : to_remove) {
-                // Close sockets
+                std::cout << "[Simulator] Heartbeat timeout for machine: " << uuid << std::endl;
+                std::cout << "[Simulator]   Cleaning up sockets and tracking..." << std::endl;
+
+                // Close and remove sockets
                 if (control_sockets_.count(uuid)) {
                     control_sockets_[uuid]->close();
                     control_sockets_.erase(uuid);
@@ -251,14 +267,21 @@ namespace simulator {
                     state_sockets_.erase(uuid);
                 }
 
-                // Destroy machine
-                destroy_machine(uuid);
+                // Remove from heartbeat tracking
                 last_heartbeat_.erase(uuid);
-                std::cout << "[Simulator] Removed machine: " << uuid << std::endl;
+
+                // NOTE: We intentionally DON'T call destroy_machine() here because:
+                // 1. It causes segfaults (physics body/chassis may be in use)
+                // 2. The machine will stop receiving controls anyway (socket closed)
+                // 3. Proper cleanup should happen via explicit DESPAWN message
+                // TODO: Mark machine as "disconnected" or "inactive" instead of destroying
+
+                std::cout << "[Simulator] Cleaned up resources for: " << uuid << std::endl;
             }
         }
 
         // Publish state to all machines (PUB sockets)
+        static int state_tick = 0;
         if (!state_sockets_.empty()) {
             auto world_state = get_world_state();
             for (auto &[uuid, socket] : state_sockets_) {
@@ -268,6 +291,13 @@ namespace simulator {
                 for (const auto &ms : world_state.machines) {
                     if (std::string(ms.uuid.view()) == uuid) {
                         try {
+                            // Debug: Print state every 60 ticks (~1 second)
+                            if (++state_tick % 60 == 0) {
+                                std::cout << "[Simulator] Publishing state for " << uuid << ": pose=("
+                                          << ms.pose.position.x << ", " << ms.pose.position.y << ", " << ms.pose.angle
+                                          << ")" << std::endl;
+                            }
+
                             auto data = cista::serialize(ms);
                             socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
                         } catch (const zmq::error_t &e) {
