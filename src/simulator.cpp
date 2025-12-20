@@ -1,4 +1,5 @@
 #include "flatsim/simulator.hpp"
+#include <chrono>
 #include <cista/serialization.h>
 #include <iostream>
 #include <vector>
@@ -12,14 +13,22 @@ namespace simulator {
         // Setup ZMQ spawn socket (REP)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
 
+        // Setup heartbeat socket (PULL)
+        heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
+
         if (conn_ == Conn::IPC) {
             spawn_socket_->bind("ipc:///tmp/flatsim_spawn");
+            heartbeat_socket_->bind("ipc:///tmp/flatsim_heartbeat");
             std::cout << "[Simulator] Spawn socket listening on ipc:///tmp/flatsim_spawn" << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on ipc:///tmp/flatsim_heartbeat" << std::endl;
         } else {
             spawn_socket_->bind("tcp://*:5555");
+            heartbeat_socket_->bind("tcp://*:5556");
             std::cout << "[Simulator] Spawn socket listening on tcp://*:5555" << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on tcp://*:5556" << std::endl;
         }
         spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
+        heartbeat_socket_->set(zmq::sockopt::rcvtimeo, 0);
 
         // Setup physics world with World wrapper
         types::WorldSettings ws;
@@ -29,6 +38,7 @@ namespace simulator {
 
     Simulator::~Simulator() {
         spawn_socket_->close();
+        heartbeat_socket_->close();
         for (auto &[uuid, sock] : control_sockets_) {
             sock->close();
         }
@@ -136,6 +146,9 @@ namespace simulator {
                 control_sockets_[uuid] = std::move(ctrl_sock);
                 state_sockets_[uuid] = std::move(state_sock);
 
+                // Initialize heartbeat timestamp
+                last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+
                 std::cout << "[Simulator] Getting world state..." << std::endl;
                 resp.success = true;
                 resp.state = get_world_state();
@@ -161,6 +174,7 @@ namespace simulator {
                     // Then destroy machine
                     std::cout << "[Simulator] Destroying machine..." << std::endl;
                     resp.success = destroy_machine(uuid_str);
+                    last_heartbeat_.erase(uuid_str);
                     std::cout << "[Simulator] Despawned machine: " << uuid_str << std::endl;
                 } catch (const std::exception &e) {
                     std::cerr << "[Simulator] Exception during despawn: " << e.what() << std::endl;
@@ -192,6 +206,55 @@ namespace simulator {
                 }
             } catch (const zmq::error_t &e) {
                 // Socket might be closed, ignore
+            }
+        }
+
+        // Process heartbeat messages (PULL socket, non-blocking)
+        while (true) {
+            zmq::message_t hb_msg;
+            auto hb_result = heartbeat_socket_->recv(hb_msg, zmq::recv_flags::dontwait);
+            if (!hb_result) break;
+
+            std::vector<uint8_t> buffer(static_cast<uint8_t *>(hb_msg.data()),
+                                        static_cast<uint8_t *>(hb_msg.data()) + hb_msg.size());
+            auto *hb_req = cista::deserialize<types::ser::Request>(buffer);
+            if (hb_req && hb_req->type == types::ser::MsgType::HEARTBEAT) {
+                std::string uuid_str(hb_req->uuid.view());
+                last_heartbeat_[uuid_str] = std::chrono::steady_clock::now();
+            }
+        }
+
+        // Check for stale heartbeats (>5 seconds) and remove dead machines
+        // Only check every 60 ticks (~1 second) to avoid overhead
+        static int cleanup_tick = 0;
+        if (++cleanup_tick % 60 == 0) {
+            auto now = std::chrono::steady_clock::now();
+            std::vector<std::string> to_remove;
+
+            for (const auto &[uuid, last_hb] : last_heartbeat_) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_hb).count();
+                if (elapsed > 5) {
+                    std::cout << "[Simulator] Machine " << uuid << " heartbeat timeout (" << elapsed
+                              << "s), removing..." << std::endl;
+                    to_remove.push_back(uuid);
+                }
+            }
+
+            for (const auto &uuid : to_remove) {
+                // Close sockets
+                if (control_sockets_.count(uuid)) {
+                    control_sockets_[uuid]->close();
+                    control_sockets_.erase(uuid);
+                }
+                if (state_sockets_.count(uuid)) {
+                    state_sockets_[uuid]->close();
+                    state_sockets_.erase(uuid);
+                }
+
+                // Destroy machine
+                destroy_machine(uuid);
+                last_heartbeat_.erase(uuid);
+                std::cout << "[Simulator] Removed machine: " << uuid << std::endl;
             }
         }
 

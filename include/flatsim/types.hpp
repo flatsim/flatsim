@@ -630,6 +630,7 @@ namespace types {
             SPAWN,
             DESPAWN,
             CONTROL,
+            HEARTBEAT,
             GET_STATE,
         };
 
@@ -637,7 +638,7 @@ namespace types {
             MsgType type;
             Machine machine;         // For SPAWN
             WheelControl control;    // For CONTROL (per-wheel)
-            cista::raw::string uuid; // For DESPAWN
+            cista::raw::string uuid; // For DESPAWN and HEARTBEAT
         };
 
         struct Response {

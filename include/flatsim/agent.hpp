@@ -12,9 +12,10 @@ namespace agent {
     class Agent {
       private:
         zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> spawn_socket_;   // REQ - for spawn/despawn
-        std::unique_ptr<zmq::socket_t> control_socket_; // PUSH - for sending controls
-        std::unique_ptr<zmq::socket_t> state_socket_;   // SUB - for receiving state
+        std::unique_ptr<zmq::socket_t> spawn_socket_;     // REQ - for spawn/despawn
+        std::unique_ptr<zmq::socket_t> control_socket_;   // PUSH - for sending controls
+        std::unique_ptr<zmq::socket_t> state_socket_;     // SUB - for receiving state
+        std::unique_ptr<zmq::socket_t> heartbeat_socket_; // PUSH - for heartbeats
         std::string address_;
         Machine machine_;
         bool spawned_ = false;

@@ -24,6 +24,7 @@ namespace simulator {
         // ZMQ
         zmq::context_t ctx_;
         std::unique_ptr<zmq::socket_t> spawn_socket_;                           // REP - for spawn/despawn requests
+        std::unique_ptr<zmq::socket_t> heartbeat_socket_;                       // PULL - for heartbeat messages
         std::map<std::string, std::unique_ptr<zmq::socket_t>> control_sockets_; // PULL per-robot
         std::map<std::string, std::unique_ptr<zmq::socket_t>> state_sockets_;   // PUB per-robot
         Conn conn_;
@@ -36,6 +37,9 @@ namespace simulator {
 
         // Machines: uuid -> Machine
         std::map<std::string, Machine> machines_;
+
+        // Heartbeat tracking: uuid -> last heartbeat time
+        std::map<std::string, std::chrono::steady_clock::time_point> last_heartbeat_;
 
         // Next collision group
         uint32_t next_group_ = 1;

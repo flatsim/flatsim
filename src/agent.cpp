@@ -11,9 +11,10 @@ namespace agent {
         spawn_socket_->connect(spawn_addr);
         std::cout << "[Agent] Connected to spawn socket: " << spawn_addr << std::endl;
 
-        // Create control and state sockets (will connect after spawn)
+        // Create control, state, and heartbeat sockets (will connect after spawn)
         control_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
         state_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::sub);
+        heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
         state_socket_->set(zmq::sockopt::subscribe, "");
         state_socket_->set(zmq::sockopt::rcvtimeo, 0);
     }
@@ -25,6 +26,7 @@ namespace agent {
         spawn_socket_->close();
         control_socket_->close();
         state_socket_->close();
+        heartbeat_socket_->close();
         ctx_.close();
     }
 
@@ -53,11 +55,15 @@ namespace agent {
                     address_.empty() ? "ipc:///tmp/flatsim_ctrl_" + uuid : "tcp://" + address_ + ":5600";
                 std::string state_addr =
                     address_.empty() ? "ipc:///tmp/flatsim_state_" + uuid : "tcp://" + address_ + ":5601";
+                std::string hb_addr = address_.empty() ? "ipc:///tmp/flatsim_heartbeat" : "tcp://" + address_ + ":5602";
 
                 control_socket_->connect(ctrl_addr);
                 state_socket_->connect(state_addr);
+                heartbeat_socket_->connect(hb_addr);
+
                 std::cout << "[Agent] Connected to control: " << ctrl_addr << std::endl;
                 std::cout << "[Agent] Connected to state: " << state_addr << std::endl;
+                std::cout << "[Agent] Connected to heartbeat: " << hb_addr << std::endl;
 
                 // Update state from response
                 for (const auto &ms : resp->state.machines) {
@@ -130,6 +136,17 @@ namespace agent {
     void Agent::tick(float dt, int timeout_ms) {
         if (!spawned_) {
             return;
+        }
+
+        // Send heartbeat to simulator (non-blocking, fire-and-forget)
+        static int tick_count = 0;
+        if (++tick_count % 30 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
+            types::ser::Request hb_req;
+            hb_req.type = types::ser::MsgType::HEARTBEAT;
+            hb_req.uuid = machine_.uuid();
+
+            auto hb_data = cista::serialize(hb_req);
+            heartbeat_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);
         }
 
         // BLOCKING: Wait for state update from simulator
