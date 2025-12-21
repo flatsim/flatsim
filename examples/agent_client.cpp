@@ -6,10 +6,16 @@
 #include "flatsim/types.hpp"
 #include <chrono>
 #include <iostream>
+#include <rerun.hpp>
 #include <thread>
 
 int main(int argc, char **argv) {
     std::cout << "[Client] Starting agent client..." << std::endl;
+
+    // Setup Rerun
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim_agent", "agent");
+    rec->spawn().exit_on_failure();
+    std::cout << "[Rerun] Visualization started" << std::endl;
 
     // Load machine configuration
     std::string machine_file = "examples/machines/tractor.json";
@@ -26,8 +32,8 @@ int main(int argc, char **argv) {
     machine_config.uuid = "agent_001";
     std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
 
-    // Create agent (connects to simulator via IPC)
-    agent::Agent agent("", nullptr);
+    // Create agent (connects to simulator via IPC) with Rerun visualization
+    agent::Agent agent("", rec);
     agent.set_machine(machine_config);
 
     // Spawn in simulator

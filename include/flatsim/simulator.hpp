@@ -14,7 +14,8 @@ namespace simulator {
 
     enum class Conn { TCP, IPC };
 
-    struct WorldSettings {
+    // Simple settings for Simulator constructor (not to be confused with simulator::WorldSettings)
+    struct SimulatorSettings {
         float width = 100.0f;
         float height = 100.0f;
     };
@@ -33,7 +34,7 @@ namespace simulator {
 
         // Physics world with obstacle management
         std::unique_ptr<World> world_;
-        WorldSettings world_settings_;
+        SimulatorSettings sim_settings_;
 
         // Machines: uuid -> Machine
         std::map<std::string, Machine> machines_;
@@ -48,7 +49,7 @@ namespace simulator {
         std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
-        Simulator(Conn conn, const std::string &address = "", const WorldSettings &settings = {},
+        Simulator(Conn conn, const std::string &address = "", const SimulatorSettings &settings = {},
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
         ~Simulator();
 

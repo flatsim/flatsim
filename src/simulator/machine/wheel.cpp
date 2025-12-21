@@ -144,7 +144,7 @@ namespace simulator {
         auto th = wheel->GetRotation().GetAngle();
 
         rec->log_static(
-            robot_info->seqid + "/chassis/wheel/" + this->name,
+            robot_info->uuid + "/chassis/wheel/" + this->name,
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{float(bound.size.x), float(bound.size.y), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)

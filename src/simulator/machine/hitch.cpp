@@ -35,7 +35,7 @@ namespace simulator {
         auto k_w = float(bound.size.x);
         auto k_h = float(bound.size.y);
         rec->log_static(
-            robot_info->seqid + "/chassis/hitch/" + name,
+            robot_info->uuid + "/chassis/hitch/" + name,
             rerun::Boxes3D::from_centers_and_sizes({{float(k_x), float(k_y), 0.1f}}, {{float(k_w), float(k_h), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

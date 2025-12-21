@@ -125,7 +125,7 @@ namespace simulator {
         auto w = float(bound.size.x);
         auto h = float(bound.size.y);
         rec->log_static(
-            robot_info->seqid + "/chassis",
+            robot_info->uuid + "/chassis",
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
                 .with_radii({{0.02f}})
                 // .with_labels({label})

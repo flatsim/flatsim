@@ -11,7 +11,7 @@
 int main() {
     std::cout << "[Example] Simple simulator-only demo (direct API, no agent)" << std::endl;
 
-    simulator::WorldSettings ws{100.0f, 100.0f};
+    simulator::SimulatorSettings ws{100.0f, 100.0f};
     simulator::Simulator sim(simulator::Conn::IPC, "", ws, nullptr);
 
     // Create a simple 4-wheel machine (no IPC/Agent involved)

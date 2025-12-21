@@ -6,9 +6,9 @@
 
 namespace simulator {
 
-    Simulator::Simulator(Conn conn, const std::string &address, const WorldSettings &settings,
+    Simulator::Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
                          std::shared_ptr<rerun::RecordingStream> rec)
-        : ctx_(1), conn_(conn), address_(address), world_settings_(settings), rec_(rec) {
+        : ctx_(1), conn_(conn), address_(address), sim_settings_(settings), rec_(rec) {
 
         // Setup ZMQ spawn socket (REP)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
@@ -31,9 +31,10 @@ namespace simulator {
         heartbeat_socket_->set(zmq::sockopt::rcvtimeo, 0);
 
         // Setup physics world with World wrapper
-        types::WorldSettings ws;
-        ws.size = concord::Size(world_settings_.width, world_settings_.height, 0.0);
-        world_ = std::make_unique<World>(ws, rec_);
+        world_ = std::make_unique<World>(rec_);
+        world_->init(concord::Datum(), concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+        std::cout << "[Simulator] Initialized with world size: " << sim_settings_.width << "x" << sim_settings_.height
+                  << std::endl;
     }
 
     Simulator::~Simulator() {
@@ -51,9 +52,11 @@ namespace simulator {
     void Simulator::create_machine(const types::Machine &machine) {
         uint32_t group = machine.group > 0 ? machine.group : next_group_++;
 
-        Machine m(rec_, world_->physics_ptr(), machine, group);
-        m.create();
-        machines_[machine.uuid] = std::move(m);
+        // Create machine directly in the map to avoid pointer invalidation
+        auto [it, inserted] = machines_.try_emplace(machine.uuid, rec_, world_->physics_ptr(), machine, group);
+        if (inserted) {
+            it->second.create();
+        }
     }
 
     void Simulator::apply_control(const types::WheelControl &control, float dt) {
@@ -89,13 +92,13 @@ namespace simulator {
         static int tick_num = 0;
         tick_num++;
 
-        // Tick all machines
+        // Tick physics world FIRST (like old code)
+        world_->tick(dt);
+
+        // Then tick all machines
         for (auto &[uuid, machine] : machines_) {
             machine.tick(dt);
         }
-
-        // Tick physics world
-        world_->tick(dt);
 
         if (tick_num % 60 == 0) {
             std::cout << "[Simulator::tick] Tick #" << tick_num << " - " << machines_.size() << " machines"

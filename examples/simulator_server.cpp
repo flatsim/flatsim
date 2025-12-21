@@ -5,6 +5,7 @@
 #include "flatsim/types.hpp"
 #include <chrono>
 #include <iostream>
+#include <rerun.hpp>
 #include <signal.h>
 #include <thread>
 
@@ -21,9 +22,14 @@ int main() {
 
     std::cout << "[Server] Starting simulator server..." << std::endl;
 
+    // Setup Rerun
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim_server", "world");
+    rec->spawn().exit_on_failure();
+    std::cout << "[Rerun] Visualization started" << std::endl;
+
     // Create simulator with IPC communication
-    simulator::WorldSettings ws{100.0f, 100.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws, nullptr);
+    simulator::SimulatorSettings ws{100.0f, 100.0f};
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
     std::cout << "[Server] Simulator ready. Waiting for agent connections..." << std::endl;
     std::cout << "[Server] Press Ctrl+C to stop" << std::endl;

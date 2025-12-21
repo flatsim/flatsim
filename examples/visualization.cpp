@@ -13,7 +13,7 @@ int main() {
     rec->spawn().exit_on_failure();
     std::cout << "[Rerun] Visualization started" << std::endl;
 
-    simulator::WorldSettings ws{100.0f, 100.0f};
+    simulator::SimulatorSettings ws{100.0f, 100.0f};
     simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
     // Create a simple 4-wheel machine

@@ -36,7 +36,7 @@ namespace simulator {
         auto s_h = float(bound.size.y);
 
         rec->log_static(
-            robot_info->seqid + "/chassis/karosserie/" + name + "/section_" + std::to_string(section_id),
+            robot_info->uuid + "/chassis/karosserie/" + name + "/section_" + std::to_string(section_id),
             rerun::Boxes3D::from_centers_and_sizes({{float(s_x), float(s_y), 0.1f}}, {{float(s_w), float(s_h), 0.0f}})
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)

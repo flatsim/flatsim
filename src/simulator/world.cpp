@@ -4,20 +4,17 @@
 
 namespace simulator {
 
-    World::World(const types::WorldSettings &settings, std::shared_ptr<rerun::RecordingStream> rec)
-        : settings_(settings), rec_(rec) {
-        muli::WorldSettings muli_settings;
-        muli_settings.world_bounds = muli::AABB(
-            muli::Vec2(-static_cast<float>(settings_.size.x) / 2.0f, -static_cast<float>(settings_.size.y) / 2.0f),
-            muli::Vec2(static_cast<float>(settings_.size.x) / 2.0f, static_cast<float>(settings_.size.y) / 2.0f));
-        muli_settings.apply_gravity = false;
-        muli_settings.gravity = muli::Vec2(0.0f, 0.0f);
-
-        physics_ = std::make_unique<muli::World>(muli_settings);
-        std::cout << "[World] Created (" << settings_.size.x << "x" << settings_.size.y << ")" << std::endl;
-    }
+    World::World(std::shared_ptr<rerun::RecordingStream> rec) : rec_(rec) {}
 
     World::~World() = default;
+
+    void World::init(concord::Datum datum, concord::Size size) {
+        settings_.init(datum, size);
+        // Pass settings_ (which extends muli::WorldSettings) directly to muli::World
+        // This ensures all muli defaults are properly inherited
+        physics_ = std::make_shared<muli::World>(settings_);
+        std::cout << "[World] Created (" << size.x << "x" << size.y << ")" << std::endl;
+    }
 
     void World::tick(float dt) { physics_->Step(dt); }
 
@@ -25,8 +22,8 @@ namespace simulator {
         if (!rec_) return;
 
         // Visualize world boundaries
-        float w = static_cast<float>(settings_.size.x);
-        float h = static_cast<float>(settings_.size.y);
+        float w = static_cast<float>(settings_.get_size().x);
+        float h = static_cast<float>(settings_.get_size().y);
         std::vector<std::array<float, 3>> corners = {
             {-w / 2.0f, -h / 2.0f, 0.0f},
             {w / 2.0f, -h / 2.0f, 0.0f},
