@@ -47,5 +47,8 @@ namespace simulator {
         std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
         concord::Bound get_bound() const { return bound; }
         void update_color(const pigment::RGB &new_color) { color = new_color; }
+
+        // Destroy physics resources
+        void destroy();
     };
 } // namespace simulator

@@ -1,3 +1,4 @@
+#include "flatsim/agent/loader.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -16,52 +17,12 @@ int main() {
     simulator::SimulatorSettings ws{100.0f, 100.0f};
     simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
-    // Create a simple 4-wheel machine
-    types::Machine machine;
-    machine.uuid = "robot_001";
-    machine.name = "VisBot";
-    machine.bound.pose.point.x = 0.0;
-    machine.bound.pose.point.y = 0.0;
-    machine.bound.pose.angle.yaw = 0.0;
-    machine.bound.size = concord::Size(1.0, 2.0, 0.0);
-    machine.color = pigment::RGB(0, 255, 0); // Green
-
-    // Add 4 wheels
-    types::Wheel fl, fr, rl, rr;
-
-    fl.name = "front_left";
-    fl.bound.pose.point.x = -0.4;
-    fl.bound.pose.point.y = 0.8;
-    fl.bound.size = concord::Size(0.1, 0.2, 0.0);
-    // fl.color defaults to (0,0,0) which will inherit machine color
-    fl.steering_max = 0.5f;
-    fl.force = 200.0f;
-
-    fr.name = "front_right";
-    fr.bound.pose.point.x = 0.4;
-    fr.bound.pose.point.y = 0.8;
-    fr.bound.size = concord::Size(0.1, 0.2, 0.0);
-    // fr.color defaults to (0,0,0) which will inherit machine color
-    fr.steering_max = 0.5f;
-    fr.force = 200.0f;
-
-    rl.name = "rear_left";
-    rl.bound.pose.point.x = -0.4;
-    rl.bound.pose.point.y = -0.8;
-    rl.bound.size = concord::Size(0.1, 0.2, 0.0);
-    // rl.color defaults to (0,0,0) which will inherit machine color
-    rl.steering_max = 0.0f;
-    rl.force = 200.0f;
-
-    rr.name = "rear_right";
-    rr.bound.pose.point.x = 0.4;
-    rr.bound.pose.point.y = -0.8;
-    rr.bound.size = concord::Size(0.1, 0.2, 0.0);
-    // rr.color defaults to (0,0,0) which will inherit machine color
-    rr.steering_max = 0.0f;
-    rr.force = 200.0f;
-
-    machine.wheels = {fl, fr, rl, rr};
+    // Load tractor from JSON
+    std::cout << "[Example] Loading tractor from JSON..." << std::endl;
+    types::Machine machine =
+        agent::Loader::load_from_json("examples/machines/tractor.json", concord::Pose(0.0, 0.0, 0.0));
+    std::cout << "[Example] Loaded machine: " << machine.name << " with " << machine.wheels.size() << " wheels, "
+              << machine.karosseries.size() << " karosseries, " << machine.hitches.size() << " hitches" << std::endl;
 
     sim.create_machine(machine);
 

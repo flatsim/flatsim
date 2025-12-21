@@ -59,5 +59,8 @@ namespace simulator {
 
         // Apply braking to all wheels
         void brake(float brake_force);
+
+        // Destroy all physics resources (body, wheels, joints, karosseries)
+        void destroy();
     };
 } // namespace simulator

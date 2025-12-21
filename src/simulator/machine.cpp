@@ -28,8 +28,8 @@ namespace simulator {
     }
 
     void Machine::destroy() {
-        if (chassis_ && chassis_->body && world_) {
-            world_->Destroy(chassis_->body);
+        if (chassis_) {
+            chassis_->destroy();
         }
         chassis_.reset();
 

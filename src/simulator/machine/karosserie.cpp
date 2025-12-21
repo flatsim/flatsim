@@ -137,4 +137,11 @@ namespace simulator {
             }
         }
     }
+
+    void Karosserie::destroy() {
+        if (world && karosserie) {
+            world->Destroy(karosserie);
+            karosserie = nullptr;
+        }
+    }
 } // namespace simulator

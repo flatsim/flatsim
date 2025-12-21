@@ -48,24 +48,14 @@ int main(int argc, char **argv) {
     // Simple control loop - drive forward in a circle
     std::cout << "[Client] Running control loop (10 seconds)..." << std::endl;
     const float dt = 0.016f;
-    int iterations = 600; // ~10 seconds at 60 Hz
 
-    for (int i = 0; i < iterations; ++i) {
+    while (true) {
         // Set velocity commands (controls are automatically sent in tick())
-        agent.set_velocity(0.5f, 0.2f); // Forward 0.5 m/s, turn 0.2 rad/s
-
+        agent.set_velocity(0.5f, 0.6f); // Forward 0.5 m/s, turn 0.2 rad/s
         // BLOCKING: Wait for state update from simulator (tick blocks until message received)
         agent.tick(dt, 100); // 100ms timeout
-
         // Visualization (currently empty placeholder)
-        agent.tock();
-
-        // Print pose every second
-        if (i % 60 == 0) {
-            auto pose = agent.machine().world_pose();
-            std::cout << "[Client] Pose: (" << pose.point.x << ", " << pose.point.y << ") yaw=" << pose.angle.yaw
-                      << std::endl;
-        }
+        // agent.tock();
     }
 
     // Despawn from simulator

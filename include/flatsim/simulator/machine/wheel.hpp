@@ -47,6 +47,7 @@ namespace simulator {
         void tick(float dt);
         void tock();
         void teleport(concord::Pose pose);
+        void destroy();
         void update(float steering, float throttle, muli::MotorJoint *joint, float dt);
         void configure_physics_for_size();
 

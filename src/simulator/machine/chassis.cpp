@@ -239,4 +239,33 @@ namespace simulator {
         }
     }
 
+    void Chassis::destroy() {
+        // Destroy joints first
+        for (auto *joint : joints) {
+            if (joint) world->Destroy(joint);
+        }
+        joints.clear();
+
+        for (auto *joint : angle_joints) {
+            if (joint) world->Destroy(joint);
+        }
+        angle_joints.clear();
+
+        // Destroy wheels
+        for (auto &wheel : wheels) {
+            wheel.destroy();
+        }
+
+        // Destroy karosseries
+        for (auto &kaross : karosseries) {
+            kaross.destroy();
+        }
+
+        // Destroy body last
+        if (world && body) {
+            world->Destroy(body);
+            body = nullptr;
+        }
+    }
+
 } // namespace simulator

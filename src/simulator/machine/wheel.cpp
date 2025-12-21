@@ -224,4 +224,11 @@ namespace simulator {
         }
     }
 
+    void Wheel::destroy() {
+        if (world && wheel) {
+            world->Destroy(wheel);
+            wheel = nullptr;
+        }
+    }
+
 } // namespace simulator

@@ -1,93 +1,63 @@
-// Simple simulator-only example (no agent, no network communication)
-// This demonstrates direct simulator API usage for testing/debugging
-// For production use, see simulator_server.cpp and agent_client.cpp
+// Simple single-process example: Simulator + Agent in same process
+// Demonstrates high-level Agent API (set_velocity) with in-process Simulator
 
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/loader.hpp"
 #include "flatsim/simulator.hpp"
-#include "flatsim/types.hpp"
 #include <chrono>
 #include <iostream>
+#include <rerun.hpp>
 #include <thread>
 
 int main() {
-    std::cout << "[Example] Simple simulator-only demo (direct API, no agent)" << std::endl;
+    std::cout << "[Example] Simple demo - Simulator + Agent in same process" << std::endl;
+
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
+    rec->spawn().exit_on_failure();
+    std::cout << "[Rerun] Visualization started" << std::endl;
 
     simulator::SimulatorSettings ws{100.0f, 100.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws, nullptr);
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
 
-    // Create a simple 4-wheel machine (no IPC/Agent involved)
-    types::Machine machine;
-    machine.uuid = "robot_001";
-    machine.name = "TestBot";
-    machine.bound.pose.point.x = 0.0;
-    machine.bound.pose.point.y = 0.0;
-    machine.bound.pose.angle.yaw = 0.0;
-    machine.bound.size = concord::Size(1.0, 2.0, 0.0);
-    machine.color = pigment::RGB(255, 0, 0);
+    try {
+        concord::Pose spawn_pose(0.0, 0.0, 0.0);
+        auto machine = agent::Loader::load_from_json("examples/machines/tractor.json", spawn_pose);
 
-    // Add 4 wheels (front steerable, rear fixed)
-    types::Wheel fl, fr, rl, rr;
+        std::cout << "[Loader] Loaded: " << machine.name << std::endl;
 
-    fl.name = "front_left";
-    fl.bound.pose.point.x = -0.4;
-    fl.bound.pose.point.y = 0.8;
-    fl.bound.size = concord::Size(0.1, 0.2, 0.0);
-    fl.color = pigment::RGB(50, 50, 50);
-    fl.steering_max = 0.5f; // Can steer
-    fl.force = 200.0f;
+        agent::Agent robot("", rec);
+        robot.set_machine(machine);
+        robot.spawn();
 
-    fr.name = "front_right";
-    fr.bound.pose.point.x = 0.4;
-    fr.bound.pose.point.y = 0.8;
-    fr.bound.size = concord::Size(0.1, 0.2, 0.0);
-    fr.color = pigment::RGB(50, 50, 50);
-    fr.steering_max = 0.5f;
-    fr.force = 200.0f;
+        const float dt = 0.016f;
+        std::cout << "[Example] Driving in circle using robot.set_velocity()" << std::endl;
 
-    rl.name = "rear_left";
-    rl.bound.pose.point.x = -0.4;
-    rl.bound.pose.point.y = -0.8;
-    rl.bound.size = concord::Size(0.1, 0.2, 0.0);
-    rl.color = pigment::RGB(50, 50, 50);
-    rl.steering_max = 0.0f; // Fixed
-    rl.force = 200.0f;
+        for (int i = 0; i < 500; ++i) {
+            robot.set_velocity(0.5f, 0.2f);
 
-    rr.name = "rear_right";
-    rr.bound.pose.point.x = 0.4;
-    rr.bound.pose.point.y = -0.8;
-    rr.bound.size = concord::Size(0.1, 0.2, 0.0);
-    rr.color = pigment::RGB(50, 50, 50);
-    rr.steering_max = 0.0f;
-    rr.force = 200.0f;
+            sim.tick(dt);
+            robot.tick(dt, 100);
 
-    machine.wheels = {fl, fr, rl, rr};
+            if (i % 2 == 0) {
+                sim.tock();
+                robot.tock();
+            }
 
-    sim.create_machine(machine);
+            if (i % 60 == 0) {
+                auto pose = robot.machine().world_pose();
+                std::cout << "[Robot] Tick " << i << " - Pos: (" << pose.point.x << ", " << pose.point.y
+                          << ") yaw=" << pose.angle.yaw << std::endl;
+            }
 
-    const float dt = 0.016f;
-    for (int i = 0; i < 200; ++i) {
-        types::WheelControl ctrl;
-        ctrl.uuid = machine.uuid;
-        ctrl.steering = {0.1f, 0.1f, 0.0f, 0.0f}; // Slight turn
-        ctrl.throttle = {0.6f, 0.6f, 0.6f, 0.6f}; // Forward
-
-        sim.apply_control(ctrl, dt);
-        sim.tick(dt);
-
-        // Call tock occasionally; in this example `rec==nullptr` so this is a no-op.
-        if (i % 2 == 0) {
-            sim.tock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        robot.despawn();
+    } catch (const std::exception &e) {
+        std::cerr << "[Error] " << e.what() << std::endl;
+        return 1;
     }
 
-    auto world_state = sim.get_world_state();
-    for (const auto &ms : world_state.machines) {
-        if (std::string(ms.uuid.view()) == machine.uuid) {
-            std::cout << "Final pose: (" << ms.pose.position.x << ", " << ms.pose.position.y
-                      << ") yaw=" << ms.pose.angle << std::endl;
-        }
-    }
-
+    std::cout << "[Example] Done!" << std::endl;
     return 0;
 }

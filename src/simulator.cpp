@@ -273,11 +273,8 @@ namespace simulator {
                 // Remove from heartbeat tracking
                 last_heartbeat_.erase(uuid);
 
-                // NOTE: We intentionally DON'T call destroy_machine() here because:
-                // 1. It causes segfaults (physics body/chassis may be in use)
-                // 2. The machine will stop receiving controls anyway (socket closed)
-                // 3. Proper cleanup should happen via explicit DESPAWN message
-                // TODO: Mark machine as "disconnected" or "inactive" instead of destroying
+                // Destroy the machine from simulation
+                destroy_machine(uuid);
 
                 std::cout << "[Simulator] Cleaned up resources for: " << uuid << std::endl;
             }
