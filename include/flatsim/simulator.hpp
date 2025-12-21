@@ -1,7 +1,6 @@
 #pragma once
 
 #include "flatsim/core/exceptions.hpp"
-#include "flatsim/ipc/server.hpp"
 #include "flatsim/robot.hpp"
 #include "flatsim/robot/types.hpp"
 #include "flatsim/world.hpp"
@@ -28,7 +27,6 @@ namespace fs {
         int selected_robot_idx = -1;
         uint ticks = 0;
         uint tocks = 0;
-        std::unique_ptr<Server> dispatcher;
 
       public:
         Simulator(std::shared_ptr<rerun::RecordingStream> rec);
@@ -62,17 +60,6 @@ namespace fs {
         // RERUN MANAGEMENT
         void reset_recording();
         void clear_all_entities();
-
-        // DISPATCHER (ZMQ Process Separation)
-        void enable_dispatcher(const std::string &server_host = "0.0.0.0");
-        void disable_dispatcher();
-        bool is_dispatcher_enabled() const { return dispatcher != nullptr; }
-
-        // ROBOT ONLINE STATUS
-        bool is_robot_online(const std::string &uuid) const;
-        double get_robot_last_heartbeat(const std::string &uuid) const;
-        void set_heartbeat_timeout(double timeout);
-        double get_heartbeat_timeout() const;
     };
 
     // Template implementation

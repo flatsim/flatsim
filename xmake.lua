@@ -258,10 +258,8 @@ add_requires("muli", "pigment", "entropy")
 add_requires("concord", "farmtrax", "drivekit", "zoneout")
 add_requires("rerun_sdk")
 
--- Use pkgconfig to find system packages
-add_requires("pkgconfig::libzmq", {alias = "zeromq"})
-add_requires("pkgconfig::cppzmq", {alias = "cppzmq"})
 -- Boost needs explicit library specification
+add_requires("boost", {system = true})
 add_requires("boost", {system = true})
 
 if has_config("examples") then
@@ -292,7 +290,7 @@ target("flatsim_internal")
     -- Link dependencies (order matters: libraries with dependencies come first)
     add_packages("drivekit", "farmtrax", "zoneout")
     add_packages("concord", "entropy", "pigment")
-    add_packages("muli", "rerun_sdk", "zeromq", "cppzmq")
+    add_packages("muli", "rerun_sdk")
 
     -- Explicitly link only boost_json (avoid pulling in all boost libs)
     add_linkdirs(path.join(os.getenv("CMAKE_PREFIX_PATH") or "", "lib"))
@@ -329,7 +327,7 @@ if has_config("examples") then
             add_deps("flatsim_internal")
             add_packages("muli", "pigment", "entropy")
             add_packages("concord", "zoneout", "farmtrax", "drivekit")
-            add_packages("rerun_sdk", "zeromq", "cppzmq", "cli11")
+            add_packages("rerun_sdk", "cli11")
             add_includedirs("include")
 
             -- Link boost_json explicitly
@@ -352,7 +350,7 @@ if has_config("tests") then
             -- Link order matters: libraries with dependencies come first
             add_packages("drivekit", "farmtrax", "zoneout")
             add_packages("concord", "entropy", "pigment")
-            add_packages("muli", "rerun_sdk", "zeromq", "cppzmq", "doctest")
+            add_packages("muli", "rerun_sdk", "doctest")
             add_includedirs("include")
 
             -- Link boost_json explicitly

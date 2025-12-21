@@ -10,32 +10,6 @@ namespace fs {
         ticks++;
         if (!world) throw NullPointerException("world");
 
-        // Process dispatcher if enabled
-        if (dispatcher && dispatcher->is_ready()) {
-            // Process spawn requests
-            dispatcher->process_spawn_requests();
-
-            // Get current time for heartbeat processing
-            auto now = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
-            double current_time = elapsed.count() / 1000.0;
-
-            // Process heartbeats (updates robot online status)
-            dispatcher->process_heartbeats(current_time);
-
-            // Receive control commands from robot processes
-            auto commands = dispatcher->receive_commands();
-            for (const auto &cmd : commands) {
-                // Apply control commands to robots
-                for (auto &robot : robots) {
-                    if (robot && robot->info.uuid == cmd.robot_uuid) {
-                        robot->update(cmd.steering, cmd.throttle);
-                        break;
-                    }
-                }
-            }
-        }
-
         // World tick
         world->tick(dt);
 
@@ -49,11 +23,6 @@ namespace fs {
         for (auto &robott : robots) {
             if (!robott) continue;
             robott->tick(dt);
-        }
-
-        // Send physics states to robot processes
-        if (dispatcher && dispatcher->is_ready()) {
-            dispatcher->send_states();
         }
     }
 
@@ -262,68 +231,6 @@ namespace fs {
 
         // Reset timeline
         rec->reset_time();
-    }
-
-    // DISPATCHER
-    void Simulator::enable_dispatcher(const std::string &server_host) {
-        if (dispatcher) {
-            std::cout << "[Simulator] Dispatcher already enabled" << std::endl;
-            return;
-        }
-
-        dispatcher = std::make_unique<Server>();
-        if (dispatcher->init(this, true, server_host)) {
-            std::cout << "[Simulator] Dispatcher enabled successfully (host: " << server_host << ")" << std::endl;
-        } else {
-            std::cerr << "[Simulator] Failed to enable dispatcher" << std::endl;
-            dispatcher.reset();
-        }
-    }
-
-    void Simulator::disable_dispatcher() {
-        if (!dispatcher) {
-            return;
-        }
-
-        dispatcher->cleanup();
-        dispatcher.reset();
-        std::cout << "[Simulator] Dispatcher disabled" << std::endl;
-    }
-
-    // ROBOT ONLINE STATUS
-    bool Simulator::is_robot_online(const std::string &uuid) const {
-        if (dispatcher && dispatcher->is_ready()) {
-            return dispatcher->is_robot_online(uuid);
-        }
-
-        // If no dispatcher, check robot state directly
-        for (const auto &robot : robots) {
-            if (robot && robot->info.uuid == uuid) {
-                return robot->state.online;
-            }
-        }
-
-        return false;
-    }
-
-    double Simulator::get_robot_last_heartbeat(const std::string &uuid) const {
-        if (dispatcher && dispatcher->is_ready()) {
-            return dispatcher->get_last_heartbeat(uuid);
-        }
-        return 0.0;
-    }
-
-    void Simulator::set_heartbeat_timeout(double timeout) {
-        if (dispatcher && dispatcher->is_ready()) {
-            dispatcher->set_heartbeat_timeout(timeout);
-        }
-    }
-
-    double Simulator::get_heartbeat_timeout() const {
-        if (dispatcher && dispatcher->is_ready()) {
-            return dispatcher->get_heartbeat_timeout();
-        }
-        return 5.0; // Default timeout
     }
 
 } // namespace fs
