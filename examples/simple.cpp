@@ -25,7 +25,7 @@ int main() {
 
         std::cout << "[Loader] Loaded: " << machine.name << std::endl;
 
-        agent::Agent robot("", rec);
+        agent::Agent robot("");
         robot.set_machine(machine);
         robot.spawn();
 

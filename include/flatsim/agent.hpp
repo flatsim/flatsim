@@ -26,7 +26,7 @@ namespace agent {
         std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
-        Agent(const std::string &address = "", std::shared_ptr<rerun::RecordingStream> rec = nullptr);
+        Agent(const std::string &address = "");
         ~Agent();
 
         void set_machine(const types::Machine &config);

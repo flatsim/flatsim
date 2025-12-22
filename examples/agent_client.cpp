@@ -12,28 +12,16 @@
 int main(int argc, char **argv) {
     std::cout << "[Client] Starting agent client..." << std::endl;
 
-    // Setup Rerun
-    auto rec = std::make_shared<rerun::RecordingStream>("flatsim_agent", "agent");
-    rec->spawn().exit_on_failure();
-    std::cout << "[Rerun] Visualization started" << std::endl;
+    std::string machine_file = "examples/machines/tractor.json";
+    concord::Pose spawn_pose(10.0, 10.0, 0.0);
 
     // Load machine configuration
-    std::string machine_file = "examples/machines/tractor.json";
-    if (argc > 1) {
-        machine_file = argv[1];
-    }
-
-    concord::Pose spawn_pose;
-    spawn_pose.point.x = 0.0;
-    spawn_pose.point.y = 0.0;
-    spawn_pose.angle.yaw = 0.0;
-
     types::Machine machine_config = agent::Loader::load_from_json(machine_file, spawn_pose);
     machine_config.uuid = "agent_001";
     std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
 
-    // Create agent (connects to simulator via IPC) with Rerun visualization
-    agent::Agent agent("", rec);
+    // Create agent (rerun will be set up automatically after spawn)
+    agent::Agent agent("");
     agent.set_machine(machine_config);
 
     // Spawn in simulator

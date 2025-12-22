@@ -3,8 +3,7 @@
 
 namespace agent {
 
-    Agent::Agent(const std::string &address, std::shared_ptr<rerun::RecordingStream> rec)
-        : ctx_(1), address_(address), rec_(rec) {
+    Agent::Agent(const std::string &address) : ctx_(1), address_(address), rec_(nullptr) {
         // Create spawn socket (REQ)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::req);
         std::string spawn_addr = address_.empty() ? "ipc:///tmp/flatsim_spawn" : address_;
@@ -65,6 +64,23 @@ namespace agent {
                 std::cout << "[Agent] Connected to state: " << state_addr << std::endl;
                 std::cout << "[Agent] Connected to heartbeat: " << hb_addr << std::endl;
 
+                // Create RecordingStream using info from simulator
+                std::string rerun_addr(resp->rerun.grpc_address.view());
+                std::string rec_id(resp->rerun.recording_id.view());
+                std::string app_id(resp->rerun.application_id.view());
+
+                rec_ = std::make_shared<rerun::RecordingStream>(app_id, rec_id);
+                auto conn_result = rec_->connect_grpc(rerun_addr);
+                if (conn_result.is_ok()) {
+                    std::cout << "[Agent] Connected to Rerun Viewer at " << rerun_addr << std::endl;
+                    std::cout << "[Agent] Recording ID: " << rec_id << std::endl;
+                } else {
+                    std::cerr << "[Agent] Warning: Failed to connect to Rerun Viewer" << std::endl;
+                }
+
+                // Update machine with rerun
+                machine_ = Machine(rec_, machine_.config());
+
                 // Update state from response
                 for (const auto &ms : resp->state.machines) {
                     if (std::string(ms.uuid.view()) == machine_.uuid()) {
@@ -74,7 +90,7 @@ namespace agent {
                 }
 
                 // Initialize control manager
-                control_manager_.init(&machine_.config());
+                control_manager_.init(&machine_.config_mut());
 
                 spawned_ = true;
                 std::cout << "[Agent] Spawn successful" << std::endl;

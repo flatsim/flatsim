@@ -10,6 +10,19 @@ namespace simulator {
                          std::shared_ptr<rerun::RecordingStream> rec)
         : ctx_(1), conn_(conn), address_(address), sim_settings_(settings), rec_(rec) {
 
+        // Create rerun internally if not provided
+        if (!rec_) {
+            recording_id_ = "flatsim_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+            rec_ = std::make_shared<rerun::RecordingStream>(application_id_, recording_id_);
+            rec_->connect_grpc(rerun_grpc_addr_);
+        }
+
+        // Clear rerun viewer
+        if (rec_) {
+            rec_->log("", rerun::Clear::RECURSIVE);
+            rec_->log_with_static("", true, rerun::Clear::RECURSIVE);
+        }
+
         // Setup ZMQ spawn socket (REP)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
 

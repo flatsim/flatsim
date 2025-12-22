@@ -641,9 +641,16 @@ namespace types {
             cista::raw::string uuid; // For DESPAWN and HEARTBEAT
         };
 
+        struct RerunInfo {
+            cista::raw::string grpc_address;   // e.g., "127.0.0.1:9876"
+            cista::raw::string recording_id;   // Shared recording ID
+            cista::raw::string application_id; // Application name
+        };
+
         struct Response {
             bool success = false;
             WorldState state;
+            RerunInfo rerun;
         };
 
         // Serializable State

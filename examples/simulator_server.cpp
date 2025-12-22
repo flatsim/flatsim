@@ -21,15 +21,11 @@ int main() {
     signal(SIGINT, signal_handler);
 
     std::cout << "[Server] Starting simulator server..." << std::endl;
+    std::cout << "[Server] Make sure to run 'rerun' in another terminal for visualization!" << std::endl;
 
-    // Setup Rerun
-    auto rec = std::make_shared<rerun::RecordingStream>("flatsim_server", "world");
-    rec->spawn().exit_on_failure();
-    std::cout << "[Rerun] Visualization started" << std::endl;
-
-    // Create simulator with IPC communication
-    simulator::SimulatorSettings ws{100.0f, 100.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
+    // Create simulator with IPC communication (rerun connects automatically)
+    simulator::SimulatorSettings ws{500.0f, 500.0f};
+    simulator::Simulator sim(simulator::Conn::IPC, "", ws);
 
     std::cout << "[Server] Simulator ready. Waiting for agent connections..." << std::endl;
     std::cout << "[Server] Press Ctrl+C to stop" << std::endl;

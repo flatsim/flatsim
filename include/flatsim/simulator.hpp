@@ -47,6 +47,9 @@ namespace simulator {
 
         // Rerun visualization
         std::shared_ptr<rerun::RecordingStream> rec_;
+        std::string rerun_grpc_addr_ = "rerun+http://127.0.0.1:9876/proxy";
+        std::string recording_id_ = "flatsim";
+        std::string application_id_ = "flatsim";
 
       public:
         Simulator(Conn conn, const std::string &address = "", const SimulatorSettings &settings = {},
