@@ -192,10 +192,49 @@ namespace simulator {
         static int tick_num = 0;
         tick_num++;
 
-        // Tick physics world FIRST (like old code)
+        // STEP 1: Publish current state FIRST so agents get fresh data
+        if (!state_sockets_.empty()) {
+            auto world_state = get_world_state();
+            for (auto &[uuid, socket] : state_sockets_) {
+                if (!socket) continue;
+                for (const auto &ms : world_state.machines) {
+                    if (std::string(ms.uuid.view()) == uuid) {
+                        try {
+                            auto data = cista::serialize(ms);
+                            socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
+                        } catch (const zmq::error_t &e) {
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // STEP 2: BLOCKING wait for controls from agents (with short timeout)
+        for (auto &[uuid, socket] : control_sockets_) {
+            if (!socket) continue;
+            try {
+                socket->set(zmq::sockopt::rcvtimeo, 50); // 50ms timeout
+                zmq::message_t ctrl_msg;
+                auto ctrl_result = socket->recv(ctrl_msg, zmq::recv_flags::none);
+                if (ctrl_result) {
+                    std::vector<uint8_t> buffer(static_cast<uint8_t *>(ctrl_msg.data()),
+                                                static_cast<uint8_t *>(ctrl_msg.data()) + ctrl_msg.size());
+                    auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
+                    if (ctrl_req) {
+                        auto control = ctrl_req->to_control();
+                        apply_control(control, dt);
+                    }
+                }
+            } catch (const zmq::error_t &e) {
+                // Timeout or error, continue with last controls
+            }
+        }
+
+        // STEP 3: Physics step with fresh controls
         world_->tick(dt);
 
-        // Then tick all machines
+        // STEP 4: Update machine poses from physics
         for (auto &[uuid, machine] : machines_) {
             machine.tick(dt);
         }
@@ -313,27 +352,7 @@ namespace simulator {
             spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
         }
 
-        // Process control commands from all machines (PULL sockets)
-        static int ctrl_tick = 0;
-        for (auto &[uuid, socket] : control_sockets_) {
-            if (!socket) continue; // Skip null sockets
-
-            try {
-                zmq::message_t ctrl_msg;
-                auto ctrl_result = socket->recv(ctrl_msg, zmq::recv_flags::dontwait);
-                if (ctrl_result) {
-                    std::vector<uint8_t> buffer(static_cast<uint8_t *>(ctrl_msg.data()),
-                                                static_cast<uint8_t *>(ctrl_msg.data()) + ctrl_msg.size());
-                    auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
-                    if (ctrl_req) {
-                        auto control = ctrl_req->to_control();
-                        apply_control(control, dt);
-                    }
-                }
-            } catch (const zmq::error_t &e) {
-                // Socket might be closed, ignore
-            }
-        }
+        // NOTE: Control commands are processed at the START of tick() before physics
 
         // Process heartbeat messages (PULL socket, non-blocking)
         // Limit to 100 messages per tick to prevent blocking
@@ -391,27 +410,7 @@ namespace simulator {
             }
         }
 
-        // Publish state to all machines (PUB sockets)
-        static int state_tick = 0;
-        if (!state_sockets_.empty()) {
-            auto world_state = get_world_state();
-            for (auto &[uuid, socket] : state_sockets_) {
-                if (!socket) continue; // Skip null sockets
-
-                // Find this machine's state
-                for (const auto &ms : world_state.machines) {
-                    if (std::string(ms.uuid.view()) == uuid) {
-                        try {
-                            auto data = cista::serialize(ms);
-                            socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
-                        } catch (const zmq::error_t &e) {
-                            // Socket might be closed, ignore
-                        }
-                        break;
-                    }
-                }
-            }
-        }
+        // NOTE: State is now published at the START of tick for synchronization
     }
 
     void Simulator::tock() {

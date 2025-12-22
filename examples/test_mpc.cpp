@@ -86,10 +86,11 @@ int main(int argc, char **argv) {
     if (mpc) {
         auto mpc_config = mpc->get_mpc_config();
 
-        mpc_config.horizon_steps = 15;
+        mpc_config.horizon_steps = 20;
         mpc_config.dt = 0.1;
         mpc_config.ref_velocity = 0.8;
 
+        // Same weights as old test
         mpc_config.weight_cte = 200.0;
         mpc_config.weight_epsi = 150.0;
         mpc_config.weight_vel = 1.0;
@@ -121,9 +122,9 @@ int main(int argc, char **argv) {
     std::cout << "[MPC] Path set with " << s_curve_waypoints.size() << " waypoints" << std::endl;
     std::cout << "[MPC] Starting path following..." << std::endl;
 
-    const float dt = 0.016f;
     int step_count = 0;
     auto start_time = std::chrono::steady_clock::now();
+    float dt = 0.016f; // Fixed 60 FPS like old test
 
     while (!tractor.controls().tracker().tracker()->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
@@ -154,6 +155,8 @@ int main(int argc, char **argv) {
         }
 
         step_count++;
+
+        // Sleep to match 60 FPS like old test
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 

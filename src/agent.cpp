@@ -177,18 +177,10 @@ namespace agent {
             return;
         }
 
-        // Update control manager (includes navigation update if enabled)
-        control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
-
-        // Get current control from control manager and send to simulator
-        auto wheel_ctrl = control_manager_.get_wheel_control();
-        auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
-        auto ctrl_data = cista::serialize(ctrl_ser);
-        control_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
-
         // Send heartbeat to simulator (non-blocking, fire-and-forget)
         static int tick_count = 0;
-        if (++tick_count % 5 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
+        tick_count++;
+        if (tick_count % 5 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
             types::ser::Request hb_req;
             hb_req.type = types::ser::MsgType::HEARTBEAT;
             hb_req.uuid = machine_.uuid();
@@ -197,7 +189,7 @@ namespace agent {
             heartbeat_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);
         }
 
-        // BLOCKING: Wait for state update from simulator
+        // BLOCKING: Wait for state update from simulator FIRST
         state_socket_->set(zmq::sockopt::rcvtimeo, timeout_ms);
         zmq::message_t state_msg;
         auto result = state_socket_->recv(state_msg, zmq::recv_flags::none);
@@ -214,6 +206,15 @@ namespace agent {
                 machine_.tick(dt);
             }
         }
+
+        // Update control manager with FRESH pose (includes navigation update if enabled)
+        control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
+
+        // Get current control from control manager and send to simulator
+        auto wheel_ctrl = control_manager_.get_wheel_control();
+        auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
+        auto ctrl_data = cista::serialize(ctrl_ser);
+        control_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
     }
 
     void Agent::tock() {

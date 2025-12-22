@@ -222,8 +222,13 @@ namespace agent {
         boost::json::object const &throttle = controls_json.at("throttle").as_object();
 
         boost::json::array const &max_angles = steering.at("max_angles").as_array();
-        for (const auto &angle : max_angles) {
-            machine.controls.steerings_max.push_back(deg2rad(get_value<float>(angle)));
+        for (size_t i = 0; i < max_angles.size(); ++i) {
+            float angle_rad = deg2rad(get_value<float>(max_angles[i]));
+            machine.controls.steerings_max.push_back(angle_rad);
+            // Also set steering_max on corresponding wheel for constraint calculation
+            if (i < machine.wheels.size()) {
+                machine.wheels[i].steering_max = angle_rad;
+            }
         }
 
         boost::json::array const &differential = steering.at("differential").as_array();
@@ -232,8 +237,13 @@ namespace agent {
         }
 
         boost::json::array const &max_values = throttle.at("max_values").as_array();
-        for (const auto &value : max_values) {
-            machine.controls.throttles_max.push_back(get_value<float>(value));
+        for (size_t i = 0; i < max_values.size(); ++i) {
+            float throttle_val = get_value<float>(max_values[i]);
+            machine.controls.throttles_max.push_back(throttle_val);
+            // Also set throttle_max on corresponding wheel
+            if (i < machine.wheels.size()) {
+                machine.wheels[i].throttle_max = throttle_val;
+            }
         }
 
         if (throttle.contains("differential")) {

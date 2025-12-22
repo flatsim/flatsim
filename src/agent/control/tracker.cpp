@@ -2,6 +2,7 @@
 #include "flatsim/agent/machine.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <limits>
 
 namespace agent {
@@ -101,6 +102,20 @@ namespace agent {
 
         // Update tracker
         auto cmd = tracker_->tick(state, dt);
+
+        // Debug output every 60 calls
+        static int debug_count = 0;
+        if (debug_count++ % 60 == 0) {
+            std::cout << "[Tracker::update] pose=(" << current_pose.point.x << "," << current_pose.point.y << ") "
+                      << "yaw=" << current_pose.angle.yaw << " vel=" << linear_vel << " angular=" << angular_vel
+                      << " dt=" << dt << " -> linear=" << cmd.linear_velocity << " angular=" << cmd.angular_velocity
+                      << " valid=" << cmd.valid << std::endl;
+        }
+
+        // Only return command if valid
+        if (!cmd.valid) {
+            return {0.0f, 0.0f};
+        }
 
         // Return normalized velocity command
         return {static_cast<float>(cmd.linear_velocity), static_cast<float>(cmd.angular_velocity)};
