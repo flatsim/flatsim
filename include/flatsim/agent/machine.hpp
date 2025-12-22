@@ -34,6 +34,7 @@ namespace agent {
         types::State &state_mut() { return state_; }
         const std::string &uuid() const { return config_.uuid; }
         const concord::Pose &world_pose() const { return world_pose_; }
+        std::shared_ptr<rerun::RecordingStream> rec() const { return rec_; }
     };
 
 } // namespace agent

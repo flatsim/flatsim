@@ -28,6 +28,12 @@ namespace simulator {
     }
 
     void Machine::destroy() {
+        // Clear Rerun visualization for this machine's namespace recursively
+        if (rec_) {
+            rec_->log(config_.uuid, rerun::Clear::RECURSIVE);
+            rec_->log_with_static(config_.uuid, true, rerun::Clear::RECURSIVE);
+        }
+
         if (chassis_) {
             chassis_->destroy();
         }
@@ -76,7 +82,7 @@ namespace simulator {
             role_prefix = "(S)";
             break;
         }
-        std::string label = role_prefix + config_.seqid;
+        std::string label = role_prefix + config_.uuid;
 
         chassis_->tock(label);
 
@@ -86,7 +92,7 @@ namespace simulator {
             auto y = chassis_->body->GetPosition().y;
             concord::Point current_pos{x, y};
             auto wgs_coords = current_pos.toWGS(datum);
-            rec_->log_static(config_.seqid + "/gps",
+            rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.lat, wgs_coords.lon}})
                                  .with_colors({rerun::Color(config_.color.r, config_.color.g, config_.color.b)}));
         }

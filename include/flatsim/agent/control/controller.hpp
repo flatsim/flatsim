@@ -3,6 +3,7 @@
 #include "drivekit.hpp"
 #include "flatsim/types.hpp"
 #include <memory>
+#include <rerun.hpp>
 
 namespace agent {
 
@@ -11,11 +12,13 @@ namespace agent {
         std::unique_ptr<drivekit::Tracker> tracker_;
         bool enabled_ = false;
         types::Machine *machine_ = nullptr;
+        std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
         Controller() = default;
 
-        void init(types::Machine *machine, drivekit::TrackerType type = drivekit::TrackerType::PID);
+        void init(types::Machine *machine, drivekit::TrackerType type = drivekit::TrackerType::PID,
+                  std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         void set_enabled(bool enabled) { enabled_ = enabled; }
         bool is_enabled() const { return enabled_; }

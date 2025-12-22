@@ -214,6 +214,12 @@ namespace simulator {
                 std::cout << "[Simulator] Getting world state..." << std::endl;
                 resp.success = true;
                 resp.state = get_world_state();
+
+                // Populate Rerun connection info
+                resp.rerun.grpc_address = cista::offset::string(rerun_grpc_addr_);
+                resp.rerun.recording_id = cista::offset::string(recording_id_);
+                resp.rerun.application_id = cista::offset::string(application_id_);
+
                 std::cout << "[Simulator] Got world state, sending response..." << std::endl;
                 std::cout << "[Simulator] Spawned machine: " << uuid << std::endl;
             } else if (req->type == types::ser::MsgType::DESPAWN) {

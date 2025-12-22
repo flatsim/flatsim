@@ -6,8 +6,10 @@
 
 namespace agent {
 
-    void Controller::init(types::Machine *config, drivekit::TrackerType type) {
+    void Controller::init(types::Machine *config, drivekit::TrackerType type,
+                          std::shared_ptr<rerun::RecordingStream> rec) {
         machine_ = config;
+        rec_ = rec;
         tracker_ = std::make_unique<drivekit::Tracker>(type);
 
         // Build robot constraints from machine config
@@ -69,8 +71,8 @@ namespace agent {
         constraints.robot_length = config->bound.size.y;
         constraints.robot_width = config->bound.size.x;
 
-        // Initialize tracker with constraints
-        tracker_->init(constraints, nullptr, config->uuid);
+        // Initialize tracker with constraints and rerun
+        tracker_->init(constraints, rec_, config->uuid);
 
         // Configure controller settings
         drivekit::ControllerConfig ctrl_config;

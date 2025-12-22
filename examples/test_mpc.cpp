@@ -30,9 +30,9 @@ int main() {
     }
     std::cout << "[Agent] Spawned successfully!" << std::endl;
 
-    // Create controller with MPC
+    // Create controller with MPC (pass rerun for visualization)
     agent::Controller controller;
-    controller.init(&tractor.machine().config_mut(), drivekit::TrackerType::MPC);
+    controller.init(&tractor.machine().config_mut(), drivekit::TrackerType::MPC, tractor.machine().rec());
     controller.set_enabled(true);
 
     std::cout << "\n--- Testing MPC Controller with S-Curve Path ---" << std::endl;
@@ -101,6 +101,11 @@ int main() {
 
         // Tick agent (blocks until state received)
         tractor.tick(dt, 100);
+
+        // Visualize path and target
+        if (tractor.machine().rec()) {
+            controller.tracker()->tock();
+        }
 
         // Print progress every 2 seconds
         if (step_count % 120 == 0) {
