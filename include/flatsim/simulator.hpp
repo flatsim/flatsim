@@ -1,7 +1,9 @@
 #pragma once
 
+#include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <rerun.hpp>
 #include <vector>
 #include <zmq.hpp>
@@ -10,9 +12,18 @@
 #include "flatsim/simulator/world.hpp"
 #include "flatsim/types.hpp"
 
+// Forward declaration for Agent (avoid circular include)
+namespace agent {
+    class Agent;
+}
+
 namespace simulator {
 
-    enum class Conn { TCP, IPC };
+    enum class Conn {
+        LOCAL, // No networking - agents owned by simulator, single process
+        IPC,   // Inter-process communication via Unix sockets
+        TCP    // Network communication via TCP
+    };
 
     // Simple settings for Simulator constructor (not to be confused with simulator::WorldSettings)
     struct SimulatorSettings {
@@ -26,13 +37,15 @@ namespace simulator {
 
     class Simulator {
       private:
-        // ZMQ
+        // Connection mode
+        Conn conn_;
+
+        // ZMQ (only used in IPC/TCP modes)
         zmq::context_t ctx_;
         std::unique_ptr<zmq::socket_t> spawn_socket_;                           // REP - for spawn/despawn requests
         std::unique_ptr<zmq::socket_t> heartbeat_socket_;                       // PULL - for heartbeat messages
         std::map<std::string, std::unique_ptr<zmq::socket_t>> control_sockets_; // PULL per-robot
         std::map<std::string, std::unique_ptr<zmq::socket_t>> state_sockets_;   // PUB per-robot
-        Conn conn_;
         std::string address_;
         int next_tcp_port_ = 5600;
 
@@ -40,10 +53,13 @@ namespace simulator {
         std::unique_ptr<World> world_;
         SimulatorSettings sim_settings_;
 
-        // Machines: uuid -> Machine
+        // Machines: uuid -> Machine (physics bodies)
         std::map<std::string, Machine> machines_;
 
-        // Heartbeat tracking: uuid -> last heartbeat time
+        // Local agents (only used in LOCAL mode)
+        std::vector<std::unique_ptr<agent::Agent>> local_agents_;
+
+        // Heartbeat tracking: uuid -> last heartbeat time (IPC/TCP only)
         std::map<std::string, std::chrono::steady_clock::time_point> last_heartbeat_;
 
         // Next collision group
@@ -55,22 +71,56 @@ namespace simulator {
         std::string recording_id_ = "flatsim";
         std::string application_id_ = "flatsim";
 
+        // Private helpers
+        void init_rerun();
+
+        // Transport abstraction - handles LOCAL vs IPC/TCP
+        void send_state(const std::string &uuid, const types::ser::MachineState &state);
+        std::optional<types::WheelControl> recv_control(const std::string &uuid, int timeout_ms);
+
+        // IPC/TCP only - spawn/despawn and connection management
+        void process_spawn_requests();
+        void process_heartbeats();
+        void cleanup_stale_connections();
+
       public:
-        // Constructor with explicit parameters (recommended)
+        // Constructor for LOCAL mode (no networking)
+        // NOTE: datum is REQUIRED - GPS coordinates won't work without it
+        Simulator(float width, float height, concord::Datum datum,
+                  std::shared_ptr<rerun::RecordingStream> rec = nullptr);
+
+        // Constructor for IPC/TCP mode with explicit parameters
         Simulator(Conn conn, const std::string &address, float width, float height, concord::Datum datum,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
-        // Constructor with settings struct
+        // Constructor for IPC/TCP mode with settings struct
         Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         ~Simulator();
 
+        // Main loop methods
         void tick(float dt);
         void tock();
 
+        // LOCAL mode: Spawn agent directly (returns reference)
+        agent::Agent &spawn_agent(const std::filesystem::path &json_path, concord::Pose spawn_pose,
+                                  std::optional<pigment::RGB> color = std::nullopt);
+
+        // LOCAL mode: Get agent by uuid
+        agent::Agent *get_agent(const std::string &uuid);
+
+        // LOCAL mode: Get all agents
+        const std::vector<std::unique_ptr<agent::Agent>> &agents() const { return local_agents_; }
+
+        // Get connection mode
+        Conn connection_mode() const { return conn_; }
+
         // Create machine with wheels, karosseries, etc.
         void create_machine(const types::Machine &machine);
+
+        // Get machine by uuid
+        Machine *get_machine(const std::string &uuid);
 
         // Apply control to a machine
         void apply_control(const types::WheelControl &control, float dt);
@@ -84,6 +134,9 @@ namespace simulator {
         // Access to physics world and world wrapper
         muli::World &get_world() { return world_->physics(); }
         World &world() { return *world_; }
+
+        // Rerun access
+        std::shared_ptr<rerun::RecordingStream> rec() const { return rec_; }
     };
 
 } // namespace simulator

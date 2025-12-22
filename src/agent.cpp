@@ -16,7 +16,8 @@ namespace agent {
 
     static std::string ipc_endpoint(const std::filesystem::path &path) { return "ipc://" + path.string(); }
 
-    Agent::Agent(const std::string &address) : ctx_(1), address_(address), rec_(nullptr) {
+    // Constructor for networked mode (IPC/TCP)
+    Agent::Agent(const std::string &address) : local_mode_(false), ctx_(1), address_(address), rec_(nullptr) {
         // Create spawn socket (REQ)
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::req);
         std::string spawn_addr;
@@ -40,14 +41,31 @@ namespace agent {
         state_socket_->set(zmq::sockopt::rcvtimeo, 0);
     }
 
+    // Constructor for local mode (owned by Simulator)
+    Agent::Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec)
+        : local_mode_(true), ctx_(1), rec_(rec), spawned_(true) {
+
+        // No ZMQ sockets needed in local mode
+        // Initialize machine with config
+        machine_ = Machine(rec_, config);
+
+        // Initialize control manager (includes tracker initialization)
+        control_manager_.init(&machine_.config_mut(), rec_);
+
+        std::cout << "[Agent] LOCAL mode: Created agent for " << config.name << " (" << config.uuid << ")" << std::endl;
+    }
+
     Agent::~Agent() {
-        if (spawned_) {
-            despawn();
+        // Only do ZMQ cleanup in networked mode
+        if (!local_mode_) {
+            if (spawned_) {
+                despawn();
+            }
+            if (spawn_socket_) spawn_socket_->close();
+            if (control_socket_) control_socket_->close();
+            if (state_socket_) state_socket_->close();
+            if (heartbeat_socket_) heartbeat_socket_->close();
         }
-        spawn_socket_->close();
-        control_socket_->close();
-        state_socket_->close();
-        heartbeat_socket_->close();
         ctx_.close();
     }
 
@@ -177,6 +195,15 @@ namespace agent {
             return;
         }
 
+        if (local_mode_) {
+            // LOCAL MODE: State is already updated by Simulator via update_from_physics()
+            // Just run navigation/MPC to compute controls
+            control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
+            return;
+        }
+
+        // NETWORKED MODE: IPC/TCP communication with simulator
+
         // Send heartbeat to simulator (non-blocking, fire-and-forget)
         static int tick_count = 0;
         tick_count++;
@@ -228,5 +255,14 @@ namespace agent {
         // Call control manager tock for tracker visualization
         control_manager_.tock(rec_);
     }
+
+    // LOCAL mode: Update state from physics (called by Simulator)
+    void Agent::update_from_physics(const types::ser::MachineState &state) {
+        machine_.update_state(state);
+        machine_.tick(0.0f); // Process state update
+    }
+
+    // LOCAL mode: Get current wheel control (called by Simulator)
+    types::WheelControl Agent::get_wheel_control() const { return control_manager_.get_wheel_control(); }
 
 } // namespace agent
