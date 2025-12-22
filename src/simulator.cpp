@@ -1,10 +1,41 @@
 #include "flatsim/simulator.hpp"
 #include <chrono>
 #include <cista/serialization.h>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
 namespace simulator {
+
+    static std::filesystem::path ipc_dir() {
+        const char *env = std::getenv("FLATSIM_IPC_DIR");
+        std::filesystem::path dir = env && *env ? std::filesystem::path(env) : std::filesystem::path("/tmp");
+        if (dir.is_relative()) {
+            dir = std::filesystem::absolute(dir);
+        }
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+        return dir;
+    }
+
+    static void remove_ipc_socket_file(const std::string &endpoint) {
+        // endpoint looks like "ipc:///abs/path"
+        constexpr const char *prefix = "ipc://";
+        if (!endpoint.starts_with(prefix)) {
+            return;
+        }
+        std::filesystem::path p(endpoint.substr(std::char_traits<char>::length(prefix)));
+        std::error_code ec;
+        std::filesystem::remove(p, ec);
+    }
+
+    static std::string advertised_host_or_localhost(const std::string &address) {
+        if (!address.empty() && address != "*" && address != "0.0.0.0") {
+            return address;
+        }
+        return "127.0.0.1";
+    }
 
     // Constructor with settings struct
     Simulator::Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
@@ -31,10 +62,15 @@ namespace simulator {
         heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
 
         if (conn_ == Conn::IPC) {
-            spawn_socket_->bind("ipc:///tmp/flatsim_spawn");
-            heartbeat_socket_->bind("ipc:///tmp/flatsim_heartbeat");
-            std::cout << "[Simulator] Spawn socket listening on ipc:///tmp/flatsim_spawn" << std::endl;
-            std::cout << "[Simulator] Heartbeat socket listening on ipc:///tmp/flatsim_heartbeat" << std::endl;
+            auto dir = ipc_dir();
+            const std::string spawn_ep = "ipc://" + (dir / "flatsim_spawn").string();
+            const std::string hb_ep = "ipc://" + (dir / "flatsim_heartbeat").string();
+            remove_ipc_socket_file(spawn_ep);
+            remove_ipc_socket_file(hb_ep);
+            spawn_socket_->bind(spawn_ep);
+            heartbeat_socket_->bind(hb_ep);
+            std::cout << "[Simulator] Spawn socket listening on " << spawn_ep << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on " << hb_ep << std::endl;
         } else {
             spawn_socket_->bind("tcp://*:5555");
             heartbeat_socket_->bind("tcp://*:5556");
@@ -76,10 +112,15 @@ namespace simulator {
         heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
 
         if (conn_ == Conn::IPC) {
-            spawn_socket_->bind("ipc:///tmp/flatsim_spawn");
-            heartbeat_socket_->bind("ipc:///tmp/flatsim_heartbeat");
-            std::cout << "[Simulator] Spawn socket listening on ipc:///tmp/flatsim_spawn" << std::endl;
-            std::cout << "[Simulator] Heartbeat socket listening on ipc:///tmp/flatsim_heartbeat" << std::endl;
+            auto dir = ipc_dir();
+            const std::string spawn_ep = "ipc://" + (dir / "flatsim_spawn").string();
+            const std::string hb_ep = "ipc://" + (dir / "flatsim_heartbeat").string();
+            remove_ipc_socket_file(spawn_ep);
+            remove_ipc_socket_file(hb_ep);
+            spawn_socket_->bind(spawn_ep);
+            heartbeat_socket_->bind(hb_ep);
+            std::cout << "[Simulator] Spawn socket listening on " << spawn_ep << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on " << hb_ep << std::endl;
         } else {
             spawn_socket_->bind("tcp://*:5555");
             heartbeat_socket_->bind("tcp://*:5556");
@@ -186,15 +227,22 @@ namespace simulator {
                 // Create dedicated sockets for this machine
                 auto ctrl_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
                 auto state_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pub);
+                std::string ctrl_ep;
+                std::string state_ep;
+                std::string hb_ep;
 
                 if (conn_ == Conn::IPC) {
-                    std::string ctrl_addr = "ipc:///tmp/flatsim_ctrl_" + uuid;
-                    std::string state_addr = "ipc:///tmp/flatsim_state_" + uuid;
-                    ctrl_sock->bind(ctrl_addr);
-                    state_sock->bind(state_addr);
+                    auto dir = ipc_dir();
+                    ctrl_ep = "ipc://" + (dir / ("flatsim_ctrl_" + uuid)).string();
+                    state_ep = "ipc://" + (dir / ("flatsim_state_" + uuid)).string();
+                    hb_ep = "ipc://" + (dir / "flatsim_heartbeat").string();
+                    remove_ipc_socket_file(ctrl_ep);
+                    remove_ipc_socket_file(state_ep);
+                    ctrl_sock->bind(ctrl_ep);
+                    state_sock->bind(state_ep);
                     std::cout << "[Simulator] Created sockets for " << uuid << std::endl;
-                    std::cout << "[Simulator]   Control: " << ctrl_addr << std::endl;
-                    std::cout << "[Simulator]   State: " << state_addr << std::endl;
+                    std::cout << "[Simulator]   Control: " << ctrl_ep << std::endl;
+                    std::cout << "[Simulator]   State: " << state_ep << std::endl;
                 } else {
                     int base_port = next_tcp_port_;
                     next_tcp_port_ += 10;
@@ -202,6 +250,10 @@ namespace simulator {
                     state_sock->bind("tcp://*:" + std::to_string(base_port + 1));
                     std::cout << "[Simulator] Created TCP sockets for " << uuid << " on ports " << base_port << " and "
                               << (base_port + 1) << std::endl;
+                    const auto host = advertised_host_or_localhost(address_);
+                    ctrl_ep = "tcp://" + host + ":" + std::to_string(base_port);
+                    state_ep = "tcp://" + host + ":" + std::to_string(base_port + 1);
+                    hb_ep = "tcp://" + host + ":5556";
                 }
 
                 ctrl_sock->set(zmq::sockopt::rcvtimeo, 0);
@@ -219,6 +271,11 @@ namespace simulator {
                 resp.rerun.grpc_address = cista::offset::string(rerun_grpc_addr_);
                 resp.rerun.recording_id = cista::offset::string(recording_id_);
                 resp.rerun.application_id = cista::offset::string(application_id_);
+
+                // Populate ZMQ endpoints so agents can connect regardless of IPC/TCP mode.
+                resp.zmq.control_endpoint = cista::offset::string(ctrl_ep);
+                resp.zmq.state_endpoint = cista::offset::string(state_ep);
+                resp.zmq.heartbeat_endpoint = cista::offset::string(hb_ep);
 
                 std::cout << "[Simulator] Got world state, sending response..." << std::endl;
                 std::cout << "[Simulator] Spawned machine: " << uuid << std::endl;

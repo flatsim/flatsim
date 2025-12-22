@@ -5,14 +5,47 @@
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <rerun.hpp>
+#include <string>
 #include <thread>
 
 int main(int argc, char **argv) {
     std::cout << "[Client] Starting agent client..." << std::endl;
 
-    std::string machine_file = "examples/machines/tractor.json";
+    // Connection:
+    // - Default: IPC (`ipc://...`) using `FLATSIM_IPC_DIR` (defaults to `/tmp`).
+    // - TCP: pass `--host 127.0.0.1` (server must be in TCP mode).
+    std::string host;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--host" && i + 1 < argc) {
+            host = argv[++i];
+        } else if (arg == "--tcp") {
+            if (host.empty()) {
+                host = "127.0.0.1";
+            }
+        } else if (arg == "--ipc") {
+            host.clear();
+        }
+    }
+
+    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    if (!std::filesystem::exists(machine_file)) {
+        std::error_code ec;
+        std::filesystem::path probe = std::filesystem::absolute(argv[0], ec).parent_path();
+        if (!ec) {
+            for (int up = 0; up < 8 && !probe.empty(); ++up) {
+                auto candidate = probe / machine_file;
+                if (std::filesystem::exists(candidate)) {
+                    machine_file = candidate;
+                    break;
+                }
+                probe = probe.parent_path();
+            }
+        }
+    }
     concord::Pose spawn_pose(10.0, 10.0, 0.0);
 
     // Load machine configuration
@@ -21,7 +54,7 @@ int main(int argc, char **argv) {
     std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
 
     // Create agent (rerun will be set up automatically after spawn)
-    agent::Agent agent("");
+    agent::Agent agent(host);
     agent.set_machine(machine_config);
 
     // Spawn in simulator
@@ -36,8 +69,7 @@ int main(int argc, char **argv) {
     // Simple control loop - drive forward in a circle
     std::cout << "[Client] Running control loop (10 seconds)..." << std::endl;
     const float dt = 0.016f;
-
-    while (true) {
+    for (int step = 0; step < static_cast<int>(10.0f / dt); ++step) {
         // Set velocity commands (controls are automatically sent in tick())
         agent.set_velocity(0.5f, 0.6f); // Forward 0.5 m/s, turn 0.2 rad/s
         // BLOCKING: Wait for state update from simulator (tick blocks until message received)

@@ -647,10 +647,19 @@ namespace types {
             cista::raw::string application_id; // Application name
         };
 
+        // ZMQ endpoints for agent <-> simulator communication
+        // For IPC these are full `ipc://...` endpoints; for TCP full `tcp://host:port` endpoints.
+        struct ZmqInfo {
+            cista::raw::string control_endpoint;
+            cista::raw::string state_endpoint;
+            cista::raw::string heartbeat_endpoint;
+        };
+
         struct Response {
             bool success = false;
             WorldState state;
             RerunInfo rerun;
+            ZmqInfo zmq;
         };
 
         // Serializable State

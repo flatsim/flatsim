@@ -1,25 +1,69 @@
-// MPC Path Following Test - Agent Client
-// Run simulator_server separately, then run this
+// MPC Path Following Test (Agent API)
+//
+// Terminal 1 (IPC, default):
+//   FLATSIM_IPC_DIR=./build/ipc ./build/linux/x86_64/release/simulator_server --ipc
+// Terminal 2:
+//   FLATSIM_IPC_DIR=./build/ipc ./build/linux/x86_64/release/test_mpc --ipc
+//
+// Or TCP:
+//   ./build/linux/x86_64/release/simulator_server --tcp --host 127.0.0.1
+//   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
 
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/loader.hpp"
 #include <chrono>
+#include <filesystem>
+#include <numbers>
 #include <iostream>
 #include <rerun.hpp>
 #include <thread>
+#include <vector>
 
-int main() {
+int main(int argc, char **argv) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
+
+    // Connection:
+    // - Default: IPC (`ipc://...`) using `FLATSIM_IPC_DIR` (defaults to `/tmp`).
+    // - TCP: pass `--host 127.0.0.1` (server must be in TCP mode).
+    std::string host;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--host" && i + 1 < argc) {
+            host = argv[++i];
+        } else if (arg == "--tcp") {
+            if (host.empty()) {
+                host = "127.0.0.1";
+            }
+        } else if (arg == "--ipc") {
+            host.clear();
+        }
+    }
+
+    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    if (!std::filesystem::exists(machine_file)) {
+        std::error_code ec;
+        std::filesystem::path probe = std::filesystem::absolute(argv[0], ec).parent_path();
+        if (!ec) {
+            for (int up = 0; up < 8 && !probe.empty(); ++up) {
+                auto candidate = probe / machine_file;
+                if (std::filesystem::exists(candidate)) {
+                    machine_file = candidate;
+                    break;
+                }
+                probe = probe.parent_path();
+            }
+        }
+    }
 
     // Load tractor - spawn at first waypoint
     // Spawn tractor at path start, pointing in +X direction (yaw=0)
     concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
-    auto tractor_config = agent::Loader::load_from_json("examples/machines/tractor.json", spawn_pose);
+    auto tractor_config = agent::Loader::load_from_json(machine_file, spawn_pose);
     tractor_config.uuid = "mpc_tractor";
     std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
 
     // Create agent (rerun connection will be set up automatically after spawn)
-    agent::Agent tractor("");
+    agent::Agent tractor(host);
     tractor.set_machine(tractor_config);
 
     // Spawn in simulator
@@ -100,7 +144,6 @@ int main() {
 
         // Print progress every 2 seconds
         if (step_count % 120 == 0) {
-            auto target = tractor.controls().tracker().tracker()->get_current_target();
             auto status = mpc->get_status();
             auto current_pose = tractor.machine().world_pose();
 
@@ -108,7 +151,7 @@ int main() {
                       << "Pos(" << current_pose.point.x << "," << current_pose.point.y << "), "
                       << "Yaw=" << current_pose.angle.yaw << ", "
                       << "CTE=" << status.cross_track_error << "m, "
-                      << "HeadingErr=" << (status.heading_error * 180.0 / M_PI) << "deg" << std::endl;
+                      << "HeadingErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }
 
         step_count++;
