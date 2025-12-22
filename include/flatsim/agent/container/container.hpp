@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concord/concord.hpp"
-#include "flatsim/core/utils.hpp"
+#include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 #include <algorithm>
@@ -9,7 +9,7 @@
 
 namespace fs {
 
-    class Tank {
+    class Container {
       public:
         enum class Type {
             HARVEST, // For storing harvested material
@@ -29,13 +29,13 @@ namespace fs {
         pigment::RGB color;
 
       public:
-        Tank(const std::string &name, Type type, float capacity, float fill_rate, float empty_rate)
+        Container(const std::string &name, Type type, float capacity, float fill_rate, float empty_rate)
             : name(name), type(type), capacity(capacity), current_amount(0.0f), fill_rate(fill_rate),
               empty_rate(empty_rate) {}
 
         void update(float dt, bool filling, bool emptying) {
-            // Tank filling is now handled by fill() method based on harvest amount
-            // Emptying is instant via empty_all()
+            // Container filling is handled by fill() based on harvest amount.
+            // Emptying is instant via empty_all().
         }
 
         void fill(float amount) { current_amount = std::min(current_amount + amount, capacity); }
@@ -65,7 +65,7 @@ namespace fs {
         }
 
         void tick(float dt, concord::Pose trans_pose) {
-            auto new_pose = utils::move(bound.pose, trans_pose);
+            auto new_pose = ::utils::move(bound.pose, trans_pose);
 
             pose.point.x = new_pose.point.x;
             pose.point.y = new_pose.point.y;
@@ -83,19 +83,19 @@ namespace fs {
             auto t_w = float(bound.size.x);
             auto t_h = float(bound.size.y);
 
-            // Visualize tank fill level
+            // Visualize container fill level
             float fill_percentage = get_percentage() / 100.0f;
             if (fill_percentage > 0.0f) {
                 // Calculate filled portion height
                 float filled_height = t_h * fill_percentage;
 
-                // Position the filled part at the bottom of the tank
+                // Position the filled part at the bottom of the container
                 float y_offset = (t_h - filled_height) / 2.0f;
                 float filled_x = t_x - y_offset * std::sin(t_th);
                 float filled_y = t_y - y_offset * std::cos(t_th);
 
                 rec->log_static(
-                    parent_name + "/tank/" + name + "/fill",
+                    parent_name + "/container/" + name + "/fill",
                     rerun::Boxes3D::from_centers_and_sizes({{filled_x, filled_y, 0.12f}}, {{t_w, filled_height, 0.0f}})
                         .with_radii({{0.01f}})
                         .with_fill_mode(rerun::FillMode::Solid)
@@ -104,8 +104,8 @@ namespace fs {
                         .with_colors({rerun::Color(100, 200, 100)}));
             }
 
-            // Tank outline
-            rec->log_static(parent_name + "/tank/" + name + "/outline",
+            // Container outline
+            rec->log_static(parent_name + "/container/" + name + "/outline",
                             rerun::Boxes3D::from_centers_and_sizes({{t_x, t_y, 0.11f}}, {{t_w, t_h, 0.0f}})
                                 .with_radii({{0.02f}})
                                 .with_fill_mode(rerun::FillMode::MajorWireframe)

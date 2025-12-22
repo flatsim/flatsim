@@ -1,8 +1,8 @@
 #pragma once
 
-#include "flatsim/robot/sensor/sensor.hpp"
-#include "flatsim/robot/types.hpp"
+#include "flatsim/agent/sensor/sensor.hpp"
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace fs {

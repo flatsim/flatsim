@@ -36,11 +36,17 @@ namespace types {
         std::vector<bool> left_side;
     };
 
-    struct Tank {
+    enum class ContainerType { HARVEST, WASTE };
+
+    struct Container {
         std::string name;
+        ContainerType type = ContainerType::HARVEST;
         float capacity;
         concord::Bound bound;
     };
+
+    // Backwards-compatible name (legacy JSON key is still "tank")
+    using Tank = Container;
 
     struct Power {
         std::string name;
@@ -422,12 +428,14 @@ namespace types {
 
         struct Tank {
             cista::raw::string name;
+            uint8_t type = 0; // 0=HARVEST, 1=WASTE
             float capacity = 0.0f;
             Bound bound;
 
             types::Tank to_tank() const {
                 types::Tank t;
                 t.name = std::string(name.view());
+                t.type = static_cast<types::ContainerType>(type);
                 t.capacity = capacity;
                 t.bound = bound.to_bound();
                 return t;
@@ -436,6 +444,7 @@ namespace types {
             static Tank from_tank(const types::Tank &t) {
                 Tank r;
                 r.name = t.name;
+                r.type = static_cast<uint8_t>(t.type);
                 r.capacity = t.capacity;
                 r.bound = Bound::from_bound(t.bound);
                 return r;

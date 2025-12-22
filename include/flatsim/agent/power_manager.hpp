@@ -1,7 +1,7 @@
 #pragma once
 
-#include "flatsim/robot/power/power.hpp"
-#include "flatsim/robot/types.hpp"
+#include "flatsim/agent/power/power.hpp"
+#include "flatsim/types.hpp"
 #include <memory>
 #include <optional>
 
@@ -33,9 +33,12 @@ namespace fs {
         void init(const std::string &name, Power::Type type, float capacity, float consumption_rate, float charge_rate);
 
         /**
-         * @brief Initialize from PowerInfo
+         * @brief Initialize from `types::Power` config
          */
-        void init(const PowerInfo &power_info);
+        void init(const types::Power &power_info) {
+            Power::Type type = (power_info.type == types::PowerType::FUEL) ? Power::Type::FUEL : Power::Type::BATTERY;
+            init(power_info.name, type, power_info.capacity, power_info.consumption_rate, power_info.charge_rate);
+        }
 
         /**
          * @brief Check if power system exists

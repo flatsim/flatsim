@@ -1,7 +1,7 @@
 #pragma once
 
-#include "flatsim/robot/sensor/sensor.hpp"
-#include "flatsim/robot/types.hpp"
+#include "concord/concord.hpp"
+#include "flatsim/agent/sensor/sensor.hpp"
 #include "muli/world.h"
 #include <chrono>
 #include <vector>

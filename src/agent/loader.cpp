@@ -300,6 +300,10 @@ namespace agent {
     void Loader::parse_tank(types::Machine &machine, const boost::json::object &tank_json) {
         types::Tank tank;
         tank.name = get_value<std::string>(tank_json.at("name"));
+        if (tank_json.contains("type")) {
+            std::string type_str = get_value<std::string>(tank_json.at("type"));
+            tank.type = (type_str == "WASTE") ? types::ContainerType::WASTE : types::ContainerType::HARVEST;
+        }
         tank.capacity = get_value<float>(tank_json.at("capacity"));
         tank.bound.pose = parse_pose(tank_json.at("position").as_object());
         tank.bound.size = parse_size(tank_json.at("size").as_object());

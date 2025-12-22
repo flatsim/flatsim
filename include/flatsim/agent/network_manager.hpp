@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/robot/network/interface.hpp"
+#include "flatsim/agent/network/interface.hpp"
 #include <memory>
 #include <string>
 #include <vector>

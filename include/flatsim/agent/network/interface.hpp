@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flatsim/ipc/messages.hpp"
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -65,31 +65,6 @@ namespace fs::network {
          * @return Vector of connected peer UUIDs
          */
         virtual std::vector<std::string> get_connected_peers() const = 0;
-
-        /**
-         * @brief Send position message via this interface
-         * @param msg Position message to send
-         */
-        virtual void send_position(const messages::PositionMessage &msg) = 0;
-
-        /**
-         * @brief Send control command to specific peer
-         * @param target_uuid UUID of target robot
-         * @param msg Control command to send
-         */
-        virtual void send_control_command(const std::string &target_uuid, const messages::ControlCommand &msg) = 0;
-
-        /**
-         * @brief Receive position messages from this interface
-         * @return Vector of received position messages
-         */
-        virtual std::vector<messages::PositionMessage> receive_positions() = 0;
-
-        /**
-         * @brief Receive control commands from this interface
-         * @return Vector of received control commands
-         */
-        virtual std::vector<messages::ControlCommand> receive_control_commands() = 0;
 
         /**
          * @brief Send raw bytes via this interface (broadcast to all peers)
