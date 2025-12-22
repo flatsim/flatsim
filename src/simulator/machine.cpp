@@ -105,7 +105,9 @@ namespace simulator {
         if (chassis_ && chassis_->body) {
             ms.pose.position.x = chassis_->body->GetPosition().x;
             ms.pose.position.y = chassis_->body->GetPosition().y;
-            ms.pose.angle = chassis_->body->GetAngle();
+            // Add M_PI/2 to convert from body angle to world heading
+            // (model forward is +Y, so body angle 0 = heading +90deg)
+            ms.pose.angle = chassis_->body->GetAngle() + M_PI / 2;
             ms.velocity.x = chassis_->body->GetLinearVelocity().x;
             ms.velocity.y = chassis_->body->GetLinearVelocity().y;
             ms.angular_vel = chassis_->body->GetAngularVelocity();

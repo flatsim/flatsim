@@ -110,19 +110,22 @@ namespace agent {
         return ctrl;
     }
 
-    void ControlManager::update_navigation(const concord::Pose &current_pose, float dt) {
+    void ControlManager::update_navigation(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+                                           float dt) {
         // Update tracker to get velocity command
-        auto [linear, angular] = tracker_.update(current_pose, dt);
+        auto [linear, angular] = tracker_.update(current_pose, linear_vel, angular_vel, dt);
 
         // Apply velocity commands
+        // Note: Invert angular velocity - drivekit uses standard convention (positive = CCW)
+        // but the robot/simulator uses opposite convention (positive = CW)
         set_linear(linear);
-        set_angular(angular);
+        set_angular(-angular);
     }
 
-    void ControlManager::tick(const concord::Pose &current_pose, float dt) {
+    void ControlManager::tick(const concord::Pose &current_pose, float linear_vel, float angular_vel, float dt) {
         // Update navigation if enabled
         if (navigation_enabled_ && tracker_.is_enabled()) {
-            update_navigation(current_pose, dt);
+            update_navigation(current_pose, linear_vel, angular_vel, dt);
         }
     }
 

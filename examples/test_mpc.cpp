@@ -13,8 +13,8 @@
 #include "flatsim/agent/loader.hpp"
 #include <chrono>
 #include <filesystem>
-#include <numbers>
 #include <iostream>
+#include <numbers>
 #include <rerun.hpp>
 #include <thread>
 #include <vector>
@@ -74,9 +74,8 @@ int main(int argc, char **argv) {
     }
     std::cout << "[Agent] Spawned successfully!" << std::endl;
 
-    // Re-initialize tracker with MPC type (was initialized with PID by default)
-    tractor.controls().tracker().init(&tractor.machine().config_mut(), drivekit::TrackerType::MPC,
-                                      tractor.machine().rec());
+    // Switch to MPC controller (was initialized with PID by default)
+    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPC);
     tractor.controls().tracker().set_enabled(true);
     tractor.controls().set_navigation_enabled(true);
 

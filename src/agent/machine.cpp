@@ -8,7 +8,13 @@ namespace agent {
         world_pose_ = config_.bound.pose;
     }
 
-    void Machine::update_state(const types::ser::MachineState &state) { world_pose_ = state.pose.to_concord(); }
+    void Machine::update_state(const types::ser::MachineState &state) {
+        world_pose_ = state.pose.to_concord();
+        // Compute forward velocity along heading from 2D velocity vector
+        float yaw = world_pose_.angle.yaw;
+        linear_velocity_ = state.velocity.x * std::cos(yaw) + state.velocity.y * std::sin(yaw);
+        angular_velocity_ = state.angular_vel;
+    }
 
     void Machine::tick(float dt) {
         (void)dt;

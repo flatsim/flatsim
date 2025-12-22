@@ -80,7 +80,14 @@ namespace agent {
         tracker_->get_controller()->set_config(ctrl_config);
     }
 
-    std::pair<float, float> Tracker::update(const concord::Pose &current_pose, float dt) {
+    void Tracker::set_controller_type(drivekit::TrackerType type) {
+        if (tracker_) {
+            tracker_->set_controller_type(type);
+        }
+    }
+
+    std::pair<float, float> Tracker::update(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+                                            float dt) {
         if (!enabled_ || !tracker_) {
             return {0.0f, 0.0f};
         }
@@ -88,8 +95,8 @@ namespace agent {
         // Convert current pose to drivekit RobotState
         drivekit::RobotState state;
         state.pose = current_pose;
-        state.velocity.linear = 0.0; // TODO: track velocity
-        state.velocity.angular = 0.0;
+        state.velocity.linear = linear_vel;
+        state.velocity.angular = angular_vel;
         state.timestamp = 0.0;
 
         // Update tracker

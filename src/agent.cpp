@@ -178,7 +178,7 @@ namespace agent {
         }
 
         // Update control manager (includes navigation update if enabled)
-        control_manager_.tick(machine_.world_pose(), dt);
+        control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
 
         // Get current control from control manager and send to simulator
         auto wheel_ctrl = control_manager_.get_wheel_control();

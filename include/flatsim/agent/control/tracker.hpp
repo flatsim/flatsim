@@ -20,14 +20,18 @@ namespace agent {
         void init(types::Machine *machine, drivekit::TrackerType type = drivekit::TrackerType::PID,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
+        // Change controller type without reinitializing constraints
+        void set_controller_type(drivekit::TrackerType type);
+
         void set_enabled(bool enabled) { enabled_ = enabled; }
         bool is_enabled() const { return enabled_; }
 
         drivekit::Tracker *tracker() { return tracker_.get(); }
         const drivekit::Tracker *tracker() const { return tracker_.get(); }
 
-        // Update control based on current state, returns (linear, angular) velocity
-        std::pair<float, float> update(const concord::Pose &current_pose, float dt);
+        // Update control based on current state, returns (linear, angular) velocity command
+        std::pair<float, float> update(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+                                       float dt);
     };
 
 } // namespace agent
