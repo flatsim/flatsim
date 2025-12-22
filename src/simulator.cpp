@@ -151,6 +151,13 @@ namespace simulator {
         }
     }
 
+    void Simulator::teleport_machine(const std::string &uuid, const concord::Pose &pose) {
+        auto it = machines_.find(uuid);
+        if (it != machines_.end()) {
+            it->second.teleport(pose);
+        }
+    }
+
     bool Simulator::destroy_machine(const std::string &uuid) {
         auto it = machines_.find(uuid);
         if (it == machines_.end()) {
@@ -185,6 +192,11 @@ namespace simulator {
         create_machine(machine_config);
 
         auto agent_ptr = std::make_unique<agent::Agent>(machine_config, rec_);
+
+        // Set teleport callback so Agent can call back to Simulator
+        agent_ptr->set_teleport_callback(
+            [this](const std::string &uuid, const concord::Pose &pose) { this->teleport_machine(uuid, pose); });
+
         local_agents_.push_back(std::move(agent_ptr));
         return *local_agents_.back();
     }
@@ -196,6 +208,13 @@ namespace simulator {
             }
         }
         return nullptr;
+    }
+
+    agent::Agent &Simulator::get_agent(size_t index) {
+        if (index >= local_agents_.size()) {
+            throw std::out_of_range("Agent index out of range: " + std::to_string(index));
+        }
+        return *local_agents_[index];
     }
 
     // ============================================================================

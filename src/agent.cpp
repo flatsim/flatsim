@@ -263,6 +263,33 @@ namespace agent {
     }
 
     // LOCAL mode: Get current wheel control (called by Simulator)
-    types::WheelControl Agent::get_wheel_control() const { return control_manager_.get_wheel_control(); }
+    types::WheelControl Agent::get_wheel_control() const {
+        auto ctrl = control_manager_.get_wheel_control();
+        // Apply speed scale to throttle
+        for (auto &t : ctrl.throttle) {
+            t *= speed_scale_;
+        }
+        return ctrl;
+    }
+
+    void Agent::brake() {
+        // Set zero velocity and apply brake
+        control_manager_.set_linear(0.0f);
+        control_manager_.set_angular(0.0f);
+        // TODO: When brake force is implemented in WheelControl, set it here
+    }
+
+    void Agent::teleport(const concord::Pose &pose) {
+        if (local_mode_) {
+            // LOCAL mode: use callback to Simulator
+            if (teleport_callback_) {
+                teleport_callback_(machine_.uuid(), pose);
+            }
+        } else {
+            // IPC/TCP mode: TODO - send teleport request to simulator
+            // For now, just log a warning
+            std::cerr << "[Agent] teleport() not yet supported in IPC/TCP mode" << std::endl;
+        }
+    }
 
 } // namespace agent

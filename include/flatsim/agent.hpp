@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <rerun.hpp>
 #include <zmq.hpp>
@@ -9,6 +11,9 @@
 #include "flatsim/types.hpp"
 
 namespace agent {
+
+    // Teleport callback type (set by Simulator in LOCAL mode)
+    using TeleportCallback = std::function<void(const std::string &uuid, const concord::Pose &pose)>;
 
     class Agent {
       private:
@@ -27,6 +32,12 @@ namespace agent {
         Machine machine_;
         ControlManager control_manager_;
         bool spawned_ = false;
+
+        // Speed control
+        float speed_scale_ = 1.0f;
+
+        // Teleport callback (LOCAL mode only - set by Simulator)
+        TeleportCallback teleport_callback_;
 
         // Rerun visualization
         std::shared_ptr<rerun::RecordingStream> rec_;
@@ -74,6 +85,50 @@ namespace agent {
 
         // Check if in local mode
         bool is_local() const { return local_mode_; }
+
+        // ============================================================================
+        // Convenience API (shortcuts to avoid deep nesting)
+        // ============================================================================
+
+        // Direct access to drivekit::Tracker (shortcut for controls().tracker().tracker())
+        drivekit::Tracker *tracker() { return control_manager_.tracker().tracker(); }
+        const drivekit::Tracker *tracker() const { return control_manager_.tracker().tracker(); }
+
+        // Position/pose (alias for machine().world_pose())
+        const concord::Pose &get_position() const { return machine_.world_pose(); }
+
+        // Velocity access
+        float get_linear_velocity() const { return machine_.linear_velocity(); }
+        float get_angular_velocity() const { return machine_.angular_velocity(); }
+        void get_velocity(float &linear, float &angular) const {
+            linear = machine_.linear_velocity();
+            angular = machine_.angular_velocity();
+        }
+
+        // Speed control (scales velocity commands, 0.0 to 1.0)
+        void set_speed(float scale) { speed_scale_ = std::clamp(scale, 0.0f, 1.0f); }
+        float get_speed() const { return speed_scale_; }
+        void speed_up(float delta = 0.1f) { set_speed(speed_scale_ + delta); }
+        void slow_down(float delta = 0.1f) { set_speed(speed_scale_ - delta); }
+
+        // Braking
+        void brake();
+
+        // Teleport to a new pose (LOCAL mode: immediate, IPC/TCP: sends request)
+        void teleport(const concord::Pose &pose);
+
+        // Set teleport callback (called by Simulator in LOCAL mode)
+        void set_teleport_callback(TeleportCallback cb) { teleport_callback_ = std::move(cb); }
+
+        // Navigation enable/disable (shortcut for controls().set_navigation_enabled())
+        void set_navigation_enabled(bool enabled) { control_manager_.set_navigation_enabled(enabled); }
+        bool is_navigation_enabled() const { return control_manager_.is_navigation_enabled(); }
+
+        // UUID access
+        const std::string &uuid() const { return machine_.uuid(); }
+
+        // Name access
+        const std::string &name() const { return machine_.config().name; }
 
       private:
         // Transport abstraction - handles LOCAL vs IPC/TCP internally

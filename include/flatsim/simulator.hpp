@@ -1,10 +1,14 @@
 #pragma once
 
+#include <atomic>
+#include <chrono>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <rerun.hpp>
+#include <thread>
 #include <vector>
 #include <zmq.hpp>
 
@@ -110,11 +114,22 @@ namespace simulator {
         // LOCAL mode: Get agent by uuid
         agent::Agent *get_agent(const std::string &uuid);
 
+        // LOCAL mode: Get agent by index
+        agent::Agent &get_agent(size_t index);
+
         // LOCAL mode: Get all agents
         const std::vector<std::unique_ptr<agent::Agent>> &agents() const { return local_agents_; }
 
+        // LOCAL mode: Number of agents
+        size_t num_agents() const { return local_agents_.size(); }
+
         // Get connection mode
         Conn connection_mode() const { return conn_; }
+
+        // Convenience loop: combines tick/tock with user callback
+        // Runs physics at full speed, visualization at viz_fps
+        // user_loop receives dt and returns false to exit
+        template <typename UserLoop> void ticktock(UserLoop user_loop, int viz_fps = 30);
 
         // Create machine with wheels, karosseries, etc.
         void create_machine(const types::Machine &machine);
@@ -124,6 +139,9 @@ namespace simulator {
 
         // Apply control to a machine
         void apply_control(const types::WheelControl &control, float dt);
+
+        // Teleport a machine to a new pose
+        void teleport_machine(const std::string &uuid, const concord::Pose &pose);
 
         // Destroy a machine
         bool destroy_machine(const std::string &uuid);
@@ -137,6 +155,67 @@ namespace simulator {
 
         // Rerun access
         std::shared_ptr<rerun::RecordingStream> rec() const { return rec_; }
+
+        // Datum access
+        concord::Datum get_datum() const { return sim_settings_.datum; }
     };
+
+    // ============================================================================
+    // Template Implementation
+    // ============================================================================
+
+    template <typename UserLoop> void Simulator::ticktock(UserLoop user_loop, int viz_fps) {
+        std::atomic<bool> running{true};
+        const auto viz_interval = std::chrono::milliseconds(1000 / viz_fps);
+
+        // Background visualization thread
+        std::thread viz_thread([this, &running, viz_interval]() {
+            while (running.load()) {
+                auto viz_start = std::chrono::steady_clock::now();
+                this->tock();
+
+                auto viz_end = std::chrono::steady_clock::now();
+                auto elapsed = viz_end - viz_start;
+                if (elapsed < viz_interval) {
+                    std::this_thread::sleep_for(viz_interval - elapsed);
+                }
+            }
+        });
+
+        // Main physics loop
+        auto last_time = std::chrono::steady_clock::now();
+
+        try {
+            while (true) {
+                auto now = std::chrono::steady_clock::now();
+                std::chrono::duration<float> dt_dur = now - last_time;
+                float dt = dt_dur.count();
+                last_time = now;
+
+                // Physics tick
+                this->tick(dt);
+
+                // User callback - return false to exit
+                if (!user_loop(dt)) {
+                    break;
+                }
+
+                // Small sleep to cap CPU usage
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        } catch (...) {
+            running.store(false);
+            if (viz_thread.joinable()) {
+                viz_thread.join();
+            }
+            throw;
+        }
+
+        // Clean shutdown
+        running.store(false);
+        if (viz_thread.joinable()) {
+            viz_thread.join();
+        }
+    }
 
 } // namespace simulator
