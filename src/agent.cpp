@@ -1,4 +1,7 @@
 #include "flatsim/agent.hpp"
+#include "flatsim/agent/sensor/lidar_sensor.hpp"
+#include "flatsim/tagged_zmq.hpp"
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -33,12 +36,11 @@ namespace agent {
         spawn_socket_->connect(spawn_addr);
         std::cout << "[Agent] Connected to spawn socket: " << spawn_addr << std::endl;
 
-        // Create control, state, and heartbeat sockets (will connect after spawn)
-        control_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
-        state_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::sub);
-        heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
-        state_socket_->set(zmq::sockopt::subscribe, "");
-        state_socket_->set(zmq::sockopt::rcvtimeo, 0);
+        // Create uplink/downlink sockets (will connect after spawn)
+        uplink_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
+        downlink_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::sub);
+        downlink_socket_->set(zmq::sockopt::subscribe, "");
+        downlink_socket_->set(zmq::sockopt::rcvtimeo, 0);
     }
 
     // Constructor for local mode (owned by Simulator)
@@ -51,6 +53,7 @@ namespace agent {
 
         // Initialize all managers (sensors, controls, network, power, container)
         machine_.init();
+        install_sensor_callbacks();
 
         std::cout << "[Agent] LOCAL mode: Created agent for " << config.name << " (" << config.uuid << ")" << std::endl;
     }
@@ -62,9 +65,8 @@ namespace agent {
                 despawn();
             }
             if (spawn_socket_) spawn_socket_->close();
-            if (control_socket_) control_socket_->close();
-            if (state_socket_) state_socket_->close();
-            if (heartbeat_socket_) heartbeat_socket_->close();
+            if (uplink_socket_) uplink_socket_->close();
+            if (downlink_socket_) downlink_socket_->close();
         }
         ctx_.close();
     }
@@ -72,6 +74,7 @@ namespace agent {
     void Agent::set_machine(const types::Machine &config) {
         machine_ = Machine(rec_, config);
         machine_.init();
+        install_sensor_callbacks();
     }
 
     bool Agent::spawn() {
@@ -93,33 +96,28 @@ namespace agent {
             if (resp && resp->success) {
                 // Connect control and state sockets for this machine
                 std::string uuid = machine_.uuid();
-                std::string ctrl_addr(resp->zmq.control_endpoint.view());
-                std::string state_addr(resp->zmq.state_endpoint.view());
-                std::string hb_addr(resp->zmq.heartbeat_endpoint.view());
+                std::string uplink_addr(resp->zmq.uplink_endpoint.view());
+                std::string downlink_addr(resp->zmq.downlink_endpoint.view());
 
                 // Backwards-compatible fallback if talking to an older simulator.
-                if (ctrl_addr.empty() || state_addr.empty() || hb_addr.empty()) {
+                if (uplink_addr.empty() || downlink_addr.empty()) {
                     if (address_.empty()) {
                         auto dir = ipc_dir();
-                        ctrl_addr = ipc_endpoint(dir / ("flatsim_ctrl_" + uuid));
-                        state_addr = ipc_endpoint(dir / ("flatsim_state_" + uuid));
-                        hb_addr = ipc_endpoint(dir / "flatsim_heartbeat");
+                        uplink_addr = ipc_endpoint(dir / ("flatsim_uplink_" + uuid));
+                        downlink_addr = ipc_endpoint(dir / ("flatsim_downlink_" + uuid));
                     } else {
                         const std::string host =
                             (address_.starts_with("tcp://") || address_.starts_with("ipc://")) ? "127.0.0.1" : address_;
-                        ctrl_addr = "tcp://" + host + ":5600";
-                        state_addr = "tcp://" + host + ":5601";
-                        hb_addr = "tcp://" + host + ":5556";
+                        uplink_addr = "tcp://" + host + ":5600";
+                        downlink_addr = "tcp://" + host + ":5601";
                     }
                 }
 
-                control_socket_->connect(ctrl_addr);
-                state_socket_->connect(state_addr);
-                heartbeat_socket_->connect(hb_addr);
+                uplink_socket_->connect(uplink_addr);
+                downlink_socket_->connect(downlink_addr);
 
-                std::cout << "[Agent] Connected to control: " << ctrl_addr << std::endl;
-                std::cout << "[Agent] Connected to state: " << state_addr << std::endl;
-                std::cout << "[Agent] Connected to heartbeat: " << hb_addr << std::endl;
+                std::cout << "[Agent] Connected uplink: " << uplink_addr << std::endl;
+                std::cout << "[Agent] Connected downlink: " << downlink_addr << std::endl;
 
                 // Create RecordingStream using info from simulator
                 std::string rerun_addr(resp->rerun.grpc_address.view());
@@ -138,6 +136,7 @@ namespace agent {
                 // Update machine with rerun and initialize all managers
                 machine_ = Machine(rec_, machine_.config());
                 machine_.init();
+                install_sensor_callbacks();
 
                 // Update state from response
                 for (const auto &ms : resp->state.machines) {
@@ -217,33 +216,65 @@ namespace agent {
             hb_req.type = types::ser::MsgType::HEARTBEAT;
             hb_req.uuid = machine_.uuid();
 
-            auto hb_data = cista::serialize(hb_req);
-            heartbeat_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);
+            auto hb_data = flatsim::wire::pack(flatsim::wire::Kind::HEARTBEAT, hb_req);
+            uplink_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);
         }
 
-        // BLOCKING: Wait for state update from simulator FIRST
-        state_socket_->set(zmq::sockopt::rcvtimeo, timeout_ms);
-        zmq::message_t state_msg;
-        auto result = state_socket_->recv(state_msg, zmq::recv_flags::none);
+        // BLOCKING: Wait for STATE update from simulator FIRST (may receive SENSORS first).
+        const auto start = std::chrono::steady_clock::now();
+        bool got_state = false;
+        while (!got_state) {
+            const auto elapsed_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            const int remaining_ms = timeout_ms - static_cast<int>(elapsed_ms);
+            if (remaining_ms <= 0) {
+                break;
+            }
 
-        if (result) {
-            std::vector<uint8_t> buffer(static_cast<uint8_t *>(state_msg.data()),
-                                        static_cast<uint8_t *>(state_msg.data()) + state_msg.size());
-            auto *ms = cista::deserialize<types::ser::MachineState>(buffer);
-            if (ms && std::string(ms->uuid.view()) == machine_.uuid()) {
-                // Update machine state from simulator
-                machine_.update_state(*ms);
+            downlink_socket_->set(zmq::sockopt::rcvtimeo, remaining_ms);
+            zmq::message_t msg;
+            auto result = downlink_socket_->recv(msg, zmq::recv_flags::none);
+            if (!result) {
+                break;
+            }
+
+            std::vector<uint8_t> bytes(static_cast<uint8_t *>(msg.data()),
+                                       static_cast<uint8_t *>(msg.data()) + msg.size());
+
+            const auto tagged = flatsim::wire::unpack(std::move(bytes));
+            switch (tagged.kind) {
+            case flatsim::wire::Kind::STATE: {
+                auto ms = flatsim::wire::deserialize<types::ser::MachineState>(tagged.payload);
+                if (std::string(ms.uuid.view()) == machine_.uuid()) {
+                    machine_.update_state(ms);
+                    got_state = true;
+                }
+                break;
+            }
+            case flatsim::wire::Kind::SENSORS: {
+                auto ss = flatsim::wire::deserialize<types::ser::SensorState>(tagged.payload);
+                if (std::string(ss.uuid.view()) == machine_.uuid()) {
+                    sensor_data_ = ss.to_sensor_data();
+                }
+                break;
+            }
+            default:
+                break;
             }
         }
 
         // Call machine tick to process state update and run all managers
-        machine_.tick(dt);
+        if (sensor_data_.has_gps || sensor_data_.has_imu || sensor_data_.has_lidar) {
+            machine_.tick(dt, sensor_data_);
+        } else {
+            machine_.tick(dt);
+        }
 
         // Get current control from machine's control manager and send to simulator
         auto wheel_ctrl = machine_.controls.get_wheel_control();
         auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
-        auto ctrl_data = cista::serialize(ctrl_ser);
-        control_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
+        auto ctrl_data = flatsim::wire::pack(flatsim::wire::Kind::CONTROL, ctrl_ser);
+        uplink_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
     }
 
     void Agent::tock() {
@@ -289,6 +320,52 @@ namespace agent {
             // For now, just log a warning
             std::cerr << "[Agent] teleport() not yet supported in IPC/TCP mode" << std::endl;
         }
+    }
+
+    void Agent::install_sensor_callbacks() {
+        machine_.sensors.set_on_add([this](fs::Sensor &sensor) {
+            if (local_mode_ || !spawned_ || !uplink_socket_) {
+                return;
+            }
+
+            auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
+            if (!lidar) {
+                return;
+            }
+
+            types::LidarConfig cfg;
+            cfg.enabled = true;
+            cfg.min_range = lidar->get_min_range();
+            cfg.max_range = lidar->get_max_range();
+            cfg.fov_deg = lidar->get_fov_deg();
+            cfg.resolution_deg = lidar->get_resolution_deg();
+
+            auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
+            auto bytes = flatsim::wire::pack(flatsim::wire::Kind::LIDAR_CFG, msg);
+            uplink_socket_->send(zmq::buffer(bytes), zmq::send_flags::dontwait);
+        });
+
+        if (local_mode_ || !spawned_ || !uplink_socket_) {
+            return;
+        }
+
+        machine_.sensors.for_each([this](fs::Sensor &sensor) {
+            auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
+            if (!lidar) {
+                return;
+            }
+
+            types::LidarConfig cfg;
+            cfg.enabled = true;
+            cfg.min_range = lidar->get_min_range();
+            cfg.max_range = lidar->get_max_range();
+            cfg.fov_deg = lidar->get_fov_deg();
+            cfg.resolution_deg = lidar->get_resolution_deg();
+
+            auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
+            auto bytes = flatsim::wire::pack(flatsim::wire::Kind::LIDAR_CFG, msg);
+            uplink_socket_->send(zmq::buffer(bytes), zmq::send_flags::dontwait);
+        });
     }
 
 } // namespace agent

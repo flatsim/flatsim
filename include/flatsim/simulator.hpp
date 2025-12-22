@@ -47,10 +47,9 @@ namespace simulator {
 
         // ZMQ (only used in IPC/TCP modes)
         zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> spawn_socket_;                           // REP - for spawn/despawn requests
-        std::unique_ptr<zmq::socket_t> heartbeat_socket_;                       // PULL - for heartbeat messages
-        std::map<std::string, std::unique_ptr<zmq::socket_t>> control_sockets_; // PULL per-robot
-        std::map<std::string, std::unique_ptr<zmq::socket_t>> state_sockets_;   // PUB per-robot
+        std::unique_ptr<zmq::socket_t> spawn_socket_;                            // REP - for spawn/despawn requests
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> uplink_sockets_;   // PULL per-robot (agent -> sim)
+        std::map<std::string, std::unique_ptr<zmq::socket_t>> downlink_sockets_; // PUB per-robot (sim -> agent)
         std::string address_;
         int next_tcp_port_ = 5600;
 
@@ -89,7 +88,6 @@ namespace simulator {
 
         // IPC/TCP only - spawn/despawn and connection management
         void process_spawn_requests();
-        void process_heartbeats();
         void cleanup_stale_connections();
 
       public:

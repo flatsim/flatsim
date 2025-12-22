@@ -675,6 +675,7 @@ namespace types {
 
         struct MachineState {
             cista::raw::string uuid;
+            uint64_t tick_seq = 0;
             Pose pose;
             Vec2 velocity;
             float angular_vel = 0.0f;
@@ -740,6 +741,7 @@ namespace types {
 
         struct SensorState {
             cista::raw::string uuid;
+            uint64_t tick_seq = 0;
             LidarData lidar;
             GpsData gps;
             ImuData imu;
@@ -768,6 +770,37 @@ namespace types {
                 s.has_gps = d.has_gps;
                 s.has_imu = d.has_imu;
                 return s;
+            }
+        };
+
+        // LIDAR configuration update from agent -> simulator
+        struct LidarConfigMsg {
+            cista::raw::string uuid;
+            bool enabled = true;
+            float min_range = 0.5f;
+            float max_range = 15.0f;
+            float fov_deg = 45.0f;
+            float resolution_deg = 3.0f;
+
+            types::LidarConfig to_config() const {
+                types::LidarConfig c;
+                c.enabled = enabled;
+                c.min_range = min_range;
+                c.max_range = max_range;
+                c.fov_deg = fov_deg;
+                c.resolution_deg = resolution_deg;
+                return c;
+            }
+
+            static LidarConfigMsg from_config(const std::string &uuid, const types::LidarConfig &c) {
+                LidarConfigMsg m;
+                m.uuid = uuid;
+                m.enabled = c.enabled;
+                m.min_range = c.min_range;
+                m.max_range = c.max_range;
+                m.fov_deg = c.fov_deg;
+                m.resolution_deg = c.resolution_deg;
+                return m;
             }
         };
 
@@ -800,9 +833,8 @@ namespace types {
         // ZMQ endpoints for agent <-> simulator communication
         // For IPC these are full `ipc://...` endpoints; for TCP full `tcp://host:port` endpoints.
         struct ZmqInfo {
-            cista::raw::string control_endpoint;
-            cista::raw::string state_endpoint;
-            cista::raw::string heartbeat_endpoint;
+            cista::raw::string uplink_endpoint;   // agent -> simulator (PUSH/PULL)
+            cista::raw::string downlink_endpoint; // simulator -> agent (PUB/SUB)
         };
 
         struct Response {

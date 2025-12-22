@@ -21,10 +21,9 @@ namespace agent {
 
         // ZMQ sockets (only used in networked mode)
         zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> spawn_socket_;     // REQ - for spawn/despawn
-        std::unique_ptr<zmq::socket_t> control_socket_;   // PUSH - for sending controls
-        std::unique_ptr<zmq::socket_t> state_socket_;     // SUB - for receiving state
-        std::unique_ptr<zmq::socket_t> heartbeat_socket_; // PUSH - for heartbeats
+        std::unique_ptr<zmq::socket_t> spawn_socket_;    // REQ - for spawn/despawn
+        std::unique_ptr<zmq::socket_t> uplink_socket_;   // PUSH - agent -> simulator (control/heartbeat/config)
+        std::unique_ptr<zmq::socket_t> downlink_socket_; // SUB - simulator -> agent (state/sensors)
         std::string address_;
 
         // Core component - Machine contains all managers (sensors, controls, network, etc.)
@@ -140,6 +139,7 @@ namespace agent {
         bool recv_state(int timeout_ms);
         void send_control(const types::WheelControl &ctrl);
         void send_heartbeat();
+        void install_sensor_callbacks();
     };
 
 } // namespace agent

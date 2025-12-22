@@ -1,6 +1,7 @@
 #include "flatsim/simulator.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/loader.hpp"
+#include "flatsim/tagged_zmq.hpp"
 #include <chrono>
 #include <cista/serialization.h>
 #include <cstdlib>
@@ -85,26 +86,18 @@ namespace simulator {
 
         // Setup ZMQ sockets
         spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
-        heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
 
         if (conn_ == Conn::IPC) {
             auto dir = ipc_dir();
             const std::string spawn_ep = "ipc://" + (dir / "flatsim_spawn").string();
-            const std::string hb_ep = "ipc://" + (dir / "flatsim_heartbeat").string();
             remove_ipc_socket_file(spawn_ep);
-            remove_ipc_socket_file(hb_ep);
             spawn_socket_->bind(spawn_ep);
-            heartbeat_socket_->bind(hb_ep);
             std::cout << "[Simulator] Spawn socket: " << spawn_ep << std::endl;
-            std::cout << "[Simulator] Heartbeat socket: " << hb_ep << std::endl;
         } else {
             spawn_socket_->bind("tcp://*:5555");
-            heartbeat_socket_->bind("tcp://*:5556");
             std::cout << "[Simulator] Spawn socket: tcp://*:5555" << std::endl;
-            std::cout << "[Simulator] Heartbeat socket: tcp://*:5556" << std::endl;
         }
         spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
-        heartbeat_socket_->set(zmq::sockopt::rcvtimeo, 0);
 
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
@@ -126,11 +119,10 @@ namespace simulator {
         local_agents_.clear();
 
         if (spawn_socket_) spawn_socket_->close();
-        if (heartbeat_socket_) heartbeat_socket_->close();
-        for (auto &[uuid, sock] : control_sockets_) {
+        for (auto &[uuid, sock] : uplink_sockets_) {
             sock->close();
         }
-        for (auto &[uuid, sock] : state_sockets_) {
+        for (auto &[uuid, sock] : downlink_sockets_) {
             sock->close();
         }
         ctx_.close();
@@ -244,11 +236,11 @@ namespace simulator {
                 agent->update_from_physics(state);
             }
         } else {
-            // Send via ZMQ
-            auto it = state_sockets_.find(uuid);
-            if (it != state_sockets_.end() && it->second) {
+            // Send via ZMQ downlink (tagged)
+            auto it = downlink_sockets_.find(uuid);
+            if (it != downlink_sockets_.end() && it->second) {
                 try {
-                    auto data = cista::serialize(state);
+                    auto data = flatsim::wire::pack(flatsim::wire::Kind::STATE, state);
                     it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
                 } catch (const zmq::error_t &) {
                 }
@@ -265,25 +257,57 @@ namespace simulator {
             }
             return std::nullopt;
         } else {
-            // Receive via ZMQ
-            auto it = control_sockets_.find(uuid);
-            if (it == control_sockets_.end() || !it->second) {
+            // Receive via ZMQ uplink (tagged)
+            auto it = uplink_sockets_.find(uuid);
+            if (it == uplink_sockets_.end() || !it->second) {
                 return std::nullopt;
             }
 
             try {
-                it->second->set(zmq::sockopt::rcvtimeo, timeout_ms);
-                zmq::message_t msg;
-                auto result = it->second->recv(msg, zmq::recv_flags::none);
-                if (!result) {
-                    return std::nullopt;
-                }
+                const auto start = std::chrono::steady_clock::now();
+                while (true) {
+                    const auto elapsed_ms =
+                        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                            .count();
+                    const int remaining_ms = timeout_ms - static_cast<int>(elapsed_ms);
+                    if (remaining_ms <= 0) {
+                        return std::nullopt;
+                    }
 
-                std::vector<uint8_t> buffer(static_cast<uint8_t *>(msg.data()),
-                                            static_cast<uint8_t *>(msg.data()) + msg.size());
-                auto *ctrl = cista::deserialize<types::ser::WheelControl>(buffer);
-                if (ctrl) {
-                    return ctrl->to_control();
+                    it->second->set(zmq::sockopt::rcvtimeo, remaining_ms);
+                    zmq::message_t msg;
+                    auto result = it->second->recv(msg, zmq::recv_flags::none);
+                    if (!result) {
+                        return std::nullopt;
+                    }
+
+                    std::vector<uint8_t> bytes(static_cast<uint8_t *>(msg.data()),
+                                               static_cast<uint8_t *>(msg.data()) + msg.size());
+                    const auto tagged = flatsim::wire::unpack(std::move(bytes));
+
+                    switch (tagged.kind) {
+                    case flatsim::wire::Kind::CONTROL: {
+                        auto ctrl_ser = flatsim::wire::deserialize<types::ser::WheelControl>(tagged.payload);
+                        last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                        return ctrl_ser.to_control();
+                    }
+                    case flatsim::wire::Kind::HEARTBEAT: {
+                        auto hb = flatsim::wire::deserialize<types::ser::Request>(tagged.payload);
+                        if (hb.type == types::ser::MsgType::HEARTBEAT) {
+                            last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                        }
+                        break;
+                    }
+                    case flatsim::wire::Kind::LIDAR_CFG: {
+                        auto cfg_msg = flatsim::wire::deserialize<types::ser::LidarConfigMsg>(tagged.payload);
+                        const std::string msg_uuid(cfg_msg.uuid.view());
+                        set_lidar_config(msg_uuid.empty() ? uuid : msg_uuid, cfg_msg.to_config());
+                        last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                        break;
+                    }
+                    default:
+                        break;
+                    }
                 }
             } catch (const zmq::error_t &) {
             }
@@ -315,33 +339,31 @@ namespace simulator {
             create_machine(machine);
 
             // Create dedicated sockets
-            auto ctrl_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
-            auto state_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pub);
-            std::string ctrl_ep, state_ep, hb_ep;
+            auto uplink_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
+            auto downlink_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pub);
+            std::string uplink_ep, downlink_ep;
 
             if (conn_ == Conn::IPC) {
                 auto dir = ipc_dir();
-                ctrl_ep = "ipc://" + (dir / ("flatsim_ctrl_" + uuid)).string();
-                state_ep = "ipc://" + (dir / ("flatsim_state_" + uuid)).string();
-                hb_ep = "ipc://" + (dir / "flatsim_heartbeat").string();
-                remove_ipc_socket_file(ctrl_ep);
-                remove_ipc_socket_file(state_ep);
-                ctrl_sock->bind(ctrl_ep);
-                state_sock->bind(state_ep);
+                uplink_ep = "ipc://" + (dir / ("flatsim_uplink_" + uuid)).string();
+                downlink_ep = "ipc://" + (dir / ("flatsim_downlink_" + uuid)).string();
+                remove_ipc_socket_file(uplink_ep);
+                remove_ipc_socket_file(downlink_ep);
+                uplink_sock->bind(uplink_ep);
+                downlink_sock->bind(downlink_ep);
             } else {
                 int base_port = next_tcp_port_;
                 next_tcp_port_ += 10;
-                ctrl_sock->bind("tcp://*:" + std::to_string(base_port));
-                state_sock->bind("tcp://*:" + std::to_string(base_port + 1));
+                uplink_sock->bind("tcp://*:" + std::to_string(base_port));
+                downlink_sock->bind("tcp://*:" + std::to_string(base_port + 1));
                 const auto host = advertised_host_or_localhost(address_);
-                ctrl_ep = "tcp://" + host + ":" + std::to_string(base_port);
-                state_ep = "tcp://" + host + ":" + std::to_string(base_port + 1);
-                hb_ep = "tcp://" + host + ":5556";
+                uplink_ep = "tcp://" + host + ":" + std::to_string(base_port);
+                downlink_ep = "tcp://" + host + ":" + std::to_string(base_port + 1);
             }
 
-            ctrl_sock->set(zmq::sockopt::rcvtimeo, 0);
-            control_sockets_[uuid] = std::move(ctrl_sock);
-            state_sockets_[uuid] = std::move(state_sock);
+            uplink_sock->set(zmq::sockopt::rcvtimeo, 0);
+            uplink_sockets_[uuid] = std::move(uplink_sock);
+            downlink_sockets_[uuid] = std::move(downlink_sock);
             last_heartbeat_[uuid] = std::chrono::steady_clock::now();
 
             resp.success = true;
@@ -349,20 +371,19 @@ namespace simulator {
             resp.rerun.grpc_address = cista::offset::string(rerun_grpc_addr_);
             resp.rerun.recording_id = cista::offset::string(recording_id_);
             resp.rerun.application_id = cista::offset::string(application_id_);
-            resp.zmq.control_endpoint = cista::offset::string(ctrl_ep);
-            resp.zmq.state_endpoint = cista::offset::string(state_ep);
-            resp.zmq.heartbeat_endpoint = cista::offset::string(hb_ep);
+            resp.zmq.uplink_endpoint = cista::offset::string(uplink_ep);
+            resp.zmq.downlink_endpoint = cista::offset::string(downlink_ep);
 
             std::cout << "[Simulator] Spawned: " << uuid << std::endl;
         } else if (req->type == types::ser::MsgType::DESPAWN) {
             std::string uuid_str(req->uuid.view());
-            if (control_sockets_.count(uuid_str)) {
-                control_sockets_[uuid_str]->close();
-                control_sockets_.erase(uuid_str);
+            if (uplink_sockets_.count(uuid_str)) {
+                uplink_sockets_[uuid_str]->close();
+                uplink_sockets_.erase(uuid_str);
             }
-            if (state_sockets_.count(uuid_str)) {
-                state_sockets_[uuid_str]->close();
-                state_sockets_.erase(uuid_str);
+            if (downlink_sockets_.count(uuid_str)) {
+                downlink_sockets_[uuid_str]->close();
+                downlink_sockets_.erase(uuid_str);
             }
             resp.success = destroy_machine(uuid_str);
             last_heartbeat_.erase(uuid_str);
@@ -373,22 +394,6 @@ namespace simulator {
 
         auto data = cista::serialize(resp);
         spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
-    }
-
-    void Simulator::process_heartbeats() {
-        for (int i = 0; i < 100; ++i) {
-            zmq::message_t hb_msg;
-            auto hb_result = heartbeat_socket_->recv(hb_msg, zmq::recv_flags::dontwait);
-            if (!hb_result) break;
-
-            std::vector<uint8_t> buffer(static_cast<uint8_t *>(hb_msg.data()),
-                                        static_cast<uint8_t *>(hb_msg.data()) + hb_msg.size());
-            auto *hb_req = cista::deserialize<types::ser::Request>(buffer);
-            if (hb_req && hb_req->type == types::ser::MsgType::HEARTBEAT) {
-                std::string uuid_str(hb_req->uuid.view());
-                last_heartbeat_[uuid_str] = std::chrono::steady_clock::now();
-            }
-        }
     }
 
     void Simulator::cleanup_stale_connections() {
@@ -407,13 +412,13 @@ namespace simulator {
         }
 
         for (const auto &uuid : to_remove) {
-            if (control_sockets_.count(uuid)) {
-                control_sockets_[uuid]->close();
-                control_sockets_.erase(uuid);
+            if (uplink_sockets_.count(uuid)) {
+                uplink_sockets_[uuid]->close();
+                uplink_sockets_.erase(uuid);
             }
-            if (state_sockets_.count(uuid)) {
-                state_sockets_[uuid]->close();
-                state_sockets_.erase(uuid);
+            if (downlink_sockets_.count(uuid)) {
+                downlink_sockets_[uuid]->close();
+                downlink_sockets_.erase(uuid);
             }
             last_heartbeat_.erase(uuid);
             destroy_machine(uuid);
@@ -427,10 +432,13 @@ namespace simulator {
     void Simulator::tick(float dt) {
         static int tick_num = 0;
         tick_num++;
+        const uint64_t tick_seq = static_cast<uint64_t>(tick_num);
 
         // Step 1: Send state to all agents
         for (auto &[uuid, machine] : machines_) {
-            send_state(uuid, machine.get_state());
+            auto ms = machine.get_state();
+            ms.tick_seq = tick_seq;
+            send_state(uuid, ms);
         }
 
         // Step 2: Tick local agents (they compute controls)
@@ -460,13 +468,13 @@ namespace simulator {
         // Step 6: Send sensor state to agents
         for (auto &[uuid, machine] : machines_) {
             auto sensor_state = types::ser::SensorState::from_sensor_data(uuid, machine.get_sensor_data());
+            sensor_state.tick_seq = tick_seq;
             send_sensor_state(uuid, sensor_state);
         }
 
         // Step 7: IPC/TCP only - connection management
         if (conn_ != Conn::LOCAL) {
             process_spawn_requests();
-            process_heartbeats();
             cleanup_stale_connections();
 
             if (tick_num % 60 == 0) {
@@ -495,8 +503,15 @@ namespace simulator {
                 agent->update_from_sensors(state);
             }
         } else {
-            // TODO: Send via ZMQ on a separate sensor socket
-            // For now, sensors are only supported in LOCAL mode
+            // Send via ZMQ downlink (tagged)
+            auto it = downlink_sockets_.find(uuid);
+            if (it != downlink_sockets_.end() && it->second) {
+                try {
+                    auto data = flatsim::wire::pack(flatsim::wire::Kind::SENSORS, state);
+                    it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
+                } catch (const zmq::error_t &) {
+                }
+            }
         }
     }
 

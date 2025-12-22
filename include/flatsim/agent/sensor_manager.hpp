@@ -2,6 +2,7 @@
 
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,6 +22,7 @@ namespace fs {
       private:
         std::vector<std::unique_ptr<Sensor>> sensors;
         std::string robot_uuid;
+        std::function<void(Sensor &)> on_add_;
 
       public:
         SensorManager() = default;
@@ -37,6 +39,8 @@ namespace fs {
          * @param uuid Robot UUID
          */
         void set_robot_uuid(const std::string &uuid) { robot_uuid = uuid; }
+
+        void set_on_add(std::function<void(Sensor &)> cb) { on_add_ = std::move(cb); }
 
         /**
          * @brief Add a sensor to the manager (auto-enables FIFO if robot_uuid is set)
@@ -64,6 +68,18 @@ namespace fs {
          * @return Pointer to sensor or nullptr if not found
          */
         Sensor *get(const std::string &type) const;
+
+        template <typename F> void for_each(F &&fn) {
+            for (auto &sensor : sensors) {
+                if (sensor) fn(*sensor);
+            }
+        }
+
+        template <typename F> void for_each(F &&fn) const {
+            for (const auto &sensor : sensors) {
+                if (sensor) fn(*sensor);
+            }
+        }
 
         /**
          * @brief Update all sensors with robot pose

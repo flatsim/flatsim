@@ -8,7 +8,11 @@ namespace fs {
             if (!robot_uuid.empty()) {
                 sensor->enable_shm_output(robot_uuid);
             }
+            Sensor *raw = sensor.get();
             sensors.push_back(std::move(sensor));
+            if (raw && on_add_) {
+                on_add_(*raw);
+            }
         }
     }
 
