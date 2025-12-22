@@ -151,3 +151,39 @@ OK: sent/received types::ser::MachineState + types::ser::SensorState on one ZMQ 
    - Extract common code paths in `agent::Machine::tick(...)` overloads.
    - Use `SensorManager::for_each` across update functions to avoid repeated loop scaffolding.
 
+## Examples migrated from `examples_old/` (ongoing)
+
+To keep the codebase predictable and to exercise the “symmetric state/sensors transport” work in real usage, a set of
+legacy examples has been migrated to the current `agent::Agent` + `simulator::Simulator` APIs (LOCAL mode).
+
+- `examples/test_pid_local.cpp` (from `examples_old/test_pid.cpp`)
+- `examples/test_pure_pursuit_local.cpp` (from `examples_old/test_pure_pursuit.cpp`)
+- `examples/test_carrot_local.cpp` (from `examples_old/test_carrot.cpp`)
+- `examples/test_stanley_local.cpp` (from `examples_old/test_stanley.cpp`)
+- `examples/test_mppi_local.cpp` (from `examples_old/test_mppi.cpp`)
+- `examples/test_carrot_harvester_local.cpp` (from `examples_old/test_carrot_harvester.cpp`)
+- `examples/test_field_gps_nmea_local.cpp` (from `examples_old/test_field_gps_nmea.cpp`)
+- `examples/test_greenhouse_fleet_local.cpp` (from `examples_old/test_greenhouse_fleet.cpp`)
+  - Adds `examples/greenhouse_blueprint_graph.yaml` used by the example.
+- `examples/test_mca_local.cpp` (from `examples_old/test_mca.cpp`)
+  - Note: dynamic obstacles currently need `World::update_obstacles(...)` to be called (the example does this).
+- `examples/test_mppi_diff_local.cpp` (from `examples_old/test_mppi_diff.cpp`)
+  - Note: this example drives `drivekit::Tracker::tick(...)` directly to control `RobotState.turn_first`.
+- `examples/test_mppi_stress_30_local.cpp` (from `examples_old/test_mppi_stress_30.cpp`)
+- `examples/test_pid_diff_local.cpp` (from `examples_old/test_pid_diff.cpp`)
+- `examples/test_pid_stress_30_local.cpp` (from `examples_old/test_pid_stress_30.cpp`)
+- `examples/test_pid_stress_300_local.cpp` (from `examples_old/test_pid_stress_300.cpp`)
+- `examples/test_sensors_joystick_local.cpp` (from `examples_old/test_sensors_joystick.cpp`)
+  - Linux-only input dependency: reads `/dev/input/js0`.
+- `examples/test_soc_local.cpp` (from `examples_old/test_soc.cpp`)
+  - Note: SOC obstacle cost needs `drivekit::WorldConstraints` wiring (not yet passed into tracker tick).
+- `examples/mvs_local.cpp` (from `examples_old/mvs.cpp`)
+
+Legacy IPC/TCP “client/server” demos already exist in `examples/` with the new messaging:
+- `examples/simulator_server.cpp` supersedes `examples_old/sim.cpp`
+- `examples/agent_client.cpp` supersedes `examples_old/robo.cpp`
+
+Legacy tests that already exist in `examples/` (no extra `_local` port needed):
+- `examples/test_farmtrax.cpp` supersedes `examples_old/test_farmtrax.cpp`
+- `examples/test_gps_nmea.cpp` supersedes `examples_old/test_gps_nmea.cpp`
+- `examples/test_mpc.cpp` and `examples/test_mpc_local.cpp` supersede `examples_old/test_mpc.cpp`
