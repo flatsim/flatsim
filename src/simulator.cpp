@@ -6,6 +6,7 @@
 
 namespace simulator {
 
+    // Constructor with settings struct
     Simulator::Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
                          std::shared_ptr<rerun::RecordingStream> rec)
         : ctx_(1), conn_(conn), address_(address), sim_settings_(settings), rec_(rec) {
@@ -45,7 +46,52 @@ namespace simulator {
 
         // Setup physics world with World wrapper
         world_ = std::make_unique<World>(rec_);
-        world_->init(concord::Datum(), concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+        world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+        std::cout << "[Simulator] Initialized with world size: " << sim_settings_.width << "x" << sim_settings_.height
+                  << std::endl;
+    }
+
+    // Constructor with explicit parameters
+    Simulator::Simulator(Conn conn, const std::string &address, float width, float height, concord::Datum datum,
+                         std::shared_ptr<rerun::RecordingStream> rec)
+        : Simulator(conn, address, SimulatorSettings{width, height, datum}, rec) {
+
+        // Create rerun internally if not provided
+        if (!rec_) {
+            recording_id_ = "flatsim_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+            rec_ = std::make_shared<rerun::RecordingStream>(application_id_, recording_id_);
+            rec_->connect_grpc(rerun_grpc_addr_);
+        }
+
+        // Clear rerun viewer
+        if (rec_) {
+            rec_->log("", rerun::Clear::RECURSIVE);
+            rec_->log_with_static("", true, rerun::Clear::RECURSIVE);
+        }
+
+        // Setup ZMQ spawn socket (REP)
+        spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
+
+        // Setup heartbeat socket (PULL)
+        heartbeat_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
+
+        if (conn_ == Conn::IPC) {
+            spawn_socket_->bind("ipc:///tmp/flatsim_spawn");
+            heartbeat_socket_->bind("ipc:///tmp/flatsim_heartbeat");
+            std::cout << "[Simulator] Spawn socket listening on ipc:///tmp/flatsim_spawn" << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on ipc:///tmp/flatsim_heartbeat" << std::endl;
+        } else {
+            spawn_socket_->bind("tcp://*:5555");
+            heartbeat_socket_->bind("tcp://*:5556");
+            std::cout << "[Simulator] Spawn socket listening on tcp://*:5555" << std::endl;
+            std::cout << "[Simulator] Heartbeat socket listening on tcp://*:5556" << std::endl;
+        }
+        spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
+        heartbeat_socket_->set(zmq::sockopt::rcvtimeo, 0);
+
+        // Setup physics world with World wrapper
+        world_ = std::make_unique<World>(rec_);
+        world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
         std::cout << "[Simulator] Initialized with world size: " << sim_settings_.width << "x" << sim_settings_.height
                   << std::endl;
     }
@@ -325,8 +371,9 @@ namespace simulator {
 
     void Simulator::tock() {
         // Visualization for all machines
+        concord::Datum datum = world_->settings().get_datum();
         for (auto &[uuid, machine] : machines_) {
-            machine.tock();
+            machine.tock(datum);
         }
 
         // Visualization for world (boundaries, obstacles, etc.)

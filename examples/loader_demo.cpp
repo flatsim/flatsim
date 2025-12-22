@@ -12,8 +12,8 @@ int main() {
     rec->spawn().exit_on_failure();
     std::cout << "[Rerun] Visualization started" << std::endl;
 
-    simulator::SimulatorSettings ws{100.0f, 100.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws, rec);
+    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
     try {
         concord::Pose spawn_pose;

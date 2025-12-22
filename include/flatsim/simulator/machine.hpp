@@ -37,7 +37,7 @@ namespace simulator {
 
         // Tick/tock pattern
         void tick(float dt);
-        void tock();
+        void tock(concord::Datum datum);
 
         // Get state for feedback
         types::ser::MachineState get_state() const;

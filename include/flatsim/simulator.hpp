@@ -16,8 +16,12 @@ namespace simulator {
 
     // Simple settings for Simulator constructor (not to be confused with simulator::WorldSettings)
     struct SimulatorSettings {
-        float width = 100.0f;
-        float height = 100.0f;
+        float width;
+        float height;
+        concord::Datum datum;
+
+        // Force users to specify all parameters
+        SimulatorSettings(float w, float h, concord::Datum d) : width(w), height(h), datum(d) {}
     };
 
     class Simulator {
@@ -52,8 +56,14 @@ namespace simulator {
         std::string application_id_ = "flatsim";
 
       public:
-        Simulator(Conn conn, const std::string &address = "", const SimulatorSettings &settings = {},
+        // Constructor with explicit parameters (recommended)
+        Simulator(Conn conn, const std::string &address, float width, float height, concord::Datum datum,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
+
+        // Constructor with settings struct
+        Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
+                  std::shared_ptr<rerun::RecordingStream> rec = nullptr);
+
         ~Simulator();
 
         void tick(float dt);

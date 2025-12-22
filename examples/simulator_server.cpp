@@ -24,8 +24,8 @@ int main() {
     std::cout << "[Server] Make sure to run 'rerun' in another terminal for visualization!" << std::endl;
 
     // Create simulator with IPC communication (rerun connects automatically)
-    simulator::SimulatorSettings ws{500.0f, 500.0f};
-    simulator::Simulator sim(simulator::Conn::IPC, "", ws);
+    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    simulator::Simulator sim(simulator::Conn::IPC, "", 500.0f, 500.0f, datum);
 
     std::cout << "[Server] Simulator ready. Waiting for agent connections..." << std::endl;
     std::cout << "[Server] Press Ctrl+C to stop" << std::endl;

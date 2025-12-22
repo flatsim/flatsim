@@ -59,8 +59,9 @@ namespace simulator {
         chassis_->tick(dt);
     }
 
-    void Machine::tock() {
+    void Machine::tock(concord::Datum datum) {
         if (!chassis_) return;
+        if (!rec_) return;
 
         // Create label with role info
         std::string role_prefix;
@@ -78,6 +79,17 @@ namespace simulator {
         std::string label = role_prefix + config_.seqid;
 
         chassis_->tock(label);
+
+        // GPS coordinates visualization - use current body position
+        if (chassis_->body) {
+            auto x = chassis_->body->GetPosition().x;
+            auto y = chassis_->body->GetPosition().y;
+            concord::Point current_pos{x, y};
+            auto wgs_coords = current_pos.toWGS(datum);
+            rec_->log_static(config_.seqid + "/gps",
+                             rerun::GeoPoints({{wgs_coords.lat, wgs_coords.lon}})
+                                 .with_colors({rerun::Color(config_.color.r, config_.color.g, config_.color.b)}));
+        }
     }
 
     types::ser::MachineState Machine::get_state() const {
