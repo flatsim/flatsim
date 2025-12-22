@@ -99,6 +99,15 @@ namespace types {
         bool hooked = false;
     };
 
+    // LIDAR sensor configuration (stored in Machine, used by simulator for raycasting)
+    struct LidarConfig {
+        bool enabled = false;        // If true, simulator will compute LIDAR data
+        float min_range = 0.5f;      // Minimum detection range (meters)
+        float max_range = 15.0f;     // Maximum detection range (meters)
+        float fov_deg = 45.0f;       // Horizontal field of view (degrees)
+        float resolution_deg = 3.0f; // Angular resolution (degrees)
+    };
+
     enum class Role { MASTER, FOLLOWER, SLAVE };
 
     struct Machine {
@@ -119,6 +128,7 @@ namespace types {
         std::vector<Karosserie> karosseries;
         std::optional<Tank> tank;
         std::optional<Power> power_source;
+        std::optional<LidarConfig> lidar; // LIDAR sensor configuration
         MachineRole role = MachineRole::MASTER;
         float turning_radius = 1.0f;
         std::string seqid = name;
@@ -149,6 +159,47 @@ namespace types {
         bool turn_first = false;  // For diff/skid: rotate in place before translating
         bool allow_move = true;   // Allow movement (false = send zero velocity for collision avoidance)
         float speed_scale = 1.0f; // Scale factor for velocity commands (0.0 - 1.0)
+    };
+
+    // ============================================================================
+    // Sensor Data Types - Raw data from simulator physics
+    // ============================================================================
+
+    // LIDAR scan data from physics raycasting
+    struct LidarData {
+        std::vector<float> ranges; // Distance measurements (meters)
+        std::vector<float> angles; // Beam angles (radians, relative to heading)
+        std::vector<bool> valid;   // True if beam hit something
+        float min_range = 0.1f;
+        float max_range = 30.0f;
+    };
+
+    // GPS data from ENU to WGS84 conversion
+    struct GpsData {
+        double latitude = 0.0;  // WGS84 degrees
+        double longitude = 0.0; // WGS84 degrees
+        double altitude = 0.0;  // Meters
+        float heading = 0.0f;   // Radians
+        float speed = 0.0f;     // m/s
+    };
+
+    // IMU data from physics velocities
+    struct ImuData {
+        float accel_x = 0.0f;  // m/s^2
+        float accel_y = 0.0f;  // m/s^2
+        float accel_z = 9.81f; // m/s^2 (gravity)
+        float gyro_z = 0.0f;   // rad/s (yaw rate)
+        float yaw = 0.0f;      // radians
+    };
+
+    // Combined sensor data for a machine
+    struct SensorData {
+        LidarData lidar;
+        GpsData gps;
+        ImuData imu;
+        bool has_lidar = false;
+        bool has_gps = false;
+        bool has_imu = false;
     };
 
     // ============================================================================
@@ -628,6 +679,96 @@ namespace types {
             Vec2 velocity;
             float angular_vel = 0.0f;
             cista::raw::vector<WheelState> wheels;
+        };
+
+        // Sensor data from simulator (sent separately like MachineState)
+        struct LidarData {
+            cista::raw::vector<float> ranges;
+            cista::raw::vector<float> angles;
+            cista::raw::vector<uint8_t> valid; // 0 or 1
+            float min_range = 0.1f;
+            float max_range = 30.0f;
+
+            types::LidarData to_lidar() const {
+                types::LidarData d;
+                for (const auto &r : ranges) d.ranges.push_back(r);
+                for (const auto &a : angles) d.angles.push_back(a);
+                for (const auto &v : valid) d.valid.push_back(v != 0);
+                d.min_range = min_range;
+                d.max_range = max_range;
+                return d;
+            }
+
+            static LidarData from_lidar(const types::LidarData &d) {
+                LidarData r;
+                for (const auto &v : d.ranges) r.ranges.push_back(v);
+                for (const auto &v : d.angles) r.angles.push_back(v);
+                for (const auto &v : d.valid) r.valid.push_back(v ? 1 : 0);
+                r.min_range = d.min_range;
+                r.max_range = d.max_range;
+                return r;
+            }
+        };
+
+        struct GpsData {
+            double latitude = 0.0;
+            double longitude = 0.0;
+            double altitude = 0.0;
+            float heading = 0.0f;
+            float speed = 0.0f;
+
+            types::GpsData to_gps() const { return {latitude, longitude, altitude, heading, speed}; }
+
+            static GpsData from_gps(const types::GpsData &d) {
+                return {d.latitude, d.longitude, d.altitude, d.heading, d.speed};
+            }
+        };
+
+        struct ImuData {
+            float accel_x = 0.0f;
+            float accel_y = 0.0f;
+            float accel_z = 9.81f;
+            float gyro_z = 0.0f;
+            float yaw = 0.0f;
+
+            types::ImuData to_imu() const { return {accel_x, accel_y, accel_z, gyro_z, yaw}; }
+
+            static ImuData from_imu(const types::ImuData &d) {
+                return {d.accel_x, d.accel_y, d.accel_z, d.gyro_z, d.yaw};
+            }
+        };
+
+        struct SensorState {
+            cista::raw::string uuid;
+            LidarData lidar;
+            GpsData gps;
+            ImuData imu;
+            bool has_lidar = false;
+            bool has_gps = false;
+            bool has_imu = false;
+
+            types::SensorData to_sensor_data() const {
+                types::SensorData d;
+                d.lidar = lidar.to_lidar();
+                d.gps = gps.to_gps();
+                d.imu = imu.to_imu();
+                d.has_lidar = has_lidar;
+                d.has_gps = has_gps;
+                d.has_imu = has_imu;
+                return d;
+            }
+
+            static SensorState from_sensor_data(const std::string &uuid, const types::SensorData &d) {
+                SensorState s;
+                s.uuid = uuid;
+                s.lidar = LidarData::from_lidar(d.lidar);
+                s.gps = GpsData::from_gps(d.gps);
+                s.imu = ImuData::from_imu(d.imu);
+                s.has_lidar = d.has_lidar;
+                s.has_gps = d.has_gps;
+                s.has_imu = d.has_imu;
+                return s;
+            }
         };
 
         struct WorldState {

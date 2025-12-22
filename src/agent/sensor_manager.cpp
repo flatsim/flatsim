@@ -42,6 +42,17 @@ namespace fs {
         }
     }
 
+    void SensorManager::update_from_simulator(const types::SensorData &data, double dt) {
+        for (auto &sensor : sensors) {
+            if (sensor) {
+                // Pass combined sensor data to each sensor
+                // Each sensor extracts what it needs (GPS sensor gets GPS data, etc.)
+                sensor->update_from_simulator(data);
+                sensor->update(dt);
+            }
+        }
+    }
+
     bool SensorManager::enable_fifo_output(const std::string &uuid) {
         robot_uuid = uuid;
         bool all_success = true;

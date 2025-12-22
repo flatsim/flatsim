@@ -12,6 +12,7 @@
 #include <vector>
 #include <zmq.hpp>
 
+#include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine.hpp"
 #include "flatsim/simulator/world.hpp"
 #include "flatsim/types.hpp"
@@ -60,6 +61,9 @@ namespace simulator {
         // Machines: uuid -> Machine (physics bodies)
         std::map<std::string, Machine> machines_;
 
+        // Sensor data helper
+        Data sensor_data_;
+
         // Local agents (only used in LOCAL mode)
         std::vector<std::unique_ptr<agent::Agent>> local_agents_;
 
@@ -80,6 +84,7 @@ namespace simulator {
 
         // Transport abstraction - handles LOCAL vs IPC/TCP
         void send_state(const std::string &uuid, const types::ser::MachineState &state);
+        void send_sensor_state(const std::string &uuid, const types::ser::SensorState &state);
         std::optional<types::WheelControl> recv_control(const std::string &uuid, int timeout_ms);
 
         // IPC/TCP only - spawn/despawn and connection management
@@ -159,6 +164,16 @@ namespace simulator {
 
         // Datum access
         concord::Datum get_datum() const { return sim_settings_.datum; }
+
+        // Sensor data access
+        const types::SensorData &get_sensor_data(const std::string &uuid) const;
+
+        // LIDAR scan for a specific machine (on-demand)
+        types::LidarData scan_lidar(const std::string &uuid, float min_range, float max_range, float fov_deg,
+                                    float resolution_deg);
+
+        // Configure LIDAR for a machine (enables automatic LIDAR computation in tick())
+        void set_lidar_config(const std::string &uuid, const types::LidarConfig &config);
     };
 
     // ============================================================================

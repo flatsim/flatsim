@@ -1,6 +1,7 @@
 #pragma once
 
 #include "flatsim/agent/sensor/sensor.hpp"
+#include "flatsim/types.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -81,6 +82,18 @@ namespace fs {
          */
         void update_all_with_physics(const concord::Pose &pose, double linear_vel_x, double linear_vel_y,
                                      double angular_vel, double dt);
+
+        /**
+         * @brief Update all sensors with data from simulator
+         *
+         * This is the preferred method in LOCAL mode. The simulator computes
+         * sensor data and sends it to the agent. This method distributes the
+         * data to all sensors.
+         *
+         * @param data Combined sensor data from simulator
+         * @param dt Time delta in seconds
+         */
+        void update_from_simulator(const types::SensorData &data, double dt);
 
         /**
          * @brief Check if manager has any sensors

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concord/concord.hpp"
+#include "flatsim/types.hpp"
 #include <fstream>
 #include <memory>
 #include <string>
@@ -34,6 +35,17 @@ namespace fs {
          * @param angular_vel Angular velocity (rad/s)
          */
         virtual void set_physics_data(double linear_vel_x, double linear_vel_y, double angular_vel) {};
+
+        /**
+         * @brief Update sensor with data from simulator
+         *
+         * This is the preferred method for sensors in LOCAL mode. The simulator
+         * computes sensor data (GPS coordinates, IMU readings, LIDAR scans) and
+         * sends it to the agent. This method receives that data.
+         *
+         * @param data Combined sensor data from simulator
+         */
+        virtual void update_from_simulator(const types::SensorData &data) {};
 
         /**
          * @brief Get the current sensor data

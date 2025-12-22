@@ -64,6 +64,10 @@ namespace simulator {
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
 
+        // Initialize sensor data helper with physics world reference
+        sensor_data_.set_world(world_->physics_ptr());
+        sensor_data_.set_datum(sim_settings_.datum);
+
         std::cout << "[Simulator] LOCAL mode initialized (" << sim_settings_.width << "x" << sim_settings_.height << ")"
                   << std::endl;
     }
@@ -104,6 +108,11 @@ namespace simulator {
 
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+
+        // Initialize sensor data helper with physics world reference
+        sensor_data_.set_world(world_->physics_ptr());
+        sensor_data_.set_datum(sim_settings_.datum);
+
         std::cout << "[Simulator] Initialized (" << sim_settings_.width << "x" << sim_settings_.height << ")"
                   << std::endl;
     }
@@ -442,12 +451,19 @@ namespace simulator {
         // Step 4: Physics step
         world_->tick(dt);
 
-        // Step 5: Update machine poses
+        // Step 5: Update machine poses and sensor data
         for (auto &[uuid, machine] : machines_) {
             machine.tick(dt);
+            machine.update_sensors(sensor_data_, sim_settings_.datum, dt);
         }
 
-        // Step 6: IPC/TCP only - connection management
+        // Step 6: Send sensor state to agents
+        for (auto &[uuid, machine] : machines_) {
+            auto sensor_state = types::ser::SensorState::from_sensor_data(uuid, machine.get_sensor_data());
+            send_sensor_state(uuid, sensor_state);
+        }
+
+        // Step 7: IPC/TCP only - connection management
         if (conn_ != Conn::LOCAL) {
             process_spawn_requests();
             process_heartbeats();
@@ -468,6 +484,26 @@ namespace simulator {
 
         for (auto &agent : local_agents_) {
             agent->tock();
+        }
+    }
+
+    void Simulator::send_sensor_state(const std::string &uuid, const types::ser::SensorState &state) {
+        if (conn_ == Conn::LOCAL) {
+            // Direct call to local agent
+            auto *agent = get_agent(uuid);
+            if (agent) {
+                agent->update_from_sensors(state);
+            }
+        } else {
+            // TODO: Send via ZMQ on a separate sensor socket
+            // For now, sensors are only supported in LOCAL mode
+        }
+    }
+
+    void Simulator::set_lidar_config(const std::string &uuid, const types::LidarConfig &config) {
+        auto it = machines_.find(uuid);
+        if (it != machines_.end()) {
+            it->second.config_mut().lidar = config;
         }
     }
 

@@ -31,6 +31,9 @@ namespace agent {
         Machine machine_;
         bool spawned_ = false;
 
+        // Sensor data from simulator
+        types::SensorData sensor_data_;
+
         // Speed control
         float speed_scale_ = 1.0f;
 
@@ -77,9 +80,13 @@ namespace agent {
         // LOCAL mode: direct state update
         // IPC/TCP mode: state already received via recv_state()
         void update_from_physics(const types::ser::MachineState &state);
+        void update_from_sensors(const types::ser::SensorState &state);
 
         // Get current wheel control (used by Simulator in LOCAL mode)
         types::WheelControl get_wheel_control() const;
+
+        // Get sensor data (updated by Simulator)
+        const types::SensorData &get_sensor_data() const { return sensor_data_; }
 
         // Check if in local mode
         bool is_local() const { return local_mode_; }

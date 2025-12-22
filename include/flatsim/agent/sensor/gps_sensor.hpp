@@ -2,6 +2,7 @@
 
 #include "concord/concord.hpp"
 #include "flatsim/agent/sensor/sensor.hpp"
+#include "flatsim/types.hpp"
 #include <chrono>
 
 namespace fs {
@@ -73,6 +74,9 @@ namespace fs {
         // PHTG generation
         bool phtg = false;
 
+        // Flag indicating simulator data is available (skip self-computation)
+        bool simulator_data_available_ = false;
+
         /**
          * @brief Write NMEA string to shared memory
          */
@@ -130,6 +134,7 @@ namespace fs {
         // Sensor interface implementation
         void update(double dt) override;
         void set_robot_pose(const concord::Pose &pose) override;
+        void update_from_simulator(const types::SensorData &data) override;
         void *get_data() override;
         std::string get_type() const override;
         bool is_data_valid() const override;

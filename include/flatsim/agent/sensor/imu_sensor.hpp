@@ -2,6 +2,7 @@
 
 #include "concord/concord.hpp"
 #include "flatsim/agent/sensor/sensor.hpp"
+#include "flatsim/types.hpp"
 #include <chrono>
 
 namespace fs {
@@ -101,6 +102,9 @@ namespace fs {
         // Internal state for integration
         double last_update_real_time;
 
+        // Flag indicating simulator data is available (skip self-computation)
+        bool simulator_data_available_ = false;
+
       public:
         /**
          * @brief Construct a new IMU Sensor
@@ -118,6 +122,7 @@ namespace fs {
         void update(double dt) override;
         void set_robot_pose(const concord::Pose &pose) override;
         void set_physics_data(double linear_vel_x, double linear_vel_y, double angular_vel) override;
+        void update_from_simulator(const types::SensorData &data) override;
         void *get_data() override;
         std::string get_type() const override;
         bool is_data_valid() const override;

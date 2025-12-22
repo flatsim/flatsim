@@ -198,8 +198,12 @@ namespace agent {
 
         if (local_mode_) {
             // LOCAL MODE: State is already updated by Simulator via update_from_physics()
-            // Machine.tick() handles all manager updates (sensors, controls, network, etc.)
-            machine_.tick(dt);
+            // Use sensor data from simulator if available
+            if (sensor_data_.has_gps || sensor_data_.has_imu || sensor_data_.has_lidar) {
+                machine_.tick(dt, sensor_data_);
+            } else {
+                machine_.tick(dt);
+            }
             return;
         }
 
@@ -253,6 +257,9 @@ namespace agent {
 
     // LOCAL mode: Update state from physics (called by Simulator)
     void Agent::update_from_physics(const types::ser::MachineState &state) { machine_.update_state(state); }
+
+    // LOCAL mode: Update sensor data (called by Simulator)
+    void Agent::update_from_sensors(const types::ser::SensorState &state) { sensor_data_ = state.to_sensor_data(); }
 
     // LOCAL mode: Get current wheel control (called by Simulator)
     types::WheelControl Agent::get_wheel_control() const {

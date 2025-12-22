@@ -53,6 +53,7 @@ namespace agent {
 
         // Tick/tock pattern
         void tick(float dt);
+        void tick(float dt, const types::SensorData &sensor_data); // With simulator sensor data
         void tock();
 
         // Accessors

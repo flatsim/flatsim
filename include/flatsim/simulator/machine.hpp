@@ -5,12 +5,16 @@
 #include <unordered_map>
 #include <vector>
 
+#include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine/chassis.hpp"
 #include "flatsim/types.hpp"
 #include "muli/world.h"
 #include <rerun.hpp>
 
 namespace simulator {
+
+    // Forward declare
+    class Data;
 
     class Machine {
       private:
@@ -20,6 +24,10 @@ namespace simulator {
 
         types::Machine config_;
         types::State state_;
+        types::SensorData sensor_data_;
+
+        // For IMU acceleration calculation
+        float prev_linear_vel_ = 0.0f;
 
         std::unique_ptr<Chassis> chassis_;
 
@@ -42,6 +50,12 @@ namespace simulator {
         // Get state for feedback
         types::ser::MachineState get_state() const;
 
+        // Get sensor data (filled by update_sensors)
+        const types::SensorData &get_sensor_data() const { return sensor_data_; }
+
+        // Update sensor data using Data helper
+        void update_sensors(Data &data, const concord::Datum &datum, float dt);
+
         // Find hitch by name
         Hitch *find_hitch(const std::string &name);
 
@@ -54,6 +68,7 @@ namespace simulator {
         const std::string &uuid() const { return config_.uuid; }
         Chassis *chassis() { return chassis_.get(); }
         const Chassis *chassis() const { return chassis_.get(); }
+        const muli::CollisionFilter &get_filter() const { return filter_; }
 
         // Teleport machine to new pose
         void teleport(const concord::Pose &pose);

@@ -162,4 +162,44 @@ namespace simulator {
         }
     }
 
+    void Machine::update_sensors(Data &data, const concord::Datum &datum, float dt) {
+        if (!chassis_ || !chassis_->body) return;
+
+        // Get current state
+        auto pose = chassis_->get_pose();
+
+        // IMPORTANT: The physics body's angle 0 = +X direction, but the model's forward is +Y.
+        // So we add M_PI/2 to convert body angle to heading (same as get_state() does for the agent).
+        float heading = pose.angle.yaw + M_PI / 2.0f;
+
+        auto vel = chassis_->body->GetLinearVelocity();
+        float linear_vel = vel.x * std::cos(heading) + vel.y * std::sin(heading);
+        float angular_vel = chassis_->body->GetAngularVelocity();
+
+        // GPS - always fill if datum is set
+        if (datum.is_set()) {
+            // Use corrected heading for GPS
+            concord::Pose gps_pose = pose;
+            gps_pose.angle.yaw = heading;
+            sensor_data_.gps = data.pose_to_gps(gps_pose, std::abs(linear_vel));
+            sensor_data_.has_gps = true;
+        }
+
+        // IMU - always fill
+        sensor_data_.imu = data.compute_imu(pose, linear_vel, angular_vel, prev_linear_vel_, dt);
+        sensor_data_.has_imu = true;
+        prev_linear_vel_ = linear_vel;
+
+        // LIDAR - only if configured
+        if (config_.lidar.has_value() && config_.lidar->enabled) {
+            const auto &lidar_cfg = config_.lidar.value();
+            // Use corrected heading for LIDAR scan direction
+            concord::Pose lidar_pose = pose;
+            lidar_pose.angle.yaw = heading;
+            sensor_data_.lidar = data.scan_lidar(lidar_pose, lidar_cfg.min_range, lidar_cfg.max_range,
+                                                 lidar_cfg.fov_deg, lidar_cfg.resolution_deg, filter_);
+            sensor_data_.has_lidar = true;
+        }
+    }
+
 } // namespace simulator

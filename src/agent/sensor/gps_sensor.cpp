@@ -14,12 +14,16 @@ namespace fs {
     void GPSSensor::update(double dt) {
         last_update_time += dt;
 
-        // UPDATE EVERY TICK - NO FREQUENCY CHECK
-        // Convert robot pose to GPS coordinates
-        convert_enu_to_wgs84(robot_pose);
-
-        // Add measurement noise
-        add_measurement_noise();
+        // If simulator data is available, use it. Otherwise, compute from pose.
+        if (simulator_data_available_) {
+            // Data already set by update_from_simulator(), just add noise
+            add_measurement_noise();
+            simulator_data_available_ = false; // Reset for next tick
+        } else {
+            // Fallback: Convert robot pose to GPS coordinates (self-computation)
+            convert_enu_to_wgs84(robot_pose);
+            add_measurement_noise();
+        }
 
         // Update RTK status
         update_rtk_status();
@@ -231,6 +235,27 @@ namespace fs {
     }
 
     void GPSSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }
+
+    void GPSSensor::update_from_simulator(const types::SensorData &data) {
+        if (!data.has_gps) {
+            return;
+        }
+
+        // Use GPS data computed by simulator (already in WGS84)
+        current_data.latitude = data.gps.latitude;
+        current_data.longitude = data.gps.longitude;
+        current_data.altitude = data.gps.altitude;
+
+        // Compute velocity from heading and speed
+        double heading_rad = static_cast<double>(data.gps.heading);
+        double speed = static_cast<double>(data.gps.speed);
+        current_data.velocity_north = speed * std::cos(heading_rad);
+        current_data.velocity_east = speed * std::sin(heading_rad);
+        current_data.velocity_up = 0.0;
+
+        // Mark that we have simulator data (skip self-computation in update())
+        simulator_data_available_ = true;
+    }
 
     void *GPSSensor::get_data() { return &current_data; }
 

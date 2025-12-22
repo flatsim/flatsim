@@ -41,10 +41,18 @@ namespace fs {
             double actual_dt = last_update_time - last_update_real_time;
             last_update_real_time = last_update_time;
 
-            // Calculate sensor readings from robot motion
-            calculate_accelerations(actual_dt);
-            calculate_angular_velocities(actual_dt);
-            calculate_magnetic_field();
+            // If simulator data is available, use it. Otherwise, compute from physics.
+            if (simulator_data_available_) {
+                // Data already set by update_from_simulator()
+                // Just add noise and calculate magnetic field
+                calculate_magnetic_field();
+                simulator_data_available_ = false; // Reset for next tick
+            } else {
+                // Fallback: Calculate sensor readings from robot motion
+                calculate_accelerations(actual_dt);
+                calculate_angular_velocities(actual_dt);
+                calculate_magnetic_field();
+            }
 
             // Update sensor biases (simulate drift)
             update_biases(actual_dt);
@@ -89,6 +97,22 @@ namespace fs {
         linear_vel_x = vel_x;
         linear_vel_y = vel_y;
         angular_vel = ang_vel;
+    }
+
+    void IMUSensor::update_from_simulator(const types::SensorData &data) {
+        if (!data.has_imu) {
+            return;
+        }
+
+        // Use IMU data computed by simulator
+        current_data.accel_x = static_cast<double>(data.imu.accel_x);
+        current_data.accel_y = static_cast<double>(data.imu.accel_y);
+        current_data.accel_z = static_cast<double>(data.imu.accel_z);
+        current_data.gyro_z = static_cast<double>(data.imu.gyro_z);
+        current_data.yaw = static_cast<double>(data.imu.yaw);
+
+        // Mark that we have simulator data (skip self-computation in update())
+        simulator_data_available_ = true;
     }
 
     void *IMUSensor::get_data() { return &current_data; }
