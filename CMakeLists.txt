@@ -64,8 +64,11 @@ include_directories(${muli_SOURCE_DIR}/include)
 list(APPEND ext_deps muli)
 
 find_package(rerun_sdk REQUIRED)
+find_package(ZeroMQ REQUIRED)
+find_package(cppzmq REQUIRED)
+find_package(Boost REQUIRED COMPONENTS json)
 
-list(APPEND ext_deps rerun_sdk)
+list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json)
 
 FetchContent_Declare(concord GIT_REPOSITORY https://github.com/robolibs/concord.git GIT_TAG 2.5.0)
 FetchContent_MakeAvailable(concord)
