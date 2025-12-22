@@ -1,8 +1,9 @@
 #include "flatsim/agent/control_manager.hpp"
+#include <rerun.hpp>
 
 namespace agent {
 
-    void ControlManager::init(const types::Machine *m) {
+    void ControlManager::init(const types::Machine *m, std::shared_ptr<rerun::RecordingStream> rec) {
         machine = m;
         steerings.resize(m->wheels.size(), 0.0f);
         steerings_max = m->controls.steerings_max;
@@ -10,6 +11,10 @@ namespace agent {
         throttles.resize(m->wheels.size(), 0.0f);
         throttles_max = m->controls.throttles_max;
         throttles_diff = m->controls.throttles_diff;
+
+        // Initialize tracker (disabled by default - user must enable and set path)
+        tracker_.init(const_cast<types::Machine *>(m), drivekit::TrackerType::PID, rec);
+        tracker_.set_enabled(false);
     }
 
     void ControlManager::reset_controls() {
@@ -105,15 +110,27 @@ namespace agent {
         return ctrl;
     }
 
-    void ControlManager::tick(float dt) {
-        (void)dt;
-        // Placeholder for control loop processing
-        // Could implement control smoothing, filtering, etc.
+    void ControlManager::update_navigation(const concord::Pose &current_pose, float dt) {
+        // Update tracker to get velocity command
+        auto [linear, angular] = tracker_.update(current_pose, dt);
+
+        // Apply velocity commands
+        set_linear(linear);
+        set_angular(angular);
     }
 
-    void ControlManager::tock() {
-        // Placeholder for visualization
-        // Could visualize control commands, wheel angles, etc.
+    void ControlManager::tick(const concord::Pose &current_pose, float dt) {
+        // Update navigation if enabled
+        if (navigation_enabled_ && tracker_.is_enabled()) {
+            update_navigation(current_pose, dt);
+        }
+    }
+
+    void ControlManager::tock(std::shared_ptr<rerun::RecordingStream> rec) {
+        // Visualize tracker path/target if enabled
+        if (navigation_enabled_ && tracker_.is_enabled() && rec) {
+            tracker_.tracker()->tock();
+        }
     }
 
 } // namespace agent

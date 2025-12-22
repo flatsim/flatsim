@@ -41,6 +41,10 @@ namespace agent {
         void set_angular(float angular);
         void set_velocity(float linear, float angular);
 
+        // Control manager access
+        ControlManager &controls() { return control_manager_; }
+        const ControlManager &controls() const { return control_manager_; }
+
         // Tick/tock pattern - tick() blocks until state message received from simulator
         void tick(float dt, int timeout_ms = 100);
         void tock();

@@ -1,7 +1,9 @@
 #pragma once
 
+#include "flatsim/agent/control/tracker.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
+#include <memory>
 #include <vector>
 
 namespace agent {
@@ -17,18 +19,30 @@ namespace agent {
         std::vector<float> steerings_diff, throttles_diff;
         float last_steering_input = 0.0f;
 
+        Tracker tracker_;
+        bool navigation_enabled_ = true;
+
       public:
         ControlManager() = default;
 
-        void init(const types::Machine *m);
+        void init(const types::Machine *m, std::shared_ptr<rerun::RecordingStream> rec = nullptr);
         void reset_controls();
         void set_angular(float angular);
         void set_linear(float linear);
         types::WheelControl get_wheel_control() const;
 
+        // Navigation/Tracker access
+        Tracker &tracker() { return tracker_; }
+        const Tracker &tracker() const { return tracker_; }
+        void set_navigation_enabled(bool enabled) { navigation_enabled_ = enabled; }
+        bool is_navigation_enabled() const { return navigation_enabled_; }
+
+        // Update navigation (called automatically from tick if enabled)
+        void update_navigation(const concord::Pose &current_pose, float dt);
+
         // Tick/tock pattern
-        void tick(float dt);
-        void tock();
+        void tick(const concord::Pose &current_pose, float dt);
+        void tock(std::shared_ptr<rerun::RecordingStream> rec);
 
         const std::vector<float> &get_steerings() const { return steerings; }
         const std::vector<float> &get_throttles() const { return throttles; }

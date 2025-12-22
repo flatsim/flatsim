@@ -2,7 +2,6 @@
 // Run simulator_server separately, then run this
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/control/controller.hpp"
 #include "flatsim/agent/loader.hpp"
 #include <chrono>
 #include <iostream>
@@ -12,8 +11,9 @@
 int main() {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
 
-    // Load tractor
-    concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg
+    // Load tractor - spawn at first waypoint
+    // Spawn tractor at path start, pointing in +X direction (yaw=0)
+    concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
     auto tractor_config = agent::Loader::load_from_json("examples/machines/tractor.json", spawn_pose);
     tractor_config.uuid = "mpc_tractor";
     std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
@@ -30,15 +30,16 @@ int main() {
     }
     std::cout << "[Agent] Spawned successfully!" << std::endl;
 
-    // Create controller with MPC (pass rerun for visualization)
-    agent::Controller controller;
-    controller.init(&tractor.machine().config_mut(), drivekit::TrackerType::MPC, tractor.machine().rec());
-    controller.set_enabled(true);
+    // Re-initialize tracker with MPC type (was initialized with PID by default)
+    tractor.controls().tracker().init(&tractor.machine().config_mut(), drivekit::TrackerType::MPC,
+                                      tractor.machine().rec());
+    tractor.controls().tracker().set_enabled(true);
+    tractor.controls().set_navigation_enabled(true);
 
     std::cout << "\n--- Testing MPC Controller with S-Curve Path ---" << std::endl;
 
-    // Access MPC controller to configure it
-    auto mpc = dynamic_cast<drivekit::pred::MPCFollower *>(controller.tracker()->get_controller());
+    // Access MPC follower to configure it
+    auto mpc = dynamic_cast<drivekit::pred::MPCFollower *>(tractor.controls().tracker().tracker()->get_controller());
     if (mpc) {
         auto mpc_config = mpc->get_mpc_config();
 
@@ -71,8 +72,8 @@ int main() {
         {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},  {90.0f, 0.0f}};
 
     drivekit::PathGoal path(s_curve_waypoints, 2.0f, 2.0f, false);
-    controller.tracker()->set_path(path);
-    controller.tracker()->smoothen(25.0f); // 25cm intervals
+    tractor.controls().tracker().tracker()->set_path(path);
+    tractor.controls().tracker().tracker()->smoothen(25.0f); // 25cm intervals
 
     std::cout << "[MPC] Path set with " << s_curve_waypoints.size() << " waypoints" << std::endl;
     std::cout << "[MPC] Starting path following..." << std::endl;
@@ -81,7 +82,7 @@ int main() {
     int step_count = 0;
     auto start_time = std::chrono::steady_clock::now();
 
-    while (!controller.tracker()->is_path_completed()) {
+    while (!tractor.controls().tracker().tracker()->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
@@ -90,27 +91,18 @@ int main() {
             break;
         }
 
-        // Get current pose from machine state
-        auto current_pose = tractor.machine().world_pose();
-
-        // Update controller to get velocity command
-        auto [linear, angular] = controller.update(current_pose, dt);
-
-        // Send velocity command
-        tractor.set_velocity(linear, angular);
-
         // Tick agent (blocks until state received)
+        // Navigation is automatic - controller updates inside tick()
         tractor.tick(dt, 100);
 
-        // Visualize path and target
-        if (tractor.machine().rec()) {
-            controller.tracker()->tock();
-        }
+        // Tock for visualization
+        tractor.tock();
 
         // Print progress every 2 seconds
         if (step_count % 120 == 0) {
-            auto target = controller.tracker()->get_current_target();
+            auto target = tractor.controls().tracker().tracker()->get_current_target();
             auto status = mpc->get_status();
+            auto current_pose = tractor.machine().world_pose();
 
             std::cout << "[MPC] " << step_count / 60 << "s: "
                       << "Pos(" << current_pose.point.x << "," << current_pose.point.y << "), "
@@ -123,7 +115,7 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    if (controller.tracker()->is_path_completed()) {
+    if (tractor.controls().tracker().tracker()->is_path_completed()) {
         std::cout << "\n[MPC] Successfully completed S-curve path!" << std::endl;
         std::cout << "[MPC] Total time: " << step_count / 60.0f << " seconds" << std::endl;
     } else {

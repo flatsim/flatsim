@@ -89,8 +89,8 @@ namespace agent {
                     }
                 }
 
-                // Initialize control manager
-                control_manager_.init(&machine_.config_mut());
+                // Initialize control manager (includes tracker initialization)
+                control_manager_.init(&machine_.config_mut(), rec_);
 
                 spawned_ = true;
                 std::cout << "[Agent] Spawn successful" << std::endl;
@@ -141,6 +141,9 @@ namespace agent {
             return;
         }
 
+        // Update control manager (includes navigation update if enabled)
+        control_manager_.tick(machine_.world_pose(), dt);
+
         // Get current control from control manager and send to simulator
         auto wheel_ctrl = control_manager_.get_wheel_control();
         auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
@@ -153,7 +156,6 @@ namespace agent {
             types::ser::Request hb_req;
             hb_req.type = types::ser::MsgType::HEARTBEAT;
             hb_req.uuid = machine_.uuid();
-            std::cout << "[Agent] Sending heartbeat" << std::endl;
 
             auto hb_data = cista::serialize(hb_req);
             heartbeat_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);
@@ -185,6 +187,9 @@ namespace agent {
 
         // Call machine tock for visualization
         machine_.tock();
+
+        // Call control manager tock for tracker visualization
+        control_manager_.tock(rec_);
     }
 
 } // namespace agent

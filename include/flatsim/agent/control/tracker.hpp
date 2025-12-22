@@ -7,7 +7,7 @@
 
 namespace agent {
 
-    class Controller {
+    class Tracker {
       private:
         std::unique_ptr<drivekit::Tracker> tracker_;
         bool enabled_ = false;
@@ -15,7 +15,7 @@ namespace agent {
         std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
-        Controller() = default;
+        Tracker() = default;
 
         void init(types::Machine *machine, drivekit::TrackerType type = drivekit::TrackerType::PID,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);

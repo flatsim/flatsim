@@ -1,4 +1,4 @@
-#include "flatsim/agent/control/controller.hpp"
+#include "flatsim/agent/control/tracker.hpp"
 #include "flatsim/agent/machine.hpp"
 #include <algorithm>
 #include <cmath>
@@ -6,8 +6,8 @@
 
 namespace agent {
 
-    void Controller::init(types::Machine *config, drivekit::TrackerType type,
-                          std::shared_ptr<rerun::RecordingStream> rec) {
+    void Tracker::init(types::Machine *config, drivekit::TrackerType type,
+                       std::shared_ptr<rerun::RecordingStream> rec) {
         machine_ = config;
         rec_ = rec;
         tracker_ = std::make_unique<drivekit::Tracker>(type);
@@ -80,7 +80,7 @@ namespace agent {
         tracker_->get_controller()->set_config(ctrl_config);
     }
 
-    std::pair<float, float> Controller::update(const concord::Pose &current_pose, float dt) {
+    std::pair<float, float> Tracker::update(const concord::Pose &current_pose, float dt) {
         if (!enabled_ || !tracker_) {
             return {0.0f, 0.0f};
         }

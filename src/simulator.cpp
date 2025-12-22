@@ -270,17 +270,6 @@ namespace simulator {
                     auto *ctrl_req = cista::deserialize<types::ser::WheelControl>(buffer);
                     if (ctrl_req) {
                         auto control = ctrl_req->to_control();
-
-                        // Debug: Print control every 60 ticks (~1 second)
-                        if (++ctrl_tick % 60 == 0) {
-                            std::cout << "[Simulator] Received control for " << uuid << ": throttle["
-                                      << control.throttle.size() << "] = ";
-                            for (size_t i = 0; i < std::min(control.throttle.size(), size_t(4)); ++i) {
-                                std::cout << control.throttle[i] << " ";
-                            }
-                            std::cout << " steering[" << control.steering.size() << "]" << std::endl;
-                        }
-
                         apply_control(control, dt);
                     }
                 }
@@ -356,13 +345,6 @@ namespace simulator {
                 for (const auto &ms : world_state.machines) {
                     if (std::string(ms.uuid.view()) == uuid) {
                         try {
-                            // Debug: Print state every 60 ticks (~1 second)
-                            if (++state_tick % 60 == 0) {
-                                std::cout << "[Simulator] Publishing state for " << uuid << ": pose=("
-                                          << ms.pose.position.x << ", " << ms.pose.position.y << ", " << ms.pose.angle
-                                          << ")" << std::endl;
-                            }
-
                             auto data = cista::serialize(ms);
                             socket->send(zmq::buffer(data), zmq::send_flags::dontwait);
                         } catch (const zmq::error_t &e) {
