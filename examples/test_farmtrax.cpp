@@ -1,3 +1,10 @@
+// Farmtrax Multi-Machine Field Coverage Test
+//
+// Features: Robot colors, Collision avoidance with LIDAR, Dubins curves for turns
+//
+// Run:
+//   ./build/linux/x86_64/release/test_farmtrax
+
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -6,9 +13,8 @@
 #include <vector>
 
 #include "concord/concord.hpp"
-#include "flatsim/core/loader.hpp"
-#include "flatsim/robot/sensor/lidar_sensor.hpp"
-#include "flatsim/robot/types.hpp"
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun/recording_stream.hpp"
@@ -38,16 +44,13 @@ float calculate_distance(const concord::Pose &p1, const concord::Pose &p2) {
 }
 
 // Get robot's approximate size (diagonal of bounding box)
-float get_robot_size(const fs::Robot &robot) {
-    // Size uses x, y, z coordinates (x = length, y = width typically)
-    float size_x = robot.info.bound.size.x;
-    float size_y = robot.info.bound.size.y;
+float get_robot_size(const agent::Agent &robot) {
+    float size_x = robot.machine().config().bound.size.x;
+    float size_y = robot.machine().config().bound.size.y;
     return std::sqrt(size_x * size_x + size_y * size_y);
 }
 
 // Check if LIDAR detects an obstacle in front within the given range
-// Returns the minimum distance to an obstacle in the forward sector, or max_range if clear
-// Also visualizes ALL beams in Rerun (forward beams highlighted)
 float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, const concord::Pose &robot_pose,
                           std::shared_ptr<rerun::RecordingStream> rec, const std::string &robot_id, pigment::RGB color,
                           bool debug_output = false) {
@@ -57,7 +60,6 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
 
     const auto &data = lidar->get_lidar_data();
 
-    // If no data yet, return max (no obstacle)
     if (data.ranges.empty()) {
         if (debug_output) {
             std::cout << robot_id << " LIDAR: no data yet\n";
@@ -68,22 +70,18 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
     float min_distance = data.max_range;
     float min_forward_distance = data.max_range;
 
-    // Collect ALL beams for visualization
     std::vector<std::array<float, 3>> all_beam_starts;
     std::vector<std::array<float, 3>> all_beam_ends;
     std::vector<rerun::Color> all_beam_colors;
 
-    // LIDAR SECTOR_2D scans from -FOV/2 to +FOV/2
     for (size_t i = 0; i < data.ranges.size(); ++i) {
-        float angle = data.angles[i]; // This is relative to sensor/robot heading
+        float angle = data.angles[i];
         float range = data.ranges[i];
         bool is_valid_hit = data.valid[i] && range < data.max_range * 0.99f;
         bool is_forward = std::abs(angle) <= forward_angle_range;
 
-        // Transform beam to world coordinates for visualization
         float world_angle = robot_pose.angle.yaw + angle;
 
-        // Visualize the beam
         float start_x = robot_pose.point.x;
         float start_y = robot_pose.point.y;
         float end_x = start_x + range * std::cos(world_angle);
@@ -92,11 +90,7 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
         all_beam_starts.push_back({start_x, start_y, 0.5f});
         all_beam_ends.push_back({end_x, end_y, 0.5f});
 
-        // Color coding:
-        // - Beams with hit (obstacle): Mix tractor color with red (toned down red toward tractor color)
-        // - Beams without hit (clear): Tractor's color with transparency
         if (is_valid_hit) {
-            // Mix tractor color with red (70% red, 30% tractor color for a toned-down red)
             pigment::RGB red_color{255, 0, 0};
             auto mixed_color = color.mix(red_color, 0.5);
             all_beam_colors.push_back(rerun::Color(mixed_color.r, mixed_color.g, mixed_color.b, 255));
@@ -104,17 +98,14 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
                 min_forward_distance = range;
             }
         } else {
-            // Use tractor's color for clear beams
             all_beam_colors.push_back(rerun::Color(color.r, color.g, color.b, 150));
         }
 
-        // Track overall minimum
         if (is_valid_hit && range < min_distance) {
             min_distance = range;
         }
     }
 
-    // Visualize ALL beams in Rerun as line strips
     if (rec && !all_beam_starts.empty()) {
         std::vector<rerun::LineStrip3D> lines;
         for (size_t i = 0; i < all_beam_starts.size(); ++i) {
@@ -137,7 +128,6 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
 }
 
 // Generate smooth path with Dubins curves between swath endpoints
-// Only traverse actual Swath types (AB-lines), skip Connection/Around/Headland types
 std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths,
                                                  float turning_radius, float step_size = 0.5f) {
     std::vector<concord::Point> path;
@@ -146,7 +136,6 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
 
     farmtrax::turners::Dubins dubins(turning_radius);
 
-    // Filter to only include actual working swaths (not connections)
     std::vector<std::shared_ptr<const farmtrax::Swath>> working_swaths;
     for (const auto &swath : swaths) {
         if (swath->type == farmtrax::SwathType::Swath) {
@@ -159,27 +148,20 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
     for (size_t i = 0; i < working_swaths.size(); ++i) {
         const auto &swath = working_swaths[i];
 
-        // Add start point of swath
         path.push_back(swath->line.getStart());
-
-        // Add end point of swath
         path.push_back(swath->line.getEnd());
 
-        // If there's a next swath, generate Dubins curve to connect them
         if (i + 1 < working_swaths.size()) {
             const auto &next_swath = working_swaths[i + 1];
 
-            // Calculate heading at end of current swath
             float dx_curr = swath->line.getEnd().x - swath->line.getStart().x;
             float dy_curr = swath->line.getEnd().y - swath->line.getStart().y;
             float yaw_end = std::atan2(dy_curr, dx_curr);
 
-            // Calculate heading at start of next swath
             float dx_next = next_swath->line.getEnd().x - next_swath->line.getStart().x;
             float dy_next = next_swath->line.getEnd().y - next_swath->line.getStart().y;
             float yaw_start = std::atan2(dy_next, dx_next);
 
-            // Create poses for Dubins path planning
             concord::Pose start_pose;
             start_pose.point = swath->line.getEnd();
             start_pose.angle.yaw = yaw_end;
@@ -188,10 +170,8 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
             end_pose.point = next_swath->line.getStart();
             end_pose.angle.yaw = yaw_start;
 
-            // Generate Dubins path for the turn
             auto dubins_path = dubins.plan_path(start_pose, end_pose, step_size);
 
-            // Add Dubins waypoints (skip first and last as they're already in the path)
             for (size_t j = 1; j < dubins_path.waypoints.size() - 1; ++j) {
                 path.push_back(dubins_path.waypoints[j].point);
             }
@@ -212,13 +192,10 @@ int main() {
         return 1;
     }
     rec->log("", rerun::Clear::RECURSIVE);
-    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
-    // Create simulator
-    fs::Simulator simulator(rec);
+    // Create simulator with Rerun
     concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
-    concord::Size world_size{500.0f, 500.0f, 300.0f};
-    simulator.init(world_datum, world_size);
+    simulator::Simulator sim(500, 500, world_datum, rec);
 
     // Create a simple square field (100m x 100m)
     concord::Polygon poly;
@@ -226,22 +203,19 @@ int main() {
     poly.addPoint(concord::Point{100.0, 0.0, 0.0});
     poly.addPoint(concord::Point{100.0, 100.0, 0.0});
     poly.addPoint(concord::Point{0.0, 100.0, 0.0});
-    poly.addPoint(concord::Point{0.0, 0.0, 0.0}); // Close the polygon
+    poly.addPoint(concord::Point{0.0, 0.0, 0.0});
 
     std::cout << "Creating square field (100m x 100m)\n";
 
     farmtrax::Field field(poly, world_datum, true, 100000.0);
-
-    // Generate field with 4m swath width, 0 degree angle, 2 headland passes
     field.gen_field(4.0, 0.0, 2);
 
-    int num_machines = 3; // Number of tractors
+    int num_machines = 3;
     std::cout << "Number of machines: " << num_machines << "\n";
 
     auto part_cnt = field.get_parts().size();
     std::cout << "Total field parts: " << part_cnt << "\n";
 
-    // Process the first field part (in a simple square, there should be only one part)
     if (field.get_parts().empty()) {
         std::cerr << "No field parts generated!\n";
         return 1;
@@ -253,18 +227,16 @@ int main() {
               << " hectares)\n";
     std::cout << "Headlands: " << part.headlands.size() << ", Swaths: " << part.swaths.size() << "\n";
 
-    // Create division for multiple machines
     auto fieldPtr = std::make_shared<farmtrax::Part>(field.get_parts()[0]);
     farmtrax::Divy divy(fieldPtr, farmtrax::DivisionType::ALTERNATE, num_machines);
     divy.compute_division();
 
     auto &res = divy.result();
 
-    // Turning radius for Dubins curves (typical tractor turning radius)
     float turning_radius = 5.0f;
 
-    // Track which machines were successfully loaded
     std::vector<int> active_machines;
+    std::vector<agent::Agent *> agents;
 
     // Load tractors and assign paths
     for (int m = 0; m < num_machines; ++m) {
@@ -276,14 +248,12 @@ int main() {
         std::cout << "\n--- Machine " << m << " ---\n";
         std::cout << "Assigned swaths: " << res.swaths_per_machine.at(m).size() << "\n";
 
-        // Create Nety instance to optimize swath traversal order
         farmtrax::Nety nety(res.swaths_per_machine.at(m));
-        nety.field_traversal(); // Reorder swaths for optimal traversal
+        nety.field_traversal();
 
         const auto &swaths = nety.get_swaths();
         std::cout << "Optimized swaths: " << swaths.size() << "\n";
 
-        // Build path from swaths using Dubins curves for smooth turns
         std::vector<concord::Point> path = generate_dubins_path(swaths, turning_radius, 0.5f);
 
         if (path.empty()) {
@@ -293,66 +263,53 @@ int main() {
 
         std::cout << "Generated path with " << path.size() << " waypoints (including Dubins curves)\n";
 
-        // Calculate starting position for this machine
         float spawn_x = path[0].x;
-        float spawn_y = path[0].y - (m * 8.0f); // Offset each machine by 8m in Y for safety
+        float spawn_y = path[0].y - (m * 8.0f);
         float spawn_yaw = 0.0f;
 
-        // Calculate initial heading towards first waypoint
         if (path.size() > 1) {
             float dx = path[1].x - path[0].x;
             float dy = path[1].y - path[0].y;
             spawn_yaw = std::atan2(dy, dx);
         }
 
-        // Load tractor
-        try {
-            auto tractor_info = fs::Loader::load_from_json(
-                "examples/machines/tractor.json",
-                concord::Pose{concord::Point{spawn_x, spawn_y},
-                              concord::Euler{0.0f, 0.0f, spawn_yaw - 1.5708f}}); // -90 deg for tractor orientation
+        // Spawn tractor with unique UUID and color
+        std::string uuid = "tractor_" + std::to_string(m);
+        concord::Pose spawn_pose(spawn_x, spawn_y, spawn_yaw - 1.5708f);
+        auto &tractor =
+            sim.spawn_agent("examples/machines/tractor.json", spawn_pose, uuid, ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
-            // Set unique color for this robot
-            tractor_info.color = ROBOT_COLORS[m % ROBOT_COLORS.size()];
-            for (auto &karo : tractor_info.karos) {
-                karo.color = ROBOT_COLORS[m % ROBOT_COLORS.size()];
-            }
+        std::cout << "Loaded tractor " << m << " at (" << spawn_x << ", " << spawn_y << ") UUID: " << uuid << "\n";
 
-            simulator.add_robot(tractor_info);
-            std::cout << "Loaded tractor " << m << " at (" << spawn_x << ", " << spawn_y << ") with color ("
-                      << (int)tractor_info.color.r << ", " << (int)tractor_info.color.g << ", "
-                      << (int)tractor_info.color.b << ")\n";
-        } catch (const std::exception &e) {
-            std::cerr << "Failed to load tractor " << m << ": " << e.what() << std::endl;
-            return 1;
-        }
-
-        // Set up path following for this tractor
-        auto &tractor = simulator.get_robot(m);
-
-        // Update robot color after loading
-        tractor.update_color(ROBOT_COLORS[m % ROBOT_COLORS.size()]);
-
-        // Add LIDAR sensor for collision detection
-        // Using SECTOR_2D pattern with 60 degree FOV, 15m range, 5 degree resolution
-        // min_range must be larger than robot size to avoid self-detection
+        // Get robot size for LIDAR configuration
         float robot_size = get_robot_size(tractor);
-        auto lidar = std::make_unique<fs::LIDARSensor>(simulator.get_world().get_world(),
-                                                       fs::LIDARSensor::ScanPattern::SECTOR_2D,
-                                                       10.0,              // 10 Hz update rate
-                                                       robot_size + 0.5f, // min range > robot size
-                                                       15.0,              // 15m max range
-                                                       45.0,              // 60 degree FOV (30 deg each side)
-                                                       3.0                // 4 degree resolution = 15 rays
+
+        // Configure LIDAR on the simulator's machine (simulator will do raycasting)
+        types::LidarConfig lidar_cfg;
+        lidar_cfg.enabled = true;
+        lidar_cfg.min_range = robot_size + 0.5f; // min range > robot size
+        lidar_cfg.max_range = 15.0f;             // 15m max range
+        lidar_cfg.fov_deg = 45.0f;               // 45 degree FOV
+        lidar_cfg.resolution_deg = 3.0f;         // 3 degree resolution
+        sim.set_lidar_config(uuid, lidar_cfg);
+
+        // Add LIDAR sensor on agent side to receive data from simulator
+        auto lidar = std::make_unique<fs::LIDARSensor>(fs::LIDARSensor::ScanPattern::SECTOR_2D,
+                                                       10.0f,                   // 10 Hz update rate
+                                                       lidar_cfg.min_range,     // min range
+                                                       lidar_cfg.max_range,     // max range
+                                                       lidar_cfg.fov_deg,       // FOV
+                                                       lidar_cfg.resolution_deg // resolution
         );
-        lidar->configure_noise(0.0, 0.0, 0.0);             // No noise for debugging
-        lidar->set_collision_filter(tractor.get_filter()); // Use robot's filter to ignore own body
-        tractor.sensors.add(std::move(lidar));
-        std::cout << "Added LIDAR sensor to Robot " << m << " (filter bit=" << tractor.get_filter().bit << ")\n";
+        tractor.machine().sensors.add(std::move(lidar));
+        std::cout << "Added LIDAR sensor to Robot " << m << "\n";
 
         // Configure MPPI controller
-        tractor.tracker->set_controller_type(drivekit::TrackerType::MPPI);
-        auto mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker->get_controller());
+        tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
+        tractor.controls().tracker().set_enabled(true);
+        tractor.set_navigation_enabled(true);
+
+        auto *mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker()->get_controller());
 
         if (mppi_controller) {
             auto mppi_config = mppi_controller->get_mppi_config();
@@ -362,7 +319,7 @@ int main() {
             mppi_config.temperature = 0.1;
             mppi_config.steering_noise = 0.15;
             mppi_config.acceleration_noise = 0.1;
-            mppi_config.ref_velocity = 0.6; // Slower speed for agricultural work
+            mppi_config.ref_velocity = 0.6;
             mppi_config.weight_cte = 200.0;
             mppi_config.weight_epsi = 180.0;
             mppi_config.weight_vel = 1.0;
@@ -371,25 +328,23 @@ int main() {
             mppi_controller->set_mppi_config(mppi_config);
         }
 
-        // Set path with reasonable tolerance
         drivekit::PathGoal path_goal(path, 2.0f, 2.0f, false);
-        tractor.tracker->set_path(path_goal);
-        tractor.tracker->smoothen(25.0f); // Add points every 25cm for smoother following
+        tractor.tracker()->set_path(path_goal);
+        tractor.tracker()->smoothen(25.0f);
 
         active_machines.push_back(m);
+        agents.push_back(&tractor);
         std::cout << "Path set with " << path.size() << " waypoints\n";
     }
 
     std::cout << "\n=== Starting Simulation ===" << std::endl;
     std::cout << "Active machines: " << active_machines.size() << "\n";
-    std::cout << "Collision avoidance: Lower priority robots (higher index) will stop when too close\n";
+    std::cout << "Collision avoidance: Robots will stop when LIDAR detects obstacle\n";
 
-    // Track stopped state for each robot
     std::vector<bool> robot_stopped(num_machines, false);
 
-    // Simulation loop
     auto start_time = std::chrono::steady_clock::now();
-    float dt = 0.016f; // 60 FPS
+    float dt = 0.016f;
     int step_count = 0;
     bool all_completed = false;
 
@@ -397,32 +352,28 @@ int main() {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
-        if (elapsed > 600) { // 10 minute timeout
+        if (elapsed > 600) {
             std::cout << "Timeout reached!\n";
             break;
         }
 
-        // Collision avoidance: use LIDAR to detect obstacles in front
-        for (int m = 0; m < num_machines; ++m) {
-            if (m >= simulator.num_robots()) continue;
+        // Collision avoidance using LIDAR
+        for (size_t i = 0; i < agents.size(); ++i) {
+            int m = active_machines[i];
+            auto &robot = *agents[i];
+            float size_m = get_robot_size(robot);
 
-            auto &robot_m = simulator.get_robot(m);
-            float size_m = get_robot_size(robot_m);
-
-            // Get LIDAR sensor and check for obstacles
-            auto *lidar = robot_m.sensors.get<fs::LIDARSensor>();
-            float safe_distance = 2.0f * size_m; // Stop if obstacle within 2x robot size
+            auto *lidar = robot.machine().sensors.get<fs::LIDARSensor>();
+            float safe_distance = 2.0f * size_m;
 
             bool should_stop = false;
 
             if (lidar) {
-                // Check LIDAR for obstacles in forward sector (within ~30 degrees)
-                auto pos_m = robot_m.get_position();
-                // Debug output for first 10 steps
-                bool debug = (step_count < 10);
-                // Use the robot's actual seqid for Rerun entity path
+                auto pos_m = robot.get_position();
+                bool debug = (step_count % 60 == 0); // Print every second
+
                 float min_obstacle_dist =
-                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot_m.info.seqid, robot_m.info.color, debug);
+                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot.uuid(), robot.machine().config().color, debug);
 
                 if (min_obstacle_dist < safe_distance) {
                     should_stop = true;
@@ -433,32 +384,28 @@ int main() {
                 }
             }
 
-            // Update robot movement state using allow_move flag and apply braking
             if (should_stop && !robot_stopped[m]) {
-                robot_m.state.allow_move = false;
-                robot_m.brake(); // Apply physical braking force
+                robot.machine().set_navigation_enabled(false);
+                robot.brake();
                 robot_stopped[m] = true;
             } else if (!should_stop && robot_stopped[m]) {
-                robot_m.state.allow_move = true;
+                robot.machine().set_navigation_enabled(true);
                 robot_stopped[m] = false;
                 std::cout << "Robot " << m << " resuming\n";
             }
 
-            // Keep applying brake while stopped to ensure robot stays stationary
             if (robot_stopped[m]) {
-                robot_m.brake();
+                robot.brake();
             }
         }
 
-        simulator.tick(dt);
-        simulator.tock(5);
+        sim.tick(dt);
+        sim.tock();
 
         // Check if all machines completed their paths
         all_completed = true;
-        for (int m = 0; m < num_machines; ++m) {
-            if (m >= simulator.num_robots()) continue;
-            auto &tractor = simulator.get_robot(m);
-            if (!tractor.tracker->is_path_completed()) {
+        for (size_t i = 0; i < agents.size(); ++i) {
+            if (!agents[i]->tracker()->is_path_completed()) {
                 all_completed = false;
             }
         }
@@ -466,11 +413,10 @@ int main() {
         // Print progress every 5 seconds
         if (step_count % 300 == 0) {
             std::cout << "\nTime: " << elapsed << "s\n";
-            for (int m = 0; m < num_machines; ++m) {
-                if (m >= simulator.num_robots()) continue;
-                auto &tractor = simulator.get_robot(m);
-                auto pos = tractor.get_position();
-                auto completed = tractor.tracker->is_path_completed();
+            for (size_t i = 0; i < agents.size(); ++i) {
+                int m = active_machines[i];
+                auto pos = agents[i]->get_position();
+                auto completed = agents[i]->tracker()->is_path_completed();
                 std::string status = completed ? "[COMPLETED]" : (robot_stopped[m] ? "[STOPPED]" : "[RUNNING]");
                 std::cout << "  Machine " << m << ": (" << std::fixed << std::setprecision(1) << pos.point.x << ", "
                           << pos.point.y << ") " << status << "\n";
@@ -478,7 +424,7 @@ int main() {
         }
 
         step_count++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
     if (all_completed) {

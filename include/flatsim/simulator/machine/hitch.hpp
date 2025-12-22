@@ -1,0 +1,39 @@
+#pragma once
+
+#include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
+#include "muli/collision_filter.h"
+#include "muli/world.h"
+#include <rerun.hpp>
+
+namespace simulator {
+    class Hitch {
+      private:
+        std::shared_ptr<muli::World> world;
+        std::shared_ptr<rerun::RecordingStream> rec;
+        std::string parent_name;
+        types::Machine *robot_info = nullptr;
+        types::State *robot_state = nullptr;
+
+      public:
+        std::string name;
+        concord::Bound bound;
+        concord::Pose pose;
+        pigment::RGB color;
+        bool hooked = false;
+        bool is_master = true; // true = master (can pull), false = slave (can be pulled)
+
+        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+              types::Machine *robot_info, types::State *robot_state);
+        void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
+                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master);
+        void tick(float dt, concord::Pose trans_pose);
+        void tock();
+
+        void teleport(concord::Pose pose);
+
+        void toggle_hook() { hooked = !hooked; }
+        std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
+        concord::Bound get_bound() const { return bound; }
+    };
+} // namespace simulator

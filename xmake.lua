@@ -223,6 +223,28 @@ package("drivekit")
     end)
 package_end()
 
+-- Define cista package (from git) - high-performance zero-copy serialization
+package("cista")
+    set_kind("library", {headeronly = true})
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/cista-src"))
+
+    on_load(function (package)
+        local sourcedir = package:sourcedir()
+        if not os.isdir(sourcedir) then
+            print("Fetching cista from git...")
+            os.mkdir(path.directory(sourcedir))
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "v0.16",
+                            "-c", "advice.detachedHead=false",
+                            "https://github.com/felixguendling/cista.git", sourcedir})
+        end
+        package:add("includedirs", path.join(sourcedir, "include"), {public = true})
+    end)
+
+    on_install(function (package)
+        os.cp("include/*", package:installdir("include"))
+    end)
+package_end()
+
 -- Define rerun_sdk package (from ~/.local installation)
 package("rerun_sdk")
     set_kind("library", {headeronly = false})
@@ -254,7 +276,7 @@ package("rerun_sdk")
 package_end()
 
 -- Add required packages
-add_requires("muli", "pigment", "entropy")
+add_requires("muli", "pigment", "entropy", "cista")
 add_requires("concord", "farmtrax", "drivekit", "zoneout")
 add_requires("rerun_sdk")
 
@@ -286,6 +308,7 @@ target("flatsim_internal")
     -- Add header files
     add_headerfiles("include/(flatsim/**.hpp)")
     add_includedirs("include", {public = true})
+    add_includedirs("build/_deps/cista-src/include", {public = true})
 
     -- Link dependencies (order matters: libraries with dependencies come first)
     add_packages("drivekit", "farmtrax", "zoneout")

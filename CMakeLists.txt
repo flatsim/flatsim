@@ -91,6 +91,12 @@ FetchContent_Declare(drivekit GIT_REPOSITORY https://github.com/robolibs/driveki
 FetchContent_MakeAvailable(drivekit)
 list(APPEND ext_deps drivekit::drivekit)
 
+# Cista - high-performance zero-copy serialization
+FetchContent_Declare(cista GIT_REPOSITORY https://github.com/felixguendling/cista.git GIT_TAG v0.16)
+FetchContent_MakeAvailable(cista)
+include_directories(${cista_SOURCE_DIR}/include)
+list(APPEND ext_deps cista)
+
 # --------------------------------------------------------------------------------------------------
 add_library(${project_name} INTERFACE)
 # Allow users to link via `${project_name}::${project_name}`

@@ -1,16 +1,31 @@
-#include <chrono>
-#include <iostream>
-#include <thread>
-#include <vector>
+// GPS NMEA Output Test (LOCAL mode - single process)
+//
+// Run (with xmake examples enabled):
+//   xmake f -y --examples=y
+//   xmake -j
+//   ./build/linux/x86_64/release/test_gps_nmea
+//
+// This runs simulator + agent in the same process (no IPC/TCP).
+// Sensors are added to the Machine's SensorManager which auto-enables SHM output.
 
-#include "flatsim/core/loader.hpp"
-#include "flatsim/robot/sensor/gps_sensor.hpp"
-#include "flatsim/robot/sensor/imu_sensor.hpp"
-#include "flatsim/robot/types.hpp"
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/loader.hpp"
+#include "flatsim/agent/sensor/gps_sensor.hpp"
+#include "flatsim/agent/sensor/imu_sensor.hpp"
 #include "flatsim/simulator.hpp"
 #include "rerun/recording_stream.hpp"
 
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <numbers>
+#include <thread>
+#include <vector>
+
 int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+
     std::cout << "=== GPS NMEA Output Test (Endless Loop) ===" << std::endl;
 
     // Initialize Rerun logging
@@ -20,51 +35,40 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     rec->log("", rerun::Clear::RECURSIVE);
-    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
-    // Create simulator
-    fs::Simulator simulator(rec);
-    concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
-    concord::Size world_size{500.0f, 500.0f, 300.0f};
-    simulator.init(world_datum, world_size);
+    // GPS datum (reference point for simulator world)
+    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
-    // Load tractor
-    try {
-        auto tractor_info =
-            fs::Loader::load_from_json("examples/machines/tractor.json",
-                                       concord::Pose{concord::Point{0.0f, 0.0f}, concord::Euler{0.0f, 0.0f, -1.5708f}});
-        simulator.add_robot(tractor_info);
-    } catch (const std::exception &e) {
-        std::cerr << "Failed to load tractor: " << e.what() << std::endl;
-        return 1;
-    }
+    // Create simulator in LOCAL mode with Rerun
+    simulator::Simulator sim(500, 500, datum, rec);
 
-    auto &tractor = simulator.get_robot(0);
+    // Spawn tractor with custom UUID for easy SHM access
+    concord::Pose spawn_pose(0.0, 0.0, -1.5708f);
+    auto &tractor = sim.spawn_agent("examples/machines/tractor.json", spawn_pose, std::string("test_gps_nmea"));
 
-    // Override UUID with a memorable name for easy testing
-    tractor.info.uuid = "test_gps_nmea";
+    std::cout << "Tractor loaded: " << tractor.name() << " (UUID: " << tractor.uuid() << ")" << std::endl;
 
-    std::cout << "Tractor loaded: " << tractor.info.name << " (UUID: " << tractor.info.uuid << ")" << std::endl;
-
-    // Add GPS sensor
+    // Add GPS sensor to tractor's sensor manager (auto-enables SHM)
     auto gps = std::make_unique<fs::GPSSensor>(10.0, true, 3.0, 0.02); // 10Hz, RTK enabled
-    tractor.sensors.add(std::move(gps));
+    tractor.machine().sensors.add(std::move(gps));
     std::cout << "Added GPS sensor to tractor (10Hz, RTK enabled)" << std::endl;
-    std::cout << "GPS NMEA output: /dev/shm/flatsim_" << tractor.info.uuid << "_GPS" << std::endl;
-    std::cout << "GPS format file: /tmp/flatsim_" << tractor.info.uuid << "/GPS.format" << std::endl;
+    std::cout << "GPS NMEA output: /dev/shm/flatsim_" << tractor.uuid() << "_GPS" << std::endl;
+    std::cout << "GPS format file: /tmp/flatsim_" << tractor.uuid() << "/GPS.format" << std::endl;
 
-    // Add IMU sensor
+    // Add IMU sensor to tractor's sensor manager (auto-enables SHM)
     auto imu = std::make_unique<fs::IMUSensor>(100.0, 0.01, 0.001, 0.1); // 100Hz, realistic noise
-    tractor.sensors.add(std::move(imu));
+    tractor.machine().sensors.add(std::move(imu));
     std::cout << "\nAdded IMU sensor to tractor (100Hz, 9-DOF)" << std::endl;
-    std::cout << "IMU binary output: /dev/shm/flatsim_" << tractor.info.uuid << "_IMU" << std::endl;
-    std::cout << "IMU format file: /tmp/flatsim_" << tractor.info.uuid << "/IMU.format" << std::endl;
+    std::cout << "IMU binary output: /dev/shm/flatsim_" << tractor.uuid() << "_IMU" << std::endl;
+    std::cout << "IMU format file: /tmp/flatsim_" << tractor.uuid() << "/IMU.format" << std::endl;
 
     // Configure MPPI controller for endless circular path
     std::cout << "\n--- Setting up MPPI controller for endless loop ---" << std::endl;
-    tractor.tracker->set_controller_type(drivekit::TrackerType::MPPI);
+    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
+    tractor.controls().tracker().set_enabled(true);
+    tractor.set_navigation_enabled(true);
 
-    auto mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker->get_controller());
+    auto *mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker()->get_controller());
     if (mppi_controller) {
         auto mppi_config = mppi_controller->get_mppi_config();
 
@@ -96,16 +100,16 @@ int main(int argc, char *argv[]) {
     int num_points = 72; // 72 points = 5 degree intervals for smooth circle
 
     for (int i = 0; i < num_points; i++) { // Don't duplicate start/end point
-        float angle = (i * 2.0f * M_PI) / num_points;
+        float angle = (i * 2.0f * static_cast<float>(std::numbers::pi)) / num_points;
         circular_path.push_back({center_x + radius * std::cos(angle), center_y + radius * std::sin(angle)});
     }
 
     drivekit::PathGoal path(circular_path, 2.0f, 3.0f, true); // loop=true for endless
 
     std::cout << "Setting circular path with radius " << radius << "m..." << std::endl;
-    tractor.tracker->set_path(path);
+    tractor.tracker()->set_path(path);
     // DON'T smooth - it breaks the loop closure!
-    // tractor.tracker->smoothen(50.0f);
+    // tractor.tracker()->smoothen(50.0f);
 
     std::cout << "\nStarting endless loop..." << std::endl;
     std::cout << "GPS will continuously output NMEA sentences to shared memory" << std::endl;
@@ -122,16 +126,16 @@ int main(int argc, char *argv[]) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
-        simulator.tick(dt);
-        simulator.tock(5);
+        sim.tick(dt);
+        sim.tock();
 
         // Get tracker status for debugging
-        bool path_completed = tractor.tracker->is_path_completed();
-        bool goal_reached = tractor.tracker->is_goal_reached();
+        bool path_completed = tractor.tracker()->is_path_completed();
+        bool goal_reached = tractor.tracker()->is_goal_reached();
 
         // Toggle PHTG status every 10 seconds (600 steps at 60 FPS)
         if (step_count % 600 == 0) {
-            auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
+            auto *gps_sensor = tractor.machine().sensors.get<fs::GPSSensor>();
             if (gps_sensor) {
                 phtg = !phtg;
                 gps_sensor->set_phtg_status(phtg);
@@ -143,9 +147,9 @@ int main(int argc, char *argv[]) {
         // Print detailed status every 2 seconds
         if (step_count % 120 == 0) { // Every 2 seconds at 60 FPS
             auto pos = tractor.get_position();
-            double linear_vel, angular_vel;
+            float linear_vel, angular_vel;
             tractor.get_velocity(linear_vel, angular_vel);
-            auto *gps_sensor = tractor.sensors.get<fs::GPSSensor>();
+            auto *gps_sensor = tractor.machine().sensors.get<fs::GPSSensor>();
 
             std::cout << "\n=== Time " << elapsed << "s (step " << step_count << ") ===" << std::endl;
             std::cout << "Position: (" << pos.point.x << ", " << pos.point.y << ")" << std::endl;
@@ -160,11 +164,11 @@ int main(int argc, char *argv[]) {
                           << ", PHTG=" << (phtg ? "ON" : "OFF") << std::endl;
             }
 
-            auto *imu_sensor = tractor.sensors.get<fs::IMUSensor>();
+            auto *imu_sensor = tractor.machine().sensors.get<fs::IMUSensor>();
             if (imu_sensor) {
                 auto imu_data = imu_sensor->get_imu_data();
                 std::cout << "IMU: accel=(" << imu_data.accel_x << "," << imu_data.accel_y << "," << imu_data.accel_z
-                          << ") m/s²"
+                          << ") m/s^2"
                           << ", gyro=(" << imu_data.gyro_x << "," << imu_data.gyro_y << "," << imu_data.gyro_z
                           << ") rad/s"
                           << ", yaw=" << imu_data.yaw << " rad" << std::endl;
@@ -183,7 +187,7 @@ int main(int argc, char *argv[]) {
             if (step_count - last_reset_step > 100) { // Avoid spamming (only reset every ~1.6 seconds)
                 std::cout << "\n*** At second-to-last waypoint! Sending new path... ***\n" << std::endl;
                 drivekit::PathGoal new_path(circular_path, 2.0f, 3.0f, false);
-                tractor.tracker->set_path(new_path);
+                tractor.tracker()->set_path(new_path);
                 last_reset_step = step_count;
             }
         }

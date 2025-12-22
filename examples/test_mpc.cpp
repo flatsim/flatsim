@@ -1,178 +1,177 @@
+// MPC Path Following Test (Agent API)
+//
+// Terminal 1 (IPC, default):
+//   FLATSIM_IPC_DIR=./build/ipc ./build/linux/x86_64/release/simulator_server --ipc
+// Terminal 2:
+//   FLATSIM_IPC_DIR=./build/ipc ./build/linux/x86_64/release/test_mpc --ipc
+//
+// Or TCP:
+//   ./build/linux/x86_64/release/simulator_server --tcp --host 127.0.0.1
+//   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
+
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/loader.hpp"
 #include <chrono>
+#include <filesystem>
 #include <iostream>
+#include <numbers>
+#include <rerun.hpp>
 #include <thread>
 #include <vector>
 
-#include "flatsim/core/loader.hpp"
-#include "flatsim/robot/types.hpp"
-#include "flatsim/simulator.hpp"
-#include "rerun/recording_stream.hpp"
-
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
 
-    // Initialize Rerun logging
-    auto rec = std::make_shared<rerun::RecordingStream>("mpc_test", "space");
-    if (rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy").is_err()) {
-        std::cerr << "Failed to connect to rerun\n";
-        return 1;
+    // Connection:
+    // - Default: IPC (`ipc://...`) using `FLATSIM_IPC_DIR` (defaults to `/tmp`).
+    // - TCP: pass `--host 127.0.0.1` (server must be in TCP mode).
+    std::string host;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--host" && i + 1 < argc) {
+            host = argv[++i];
+        } else if (arg == "--tcp") {
+            if (host.empty()) {
+                host = "127.0.0.1";
+            }
+        } else if (arg == "--ipc") {
+            host.clear();
+        }
     }
-    rec->log("", rerun::Clear::RECURSIVE);
-    rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
-    // Create simulator
-    fs::Simulator simulator(rec);
-    concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
-    concord::Size world_size{500.0f, 500.0f, 300.0f};
-    simulator.init(world_datum, world_size);
+    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    if (!std::filesystem::exists(machine_file)) {
+        std::error_code ec;
+        std::filesystem::path probe = std::filesystem::absolute(argv[0], ec).parent_path();
+        if (!ec) {
+            for (int up = 0; up < 8 && !probe.empty(); ++up) {
+                auto candidate = probe / machine_file;
+                if (std::filesystem::exists(candidate)) {
+                    machine_file = candidate;
+                    break;
+                }
+                probe = probe.parent_path();
+            }
+        }
+    }
 
     // Load tractor - spawn at first waypoint
-    try {
-        // Spawn tractor at path start, pointing in +X direction (yaw=0)
-        auto tractor_info = fs::Loader::load_from_json(
-            "examples/machines/tractor.json",
-            concord::Pose{
-                concord::Point{0.0f, 0.0f},
-                concord::Euler{0.0f, 0.0f, -1.5708f}}); // -90 deg to compensate for tractor's default orientation
-        simulator.add_robot(tractor_info);
-    } catch (const std::exception &e) {
-        std::cerr << "Failed to load tractor: " << e.what() << std::endl;
+    // Spawn tractor at path start, pointing in +X direction (yaw=0)
+    concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
+    auto tractor_config = agent::Loader::load_from_json(machine_file, spawn_pose);
+    tractor_config.uuid = "mpc_tractor";
+    std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
+
+    // Create agent (rerun connection will be set up automatically after spawn)
+    agent::Agent tractor(host);
+    tractor.set_machine(tractor_config);
+
+    // Spawn in simulator
+    std::cout << "[Agent] Spawning in simulator..." << std::endl;
+    if (!tractor.spawn()) {
+        std::cerr << "[Agent] Failed to spawn. Is simulator_server running?" << std::endl;
         return 1;
     }
+    std::cout << "[Agent] Spawned successfully!" << std::endl;
 
-    auto &tractor = simulator.get_robot(0);
-    std::cout << "Tractor loaded: " << tractor.info.name << std::endl;
+    // Switch to MPC controller (was initialized with PID by default)
+    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPC);
+    tractor.controls().tracker().set_enabled(true);
+    tractor.controls().set_navigation_enabled(true);
 
-    // Test MPC Controller with a challenging S-curve path
     std::cout << "\n--- Testing MPC Controller with S-Curve Path ---" << std::endl;
-    std::cout << "MPC uses Model Predictive Control with lightweight BFGS optimizer" << std::endl;
-    std::cout << "This should show smooth trajectory planning without external solvers" << std::endl;
 
-    // Set controller type to MPC
-    std::cout << "Setting controller to MPC..." << std::endl;
-    tractor.tracker->set_controller_type(drivekit::TrackerType::MPC);
+    // Access MPC follower to configure it
+    auto mpc = dynamic_cast<drivekit::pred::MPCFollower *>(tractor.controls().tracker().tracker()->get_controller());
+    if (mpc) {
+        auto mpc_config = mpc->get_mpc_config();
 
-    // Access the MPC controller directly to configure it
-    auto mpc_controller = dynamic_cast<drivekit::pred::MPCFollower *>(tractor.tracker->get_controller());
-    if (mpc_controller) {
-        auto mpc_config = mpc_controller->get_mpc_config();
+        mpc_config.horizon_steps = 20;
+        mpc_config.dt = 0.1;
+        mpc_config.ref_velocity = 0.8;
 
-        // Configure MPC parameters for the lightweight optimizer
-        // Shorter horizon works better with gradient-based optimization
-        mpc_config.horizon_steps = 15; // Shorter horizon for faster convergence
-        mpc_config.dt = 0.1;           // Time step (seconds)
-        mpc_config.ref_velocity = 0.8; // Reference normalized speed (~80% throttle)
+        // Same weights as old test
+        mpc_config.weight_cte = 200.0;
+        mpc_config.weight_epsi = 150.0;
+        mpc_config.weight_vel = 1.0;
+        mpc_config.weight_steering = 50.0;
+        mpc_config.weight_acceleration = 20.0;
+        mpc_config.weight_steering_rate = 800.0;
+        mpc_config.weight_acceleration_rate = 100.0;
 
-        // Tuned cost weights for smooth control with BFGS optimizer
-        // Key: High steering_rate weight prevents oscillation
-        mpc_config.weight_cte = 200.0;               // Cross-track error (moderate)
-        mpc_config.weight_epsi = 150.0;              // Heading error (moderate)
-        mpc_config.weight_vel = 1.0;                 // Velocity tracking
-        mpc_config.weight_steering = 50.0;           // Penalize large steering angles
-        mpc_config.weight_acceleration = 20.0;       // Penalize large accelerations
-        mpc_config.weight_steering_rate = 800.0;     // HIGH: prevents steering oscillation
-        mpc_config.weight_acceleration_rate = 100.0; // Smooth acceleration changes
+        mpc->set_mpc_config(mpc_config);
 
-        mpc_controller->set_mpc_config(mpc_config);
-
-        std::cout << "MPC Configuration:" << std::endl;
-        std::cout << "  Horizon: " << mpc_config.horizon_steps << " steps ("
-                  << (mpc_config.horizon_steps * mpc_config.dt) << " seconds)" << std::endl;
-        std::cout << "  Time step: " << mpc_config.dt << " seconds" << std::endl;
-        std::cout << "  Reference velocity: " << mpc_config.ref_velocity << " m/s" << std::endl;
-        std::cout << "  CTE weight: " << mpc_config.weight_cte << std::endl;
-        std::cout << "  Heading error weight: " << mpc_config.weight_epsi << std::endl;
+        std::cout << "[MPC] Configuration:" << std::endl;
+        std::cout << "  Horizon: " << mpc_config.horizon_steps << " steps" << std::endl;
+        std::cout << "  Ref velocity: " << mpc_config.ref_velocity << " m/s" << std::endl;
     } else {
-        std::cerr << "Failed to cast to MPC controller!" << std::endl;
+        std::cerr << "[Error] Failed to cast to MPC controller!" << std::endl;
         return 1;
     }
 
-    // Create a challenging S-curve path for MPC
-    // MPC should handle this optimally by predicting future path curvature
-    std::vector<concord::Point> s_curve_path = {
-        {0.0f, 0.0f},   // Start
-        {5.0f, 0.0f},   // Straight section
-        {10.0f, 1.0f},  // Begin curve
-        {15.0f, 3.0f},  //
-        {20.0f, 6.0f},  //
-        {25.0f, 10.0f}, // Peak of first curve
-        {30.0f, 14.0f}, //
-        {35.0f, 17.0f}, //
-        {40.0f, 19.0f}, //
-        {45.0f, 20.0f}, // Transition
-        {50.0f, 19.0f}, // S-curve begins
-        {55.0f, 17.0f}, //
-        {60.0f, 14.0f}, //
-        {65.0f, 10.0f}, // Bottom of S
-        {70.0f, 6.0f},  //
-        {75.0f, 3.0f},  //
-        {80.0f, 1.0f},  //
-        {85.0f, 0.0f},  // Straight section
-        {90.0f, 0.0f}   // End
-    };
+    // Create S-curve path
+    std::vector<concord::Point> s_curve_waypoints = {
+        {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f}, {30.0f, 14.0f},
+        {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f}, {60.0f, 14.0f}, {65.0f, 10.0f},
+        {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},  {90.0f, 0.0f}};
 
-    drivekit::PathGoal path(s_curve_path, 2.0f, 2.0f, false); // Reasonable tolerance
+    drivekit::PathGoal path(s_curve_waypoints, 2.0f, 2.0f, false);
+    tractor.controls().tracker().tracker()->set_path(path);
+    tractor.controls().tracker().tracker()->smoothen(25.0f); // 25cm intervals
 
-    std::cout << "Setting navigation path with " << s_curve_path.size() << " waypoints..." << std::endl;
-    tractor.tracker->set_path(path);
-
-    // Smoothen the path for better MPC performance
-    std::cout << "Smoothening path with 25cm intervals..." << std::endl;
-    tractor.tracker->smoothen(25.0f); // Add points every 25cm for smoother reference trajectory
-
-    std::cout << "Starting MPC path following..." << std::endl;
-    std::cout << "Watch for:" << std::endl;
-    std::cout << "  - Optimal trajectory planning" << std::endl;
-    std::cout << "  - Smooth control actions" << std::endl;
-    std::cout << "  - Predictive behavior on curves" << std::endl;
-    std::cout << "  - Minimal cross-track error" << std::endl;
-
-    auto start_time = std::chrono::steady_clock::now();
-    float dt = 0.016f; // 60 FPS
+    std::cout << "[MPC] Path set with " << s_curve_waypoints.size() << " waypoints" << std::endl;
+    std::cout << "[MPC] Starting path following..." << std::endl;
 
     int step_count = 0;
+    auto start_time = std::chrono::steady_clock::now();
+    float dt = 0.016f; // Fixed 60 FPS like old test
 
-    while (!tractor.tracker->is_path_completed()) {
+    while (!tractor.controls().tracker().tracker()->is_path_completed()) {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
         if (elapsed > 300) { // 5 minute timeout
-            std::cout << "Timeout reached!" << std::endl;
+            std::cout << "[MPC] Timeout reached!" << std::endl;
             break;
         }
 
-        simulator.tick(dt);
-        simulator.tock(5);
+        // Tick agent (blocks until state received)
+        // Navigation is automatic - controller updates inside tick()
+        tractor.tick(dt, 100);
 
-        // Print progress every 2 seconds to see path following behavior
-        if (step_count % 120 == 0) { // Every ~2 seconds at 60 FPS
-            auto target = tractor.tracker->get_current_target();
-            auto pos = tractor.get_position();
-            auto status = mpc_controller->get_status();
+        // Tock for visualization
+        tractor.tock();
 
-            std::cout << "Step " << step_count / 60 << "s: "
-                      << "Robot(" << pos.point.x << "," << pos.point.y << "), "
-                      << "Yaw=" << pos.angle.yaw << ", "
+        // Print progress every 2 seconds
+        if (step_count % 120 == 0) {
+            auto status = mpc->get_status();
+            auto current_pose = tractor.machine().world_pose();
+
+            std::cout << "[MPC] " << step_count / 60 << "s: "
+                      << "Pos(" << current_pose.point.x << "," << current_pose.point.y << "), "
+                      << "Yaw=" << current_pose.angle.yaw << ", "
                       << "CTE=" << status.cross_track_error << "m, "
-                      << "Heading Error=" << (status.heading_error * 180.0 / M_PI) << "deg" << std::endl;
+                      << "HeadingErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }
 
         step_count++;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
+        // Sleep to match 60 FPS like old test
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    if (tractor.tracker->is_path_completed()) {
-        std::cout << "\n✅ MPC successfully completed the S-curve path!" << std::endl;
-        std::cout << "Check Rerun visualization to see the optimal trajectory planning." << std::endl;
-        std::cout << "Statistics:" << std::endl;
-        std::cout << "  Total time: " << step_count / 60.0f << " seconds" << std::endl;
+    if (tractor.controls().tracker().tracker()->is_path_completed()) {
+        std::cout << "\n[MPC] Successfully completed S-curve path!" << std::endl;
+        std::cout << "[MPC] Total time: " << step_count / 60.0f << " seconds" << std::endl;
     } else {
-        std::cout << "\n❌ MPC did not complete the path within timeout." << std::endl;
+        std::cout << "\n[MPC] Did not complete path within timeout" << std::endl;
     }
 
-    auto final_pos = tractor.get_position();
-    std::cout << "Final position: (" << final_pos.point.x << ", " << final_pos.point.y << ")" << std::endl;
+    auto final_pose = tractor.machine().world_pose();
+    std::cout << "[MPC] Final position: (" << final_pose.point.x << ", " << final_pose.point.y << ")" << std::endl;
+
+    tractor.despawn();
+    std::cout << "[Agent] Done" << std::endl;
 
     return 0;
 }

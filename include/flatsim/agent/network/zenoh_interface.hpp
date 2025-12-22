@@ -1,0 +1,43 @@
+#pragma once
+
+#include "flatsim/agent/network/interface.hpp"
+#include <string>
+#include <vector>
+
+namespace fs::network {
+
+    /**
+     * @brief Zenoh interface for high-performance P2P communication
+     *
+     * TODO: Implement Zenoh protocol integration
+     * - Zenoh pub/sub with key expressions
+     * - Automatic peer discovery via Zenoh scouting
+     * - Content-based routing with spatial/temporal filters
+     * - Sub-millisecond latency, high throughput
+     *
+     * Use case: High-performance, scalable P2P communication for field robots
+     */
+    class ZenohInterface : public Interface {
+      private:
+        std::string robot_uuid_;
+        bool initialized_ = false;
+        std::vector<std::string> connected_peers_;
+
+      public:
+        ZenohInterface() = default;
+        ~ZenohInterface() override = default;
+
+        bool init(const std::string &robot_uuid) override;
+        void cleanup() override;
+        void tick(float dt) override;
+        bool is_ready() const override;
+        std::string get_type() const override;
+        bool connect_to_peer(const std::string &peer_uuid) override;
+        void disconnect_from_peer(const std::string &peer_uuid) override;
+        std::vector<std::string> get_connected_peers() const override;
+        void send_bytes(const std::vector<uint8_t> &data) override;
+        void send_bytes_to_peer(const std::string &peer_uuid, const std::vector<uint8_t> &data) override;
+        std::vector<std::vector<uint8_t>> receive_bytes() override;
+    };
+
+} // namespace fs::network
