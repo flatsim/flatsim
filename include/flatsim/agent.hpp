@@ -6,7 +6,6 @@
 #include <rerun.hpp>
 #include <zmq.hpp>
 
-#include "flatsim/agent/control_manager.hpp"
 #include "flatsim/agent/machine.hpp"
 #include "flatsim/types.hpp"
 
@@ -28,9 +27,8 @@ namespace agent {
         std::unique_ptr<zmq::socket_t> heartbeat_socket_; // PUSH - for heartbeats
         std::string address_;
 
-        // Core components
+        // Core component - Machine contains all managers (sensors, controls, network, etc.)
         Machine machine_;
-        ControlManager control_manager_;
         bool spawned_ = false;
 
         // Speed control
@@ -60,14 +58,14 @@ namespace agent {
         bool spawn();
         bool despawn();
 
-        // Control interface
+        // Control interface (delegates to machine.controls)
         void set_linear(float linear);
         void set_angular(float angular);
         void set_velocity(float linear, float angular);
 
-        // Control manager access
-        ControlManager &controls() { return control_manager_; }
-        const ControlManager &controls() const { return control_manager_; }
+        // Control manager access (delegates to machine.controls)
+        ControlManager &controls() { return machine_.controls; }
+        const ControlManager &controls() const { return machine_.controls; }
 
         // Tick/tock pattern
         // Networked mode: tick() blocks until state message received from simulator
@@ -90,9 +88,9 @@ namespace agent {
         // Convenience API (shortcuts to avoid deep nesting)
         // ============================================================================
 
-        // Direct access to drivekit::Tracker (shortcut for controls().tracker().tracker())
-        drivekit::Tracker *tracker() { return control_manager_.tracker().tracker(); }
-        const drivekit::Tracker *tracker() const { return control_manager_.tracker().tracker(); }
+        // Direct access to drivekit::Tracker (shortcut for machine().tracker())
+        drivekit::Tracker *tracker() { return machine_.tracker(); }
+        const drivekit::Tracker *tracker() const { return machine_.tracker(); }
 
         // Position/pose (alias for machine().world_pose())
         const concord::Pose &get_position() const { return machine_.world_pose(); }
@@ -120,15 +118,15 @@ namespace agent {
         // Set teleport callback (called by Simulator in LOCAL mode)
         void set_teleport_callback(TeleportCallback cb) { teleport_callback_ = std::move(cb); }
 
-        // Navigation enable/disable (shortcut for controls().set_navigation_enabled())
-        void set_navigation_enabled(bool enabled) { control_manager_.set_navigation_enabled(enabled); }
-        bool is_navigation_enabled() const { return control_manager_.is_navigation_enabled(); }
+        // Navigation enable/disable (shortcut for machine().set_navigation_enabled())
+        void set_navigation_enabled(bool enabled) { machine_.set_navigation_enabled(enabled); }
+        bool is_navigation_enabled() const { return machine_.is_navigation_enabled(); }
 
         // UUID access
         const std::string &uuid() const { return machine_.uuid(); }
 
         // Name access
-        const std::string &name() const { return machine_.config().name; }
+        const std::string &name() const { return machine_.name(); }
 
       private:
         // Transport abstraction - handles LOCAL vs IPC/TCP internally

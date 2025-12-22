@@ -109,6 +109,7 @@ namespace simulator {
 
         // LOCAL mode: Spawn agent directly (returns reference)
         agent::Agent &spawn_agent(const std::filesystem::path &json_path, concord::Pose spawn_pose,
+                                  std::optional<std::string> uuid = std::nullopt,
                                   std::optional<pigment::RGB> color = std::nullopt);
 
         // LOCAL mode: Get agent by uuid

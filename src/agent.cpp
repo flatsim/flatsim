@@ -49,8 +49,8 @@ namespace agent {
         // Initialize machine with config
         machine_ = Machine(rec_, config);
 
-        // Initialize control manager (includes tracker initialization)
-        control_manager_.init(&machine_.config_mut(), rec_);
+        // Initialize all managers (sensors, controls, network, power, container)
+        machine_.init();
 
         std::cout << "[Agent] LOCAL mode: Created agent for " << config.name << " (" << config.uuid << ")" << std::endl;
     }
@@ -69,7 +69,10 @@ namespace agent {
         ctx_.close();
     }
 
-    void Agent::set_machine(const types::Machine &config) { machine_ = Machine(rec_, config); }
+    void Agent::set_machine(const types::Machine &config) {
+        machine_ = Machine(rec_, config);
+        machine_.init();
+    }
 
     bool Agent::spawn() {
         types::ser::Request req;
@@ -132,8 +135,9 @@ namespace agent {
                     std::cerr << "[Agent] Warning: Failed to connect to Rerun Viewer" << std::endl;
                 }
 
-                // Update machine with rerun
+                // Update machine with rerun and initialize all managers
                 machine_ = Machine(rec_, machine_.config());
+                machine_.init();
 
                 // Update state from response
                 for (const auto &ms : resp->state.machines) {
@@ -142,9 +146,6 @@ namespace agent {
                         break;
                     }
                 }
-
-                // Initialize control manager (includes tracker initialization)
-                control_manager_.init(&machine_.config_mut(), rec_);
 
                 spawned_ = true;
                 std::cout << "[Agent] Spawn successful" << std::endl;
@@ -181,13 +182,13 @@ namespace agent {
         return false;
     }
 
-    void Agent::set_linear(float linear) { control_manager_.set_linear(linear); }
+    void Agent::set_linear(float linear) { machine_.controls.set_linear(linear); }
 
-    void Agent::set_angular(float angular) { control_manager_.set_angular(angular); }
+    void Agent::set_angular(float angular) { machine_.controls.set_angular(angular); }
 
     void Agent::set_velocity(float linear, float angular) {
-        control_manager_.set_linear(linear);
-        control_manager_.set_angular(angular);
+        machine_.controls.set_linear(linear);
+        machine_.controls.set_angular(angular);
     }
 
     void Agent::tick(float dt, int timeout_ms) {
@@ -197,8 +198,8 @@ namespace agent {
 
         if (local_mode_) {
             // LOCAL MODE: State is already updated by Simulator via update_from_physics()
-            // Just run navigation/MPC to compute controls
-            control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
+            // Machine.tick() handles all manager updates (sensors, controls, network, etc.)
+            machine_.tick(dt);
             return;
         }
 
@@ -228,17 +229,14 @@ namespace agent {
             if (ms && std::string(ms->uuid.view()) == machine_.uuid()) {
                 // Update machine state from simulator
                 machine_.update_state(*ms);
-
-                // Call machine tick to process state update
-                machine_.tick(dt);
             }
         }
 
-        // Update control manager with FRESH pose (includes navigation update if enabled)
-        control_manager_.tick(machine_.world_pose(), machine_.linear_velocity(), machine_.angular_velocity(), dt);
+        // Call machine tick to process state update and run all managers
+        machine_.tick(dt);
 
-        // Get current control from control manager and send to simulator
-        auto wheel_ctrl = control_manager_.get_wheel_control();
+        // Get current control from machine's control manager and send to simulator
+        auto wheel_ctrl = machine_.controls.get_wheel_control();
         auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
         auto ctrl_data = cista::serialize(ctrl_ser);
         control_socket_->send(zmq::buffer(ctrl_data), zmq::send_flags::dontwait);
@@ -249,22 +247,16 @@ namespace agent {
             return;
         }
 
-        // Call machine tock for visualization
+        // Call machine tock for visualization (container, tracker, etc.)
         machine_.tock();
-
-        // Call control manager tock for tracker visualization
-        control_manager_.tock(rec_);
     }
 
     // LOCAL mode: Update state from physics (called by Simulator)
-    void Agent::update_from_physics(const types::ser::MachineState &state) {
-        machine_.update_state(state);
-        machine_.tick(0.0f); // Process state update
-    }
+    void Agent::update_from_physics(const types::ser::MachineState &state) { machine_.update_state(state); }
 
     // LOCAL mode: Get current wheel control (called by Simulator)
     types::WheelControl Agent::get_wheel_control() const {
-        auto ctrl = control_manager_.get_wheel_control();
+        auto ctrl = machine_.controls.get_wheel_control();
         // Apply speed scale to throttle
         for (auto &t : ctrl.throttle) {
             t *= speed_scale_;
@@ -274,8 +266,8 @@ namespace agent {
 
     void Agent::brake() {
         // Set zero velocity and apply brake
-        control_manager_.set_linear(0.0f);
-        control_manager_.set_angular(0.0f);
+        machine_.controls.set_linear(0.0f);
+        machine_.controls.set_angular(0.0f);
         // TODO: When brake force is implemented in WheelControl, set it here
     }
 

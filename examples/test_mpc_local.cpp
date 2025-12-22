@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
         auto mpc_config = mpc->get_mpc_config();
 
         mpc_config.horizon_steps = 20;
-        mpc_config.dt = 0.1;
+        mpc_config.dt = 0.05;
         mpc_config.ref_velocity = 0.8;
 
         // Weights

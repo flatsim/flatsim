@@ -24,6 +24,14 @@ namespace fs {
         Network();
         ~Network();
 
+        // Prevent copying (unique_ptr members)
+        Network(const Network &) = delete;
+        Network &operator=(const Network &) = delete;
+
+        // Allow moving
+        Network(Network &&) = default;
+        Network &operator=(Network &&) = default;
+
         // Interface Management
         void add_interface(std::unique_ptr<network::Interface> interface);
         void remove_interface(const std::string &interface_type);
