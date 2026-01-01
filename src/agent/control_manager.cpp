@@ -110,7 +110,7 @@ namespace agent {
         return ctrl;
     }
 
-    void ControlManager::update_navigation(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+    void ControlManager::update_navigation(const datapod::Pose &current_pose, float linear_vel, float angular_vel,
                                            float dt) {
         // Update tracker to get velocity command
         auto [linear, angular] = tracker_.update(current_pose, linear_vel, angular_vel, dt);
@@ -122,7 +122,7 @@ namespace agent {
         set_angular(-angular);
     }
 
-    void ControlManager::tick(const concord::Pose &current_pose, float linear_vel, float angular_vel, float dt) {
+    void ControlManager::tick(const datapod::Pose &current_pose, float linear_vel, float angular_vel, float dt) {
         // Update navigation if enabled
         if (navigation_enabled_ && tracker_.is_enabled()) {
             update_navigation(current_pose, linear_vel, angular_vel, dt);

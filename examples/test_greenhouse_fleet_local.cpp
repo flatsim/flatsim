@@ -6,24 +6,42 @@
 //   ./build/linux/x86_64/release/test_greenhouse_fleet_local
 
 #include <algorithm>
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <fstream>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <map>
+#include "flatsim/utils.hpp"
 #include <mutex>
+#include "flatsim/utils.hpp"
 #include <queue>
+#include "flatsim/utils.hpp"
 #include <random>
+#include "flatsim/utils.hpp"
 #include <set>
+#include "flatsim/utils.hpp"
 #include <sstream>
+#include "flatsim/utils.hpp"
 #include <string>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
+#include "flatsim/utils.hpp"
 #include <rerun.hpp>
+#include "flatsim/utils.hpp"
 
 // =============================================================================
 // Graph structures (loaded from YAML)
@@ -55,7 +73,7 @@ struct NavGraph {
     float offset_x() const { return -width / 2.0f; }
     float offset_y() const { return -length / 2.0f; }
 
-    concord::Point to_world(float x, float y) const { return {x + offset_x(), y + offset_y()}; }
+    datapod::Point to_world(float x, float y) const { return {x + offset_x(), y + offset_y()}; }
 
     void build_adjacency() {
         adjacency.clear();
@@ -470,7 +488,7 @@ int main(int argc, char **argv) {
     (void)rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy");
     rec->log("", rerun::Clear::RECURSIVE);
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(200.0f, 200.0f, datum, rec);
 
     std::vector<pigment::RGB> colors = {{255, 80, 80}, {80, 255, 80}, {80, 80, 255}};
@@ -503,7 +521,7 @@ int main(int argc, char **argv) {
         auto spawn_pos = graph.to_world(start_node->x, start_node->y);
         const std::string uuid = generate_uuid();
 
-        auto &robot = sim.spawn_agent("examples/machines/husky.json", concord::Pose(spawn_pos.x, spawn_pos.y, 0.0f),
+        auto &robot = sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f),
                                       uuid, colors[i]);
         robots.push_back(&robot);
         robot.set_speed(0.3f);
@@ -554,7 +572,7 @@ int main(int argc, char **argv) {
                     task.current_path_index = 0;
                     task.state = RobotState::MOVING;
 
-                    std::vector<concord::Point> waypoints;
+                    std::vector<datapod::Point> waypoints;
                     for (int node_id : path) {
                         const auto *node = graph.get_node(node_id);
                         if (node) {

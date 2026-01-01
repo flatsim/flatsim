@@ -45,7 +45,7 @@ namespace simulator {
 
         // Tick/tock pattern
         void tick(float dt);
-        void tock(concord::Datum datum);
+        void tock(datapod::Geo datum);
 
         // Get state for feedback
         types::ser::MachineState get_state() const;
@@ -54,7 +54,7 @@ namespace simulator {
         const types::SensorData &get_sensor_data() const { return sensor_data_; }
 
         // Update sensor data using Data helper
-        void update_sensors(Data &data, const concord::Datum &datum, float dt);
+        void update_sensors(Data &data, const datapod::Geo &datum, float dt);
 
         // Find hitch by name
         Hitch *find_hitch(const std::string &name);
@@ -71,7 +71,7 @@ namespace simulator {
         const muli::CollisionFilter &get_filter() const { return filter_; }
 
         // Teleport machine to new pose
-        void teleport(const concord::Pose &pose);
+        void teleport(const datapod::Pose &pose);
 
         // Apply braking
         void brake(float brake_force);

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
 #include <algorithm>

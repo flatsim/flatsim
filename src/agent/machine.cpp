@@ -1,4 +1,5 @@
 #include "flatsim/agent/machine.hpp"
+#include "flatsim/utils.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -34,16 +35,16 @@ namespace agent {
     }
 
     void Machine::update_state(const types::ser::MachineState &state) {
-        world_pose_ = state.pose.to_concord();
+        world_pose_ = state.pose.to_datapod();
         // Compute forward velocity along heading from 2D velocity vector
-        float yaw = world_pose_.angle.yaw;
+        float yaw = utils::get_yaw(world_pose_);
         linear_velocity_ = state.velocity.x * std::cos(yaw) + state.velocity.y * std::sin(yaw);
         angular_velocity_ = state.angular_vel;
     }
 
     void Machine::tick(float dt) {
         // Update sensors with current pose and physics data (fallback when no simulator data)
-        float yaw = world_pose_.angle.yaw;
+        float yaw = utils::get_yaw(world_pose_);
         float vel_x = linear_velocity_ * std::cos(yaw);
         float vel_y = linear_velocity_ * std::sin(yaw);
         sensors.update_all_with_physics(world_pose_, vel_x, vel_y, angular_velocity_, dt);

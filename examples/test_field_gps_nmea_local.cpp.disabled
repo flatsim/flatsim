@@ -5,6 +5,7 @@
 // Run:
 //   ./build/linux/x86_64/release/test_field_gps_nmea_local
 
+#include "flatsim/utils.hpp"
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -12,17 +13,18 @@
 #include <thread>
 #include <vector>
 
-#include "concord/concord.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/sensor/gps_sensor.hpp"
 #include "flatsim/agent/sensor/imu_sensor.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
 
 #include "farmtrax/divy.hpp"
 #include "farmtrax/field.hpp"
 #include "farmtrax/graph.hpp"
 #include "farmtrax/turners/dubins.hpp"
+#include "flatsim/utils.hpp"
 
 // Different colors for each robot
 static const std::vector<pigment::RGB> ROBOT_COLORS = {
@@ -32,9 +34,10 @@ static const std::vector<pigment::RGB> ROBOT_COLORS = {
 };
 
 // Generate smooth path with Dubins curves between swath endpoints
-static std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths,
-                                                        float turning_radius, float step_size = 0.5f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point>
+generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths, float turning_radius,
+                     float step_size = 0.5f) {
+    std::vector<datapod::Point> path;
     if (swaths.empty()) return path;
 
     farmtrax::turners::Dubins dubins(turning_radius);
@@ -63,13 +66,13 @@ static std::vector<concord::Point> generate_dubins_path(const std::vector<std::s
             const float dy_next = next_swath->line.getEnd().y - next_swath->line.getStart().y;
             const float yaw_start = std::atan2(dy_next, dx_next);
 
-            concord::Pose start_pose;
+            datapod::Pose start_pose;
             start_pose.point = swath->line.getEnd();
-            start_pose.angle.yaw = yaw_end;
+            utils::set_yaw(start_pose, yaw_end);
 
-            concord::Pose end_pose;
+            datapod::Pose end_pose;
             end_pose.point = next_swath->line.getStart();
-            end_pose.angle.yaw = yaw_start;
+            utils::set_yaw(end_pose, yaw_start);
 
             auto dubins_path = dubins.plan_path(start_pose, end_pose, step_size);
             for (size_t j = 1; j + 1 < dubins_path.waypoints.size(); ++j) {
@@ -90,18 +93,18 @@ int main(int argc, char **argv) {
     const int num_machines = 1; // This migrated demo keeps the original default.
     std::cout << "Number of machines: " << num_machines << "\n";
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
     // Create a large square field that leaves only 1/6th of world as border.
     // World is 500x500 centered at 0,0 (so -250 to +250).
     // Border: 500/6 ~= 83m => field spans roughly [-167, +167].
-    concord::Polygon poly;
-    poly.addPoint(concord::Point{-167.0, -167.0, 0.0});
-    poly.addPoint(concord::Point{167.0, -167.0, 0.0});
-    poly.addPoint(concord::Point{167.0, 167.0, 0.0});
-    poly.addPoint(concord::Point{-167.0, 167.0, 0.0});
-    poly.addPoint(concord::Point{-167.0, -167.0, 0.0});
+    datapod::Polygon poly;
+    poly.addPoint(datapod::Point{-167.0, -167.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{167.0, -167.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{167.0, 167.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{-167.0, 167.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{-167.0, -167.0, 0.0, 0.0});
 
     farmtrax::Field field(poly, datum, true, 100000.0);
     field.gen_field(18.0, 0.0, 1);
@@ -119,7 +122,7 @@ int main(int argc, char **argv) {
     auto &res = divy.result();
 
     float turning_radius = 5.0f;
-    std::vector<concord::Point> path;
+    std::vector<datapod::Point> path;
 
     // Load tractors and assign paths (kept single-machine by default).
     if (!res.swaths_per_machine.empty() && !res.swaths_per_machine.at(0).empty()) {
@@ -142,9 +145,7 @@ int main(int argc, char **argv) {
     const auto color = ROBOT_COLORS[0];
 
     auto &tractor = sim.spawn_agent("examples/machines/tractor.json",
-                                    concord::Pose(spawn_x, spawn_y, spawn_yaw - 1.5708f),
-                                    uuid,
-                                    color);
+                                    utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f), uuid, color);
 
     std::cout << "Robot UUID: " << tractor.uuid() << "\n";
     std::cout << "GPS SHM path: /dev/shm/flatsim_" << tractor.uuid() << "_GPS\n";
@@ -187,7 +188,8 @@ int main(int argc, char **argv) {
     bool phtg = false;
 
     while (true) {
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
 
         sim.tick(dt);
         sim.tock();
@@ -198,7 +200,8 @@ int main(int argc, char **argv) {
             if (gps_sensor) {
                 phtg = !phtg;
                 gps_sensor->set_phtg_status(phtg);
-                std::cout << "\n*** PHTG status toggled to: " << (phtg ? "ENABLED" : "DISABLED") << " ***\n" << std::endl;
+                std::cout << "\n*** PHTG status toggled to: " << (phtg ? "ENABLED" : "DISABLED") << " ***\n"
+                          << std::endl;
             }
         }
 

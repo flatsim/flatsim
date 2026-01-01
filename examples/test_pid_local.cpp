@@ -7,6 +7,7 @@
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -16,8 +17,8 @@
 #include <thread>
 #include <vector>
 
-static std::vector<concord::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
         const float x = offset_x + t * 40.0f * scale;
@@ -27,8 +28,8 @@ static std::vector<concord::Point> generate_s_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_u_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_u_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
         const float angle = static_cast<float>(M_PI) * t;
@@ -39,8 +40,8 @@ static std::vector<concord::Point> generate_u_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_o_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_o_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 24; ++i) {
         const float t = i / 24.0f;
         const float angle = 2.0f * static_cast<float>(M_PI) * t;
@@ -51,8 +52,8 @@ static std::vector<concord::Point> generate_o_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_l_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_l_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 10; ++i) {
         const float y = offset_y + i * 3.0f * scale;
         path.push_back({offset_x, y});
@@ -76,11 +77,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    const std::vector<concord::Point> spawn_positions = {
-        {-50.0f, -50.0f}, {50.0f, -50.0f}, {-50.0f, 50.0f}, {50.0f, 50.0f},
+    const std::vector<datapod::Point> spawn_positions = {
+        {-50.0f, -50.0f},
+        {50.0f, -50.0f},
+        {-50.0f, 50.0f},
+        {50.0f, 50.0f},
     };
     const std::vector<pigment::RGB> colors = {
         {255, 0, 0},
@@ -94,14 +98,14 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < 4; ++i) {
         const auto uuid = std::string("pid_") + std::to_string(i);
-        const concord::Pose spawn_pose(spawn_positions[i].x, spawn_positions[i].y, 0.0f);
+        const datapod::Pose spawn_pose = utils::make_pose_2d(spawn_positions[i].x, spawn_positions[i].y, 0.0f);
         auto &tractor = sim.spawn_agent(machine_file, spawn_pose, uuid, colors[i]);
         tractors.push_back(&tractor);
         std::cout << "[Spawn] Tractor " << i << " uuid=" << tractor.uuid() << " at (" << spawn_positions[i].x << ","
                   << spawn_positions[i].y << ")\n";
     }
 
-    const std::vector<std::vector<concord::Point>> paths = {
+    const std::vector<std::vector<datapod::Point>> paths = {
         generate_s_shape(spawn_positions[0].x, spawn_positions[0].y, 1.0f),
         generate_u_shape(spawn_positions[1].x, spawn_positions[1].y, 1.0f),
         generate_o_shape(spawn_positions[2].x, spawn_positions[2].y, 1.0f),
@@ -205,4 +209,3 @@ int main(int argc, char **argv) {
     std::cout << "\n=== Test Complete ===" << std::endl;
     return 0;
 }
-

@@ -10,19 +10,32 @@
 //   ./build/linux/x86_64/release/test_sensors_joystick_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/gps_sensor.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/imu_sensor.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "rerun/recording_stream.hpp"
+#include "flatsim/utils.hpp"
 
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <fcntl.h>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <linux/joystick.h>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <unistd.h>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -58,12 +71,12 @@ int main(int argc, char **argv) {
     rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
     // Create simulator in LOCAL mode (single process)
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum, rec);
 
     // Spawn tractor with a stable UUID for SHM paths
     constexpr float kSpawnYaw = -static_cast<float>(std::numbers::pi / 2.0);
-    auto &tractor = sim.spawn_agent("examples/machines/tractor.json", concord::Pose(0.0, 0.0, kSpawnYaw),
+    auto &tractor = sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(0.0, 0.0, kSpawnYaw),
                                     std::string("test_sensors_joy"));
 
     std::cout << "Tractor loaded: " << tractor.name() << " (UUID: " << tractor.uuid() << ")" << std::endl;

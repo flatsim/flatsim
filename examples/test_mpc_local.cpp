@@ -7,13 +7,21 @@
 // eliminating IPC latency for tighter control loops.
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <filesystem>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -24,14 +32,14 @@ int main(int argc, char **argv) {
     std::filesystem::path machine_file = "examples/machines/tractor.json";
 
     // GPS datum (reference point for local <-> WGS84 conversion)
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
     // Create simulator in LOCAL mode (no IPC/TCP)
     simulator::Simulator sim(200, 200, datum); // 200x200 meter world
     std::cout << "[Simulator] Created in LOCAL mode" << std::endl;
 
     // Spawn tractor at path start
-    concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg
     auto &tractor = sim.spawn_agent(machine_file.string(), spawn_pose);
     std::cout << "[Simulator] Spawned tractor: " << tractor.name() << std::endl;
 
@@ -71,7 +79,7 @@ int main(int argc, char **argv) {
     }
 
     // Create S-curve path
-    std::vector<concord::Point> s_curve_waypoints = {
+    std::vector<datapod::Point> s_curve_waypoints = {
         {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f}, {30.0f, 14.0f},
         {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f}, {60.0f, 14.0f}, {65.0f, 10.0f},
         {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},  {90.0f, 0.0f}};
@@ -107,7 +115,7 @@ int main(int argc, char **argv) {
 
             std::cout << "[MPC] " << step_count / 60 << "s: "
                       << "Pos(" << pos.point.x << "," << pos.point.y << "), "
-                      << "Yaw=" << pos.angle.yaw << ", "
+                      << "Yaw=" << utils::get_yaw(pos) << ", "
                       << "CTE=" << status.cross_track_error << "m, "
                       << "HeadingErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }

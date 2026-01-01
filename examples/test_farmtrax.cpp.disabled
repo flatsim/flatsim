@@ -5,6 +5,7 @@
 // Run:
 //   ./build/linux/x86_64/release/test_farmtrax
 
+#include "flatsim/utils.hpp"
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -12,10 +13,10 @@
 #include <thread>
 #include <vector>
 
-#include "concord/concord.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun/recording_stream.hpp"
 
@@ -23,6 +24,7 @@
 #include "farmtrax/field.hpp"
 #include "farmtrax/graph.hpp"
 #include "farmtrax/turners/dubins.hpp"
+#include "flatsim/utils.hpp"
 
 // Different colors for each robot
 const std::vector<pigment::RGB> ROBOT_COLORS = {
@@ -37,7 +39,7 @@ const std::vector<pigment::RGB> ROBOT_COLORS = {
 };
 
 // Calculate distance between two robots
-float calculate_distance(const concord::Pose &p1, const concord::Pose &p2) {
+float calculate_distance(const datapod::Pose &p1, const datapod::Pose &p2) {
     float dx = p1.point.x - p2.point.x;
     float dy = p1.point.y - p2.point.y;
     return std::sqrt(dx * dx + dy * dy);
@@ -51,7 +53,7 @@ float get_robot_size(const agent::Agent &robot) {
 }
 
 // Check if LIDAR detects an obstacle in front within the given range
-float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, const concord::Pose &robot_pose,
+float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, const datapod::Pose &robot_pose,
                           std::shared_ptr<rerun::RecordingStream> rec, const std::string &robot_id, pigment::RGB color,
                           bool debug_output = false) {
     if (!lidar) {
@@ -80,7 +82,7 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
         bool is_valid_hit = data.valid[i] && range < data.max_range * 0.99f;
         bool is_forward = std::abs(angle) <= forward_angle_range;
 
-        float world_angle = robot_pose.angle.yaw + angle;
+        float world_angle = utils::get_yaw(robot_pose) + angle;
 
         float start_x = robot_pose.point.x;
         float start_y = robot_pose.point.y;
@@ -128,9 +130,9 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
 }
 
 // Generate smooth path with Dubins curves between swath endpoints
-std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths,
+std::vector<datapod::Point> generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &swaths,
                                                  float turning_radius, float step_size = 0.5f) {
-    std::vector<concord::Point> path;
+    std::vector<datapod::Point> path;
 
     if (swaths.empty()) return path;
 
@@ -162,11 +164,11 @@ std::vector<concord::Point> generate_dubins_path(const std::vector<std::shared_p
             float dy_next = next_swath->line.getEnd().y - next_swath->line.getStart().y;
             float yaw_start = std::atan2(dy_next, dx_next);
 
-            concord::Pose start_pose;
+            datapod::Pose start_pose;
             start_pose.point = swath->line.getEnd();
             start_pose.angle.yaw = yaw_end;
 
-            concord::Pose end_pose;
+            datapod::Pose end_pose;
             end_pose.point = next_swath->line.getStart();
             end_pose.angle.yaw = yaw_start;
 
@@ -194,16 +196,16 @@ int main() {
     rec->log("", rerun::Clear::RECURSIVE);
 
     // Create simulator with Rerun
-    concord::Datum world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500, 500, world_datum, rec);
 
     // Create a simple square field (100m x 100m)
-    concord::Polygon poly;
-    poly.addPoint(concord::Point{0.0, 0.0, 0.0});
-    poly.addPoint(concord::Point{100.0, 0.0, 0.0});
-    poly.addPoint(concord::Point{100.0, 100.0, 0.0});
-    poly.addPoint(concord::Point{0.0, 100.0, 0.0});
-    poly.addPoint(concord::Point{0.0, 0.0, 0.0});
+    datapod::Polygon poly;
+    poly.addPoint(datapod::Point{0.0, 0.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{100.0, 0.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{100.0, 100.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{0.0, 100.0, 0.0, 0.0});
+    poly.addPoint(datapod::Point{0.0, 0.0, 0.0, 0.0});
 
     std::cout << "Creating square field (100m x 100m)\n";
 
@@ -254,7 +256,7 @@ int main() {
         const auto &swaths = nety.get_swaths();
         std::cout << "Optimized swaths: " << swaths.size() << "\n";
 
-        std::vector<concord::Point> path = generate_dubins_path(swaths, turning_radius, 0.5f);
+        std::vector<datapod::Point> path = generate_dubins_path(swaths, turning_radius, 0.5f);
 
         if (path.empty()) {
             std::cout << "Machine " << m << " has empty path after optimization\n";
@@ -275,7 +277,7 @@ int main() {
 
         // Spawn tractor with unique UUID and color
         std::string uuid = "tractor_" + std::to_string(m);
-        concord::Pose spawn_pose(spawn_x, spawn_y, spawn_yaw - 1.5708f);
+        datapod::Pose spawn_pose(spawn_x, spawn_y, spawn_yaw - 1.5708f);
         auto &tractor =
             sim.spawn_agent("examples/machines/tractor.json", spawn_pose, uuid, ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 

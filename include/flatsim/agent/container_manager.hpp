@@ -105,7 +105,7 @@ namespace fs {
         /**
          * @brief Update container (for visualization)
          */
-        void tick(double dt, const concord::Pose &pose) {
+        void tick(double dt, const datapod::Pose &pose) {
             if (container) container->tick(dt, pose);
         }
 

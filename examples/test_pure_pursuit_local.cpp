@@ -6,12 +6,19 @@
 //   ./build/linux/x86_64/release/test_pure_pursuit_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <filesystem>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -25,10 +32,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    concord::Pose spawn_pose(-5.0, -5.0, 0.0f);
+    datapod::Pose spawn_pose = utils::make_pose_2d(-5.0, -5.0, 0.0f);
     auto &tractor = sim.spawn_agent(machine_file, spawn_pose, "pure_pursuit_0");
     std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
 
@@ -43,7 +50,7 @@ int main(int argc, char **argv) {
     params.lookahead_gain = 1.0f;
     tractor.tracker()->set_controller_params(params);
 
-    std::vector<concord::Point> curved_path = {
+    std::vector<datapod::Point> curved_path = {
         {5.0f, 0.0f},   {8.0f, 1.0f},   {12.0f, 3.0f},  {16.0f, 6.0f},  {20.0f, 10.0f}, {24.0f, 15.0f},
         {28.0f, 21.0f}, {32.0f, 28.0f}, {35.0f, 35.0f}, {37.0f, 42.0f}, {38.0f, 49.0f}, {37.0f, 56.0f},
         {35.0f, 62.0f}, {32.0f, 67.0f}, {28.0f, 71.0f}, {23.0f, 74.0f}, {18.0f, 76.0f}, {12.0f, 77.0f},
@@ -77,7 +84,7 @@ int main(int argc, char **argv) {
             auto target = tractor.tracker()->get_current_target();
             auto pos = tractor.get_position();
             std::cout << (step_count / 60) << "s: Target(" << target.x << "," << target.y << "), Robot(" << pos.point.x
-                      << "," << pos.point.y << "), Yaw=" << pos.angle.yaw << "\n";
+                      << "," << pos.point.y << "), Yaw=" << utils::get_yaw(pos) << "\n";
         }
         step_count++;
         std::this_thread::sleep_for(std::chrono::milliseconds(16));

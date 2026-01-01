@@ -16,8 +16,8 @@ namespace simulator {
         std::string name;
         std::string parent_name;
         pigment::RGB color;
-        concord::Bound bound;
-        concord::Pose pose;
+        datapod::Box bound;
+        datapod::Pose pose;
         muli::CollisionFilter filter;
         types::Machine *robot_info = nullptr;
         types::State *robot_state = nullptr;
@@ -41,17 +41,17 @@ namespace simulator {
         Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
               muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound bound, concord::Bound parent_bound, float _force, float _friction, float _maxImpulse,
+                  datapod::Box bound, datapod::Box parent_bound, float _force, float _friction, float _maxImpulse,
                   float _brake, float _drag, float throttle_max, float steering_max);
 
         void tick(float dt);
         void tock();
-        void teleport(concord::Pose pose);
+        void teleport(datapod::Pose pose);
         void destroy();
         void update(float steering, float throttle, muli::MotorJoint *joint, float dt);
         void configure_physics_for_size();
 
-        concord::Bound get_bound() const { return bound; }
+        datapod::Box get_bound() const { return bound; }
 
         // Accessors for external access
         void set_linear_damping(float damping) {

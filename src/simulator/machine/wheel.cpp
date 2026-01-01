@@ -7,8 +7,8 @@ namespace simulator {
         : world(world), rec(rec), filter(filter), robot_info(robot_info), robot_state(robot_state) {}
 
     void Wheel::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                     concord::Bound parent_bound, concord::Bound bound, float _force, float _friction,
-                     float _maxImpulse, float _brake, float _drag, float throttle_max, float steering_max) {
+                     datapod::Box parent_bound, datapod::Box bound, float _force, float _friction, float _maxImpulse,
+                     float _brake, float _drag, float throttle_max, float steering_max) {
         this->bound = bound;
         this->color = color;
         this->name = name;
@@ -130,7 +130,7 @@ namespace simulator {
         }
     }
 
-    void Wheel::teleport(concord::Pose trans_pose) {
+    void Wheel::teleport(datapod::Pose trans_pose) {
         wheel->SetTransform(utils::pose_to_transform(trans_pose));
         wheel->SetSleeping(true);
     }

@@ -72,11 +72,11 @@ namespace simulator {
         }
     }
 
-    concord::Point DynamicObstacle::predict(double t) const {
+    datapod::Point DynamicObstacle::predict(double t) const {
         if (!config_.is_active) {
             return config_.position;
         }
-        return concord::Point{config_.position.x + config_.velocity.x * t, config_.position.y + config_.velocity.y * t,
+        return datapod::Point{config_.position.x + config_.velocity.x * t, config_.position.y + config_.velocity.y * t,
                               config_.position.z};
     }
 

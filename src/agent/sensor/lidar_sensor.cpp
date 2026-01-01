@@ -38,7 +38,7 @@ namespace fs {
         }
     }
 
-    void LIDARSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }
+    void LIDARSensor::set_robot_pose(const datapod::Pose &pose) { robot_pose = pose; }
 
     void LIDARSensor::update_from_simulator(const types::SensorData &data) {
         if (!data.has_lidar) {

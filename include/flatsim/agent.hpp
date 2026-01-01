@@ -12,7 +12,7 @@
 namespace agent {
 
     // Teleport callback type (set by Simulator in LOCAL mode)
-    using TeleportCallback = std::function<void(const std::string &uuid, const concord::Pose &pose)>;
+    using TeleportCallback = std::function<void(const std::string &uuid, const datapod::Pose &pose)>;
 
     class Agent {
       private:
@@ -99,7 +99,7 @@ namespace agent {
         const drivekit::Tracker *tracker() const { return machine_.tracker(); }
 
         // Position/pose (alias for machine().world_pose())
-        const concord::Pose &get_position() const { return machine_.world_pose(); }
+        const datapod::Pose &get_position() const { return machine_.world_pose(); }
 
         // Velocity access
         float get_linear_velocity() const { return machine_.linear_velocity(); }
@@ -119,7 +119,7 @@ namespace agent {
         void brake();
 
         // Teleport to a new pose (LOCAL mode: immediate, IPC/TCP: sends request)
-        void teleport(const concord::Pose &pose);
+        void teleport(const datapod::Pose &pose);
 
         // Set teleport callback (called by Simulator in LOCAL mode)
         void set_teleport_callback(TeleportCallback cb) { teleport_callback_ = std::move(cb); }

@@ -21,8 +21,8 @@ namespace simulator {
 
       public:
         std::string name;
-        concord::Bound bound;
-        concord::Pose pose;
+        datapod::Box bound;
+        datapod::Pose pose;
         pigment::RGB color;
         bool working = false;
         bool has_physics = true;
@@ -32,20 +32,20 @@ namespace simulator {
                    types::Machine *robot_info, types::State *robot_state);
 
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, int num_sections,
+                  datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, int num_sections,
                   bool has_physics);
-        void tick(float dt, concord::Pose trans_pose);
+        void tick(float dt, datapod::Pose trans_pose);
         void tock();
 
         muli::Transform get_transform() const;
         muli::RigidBody *get_body() const;
-        void teleport(concord::Pose pose);
+        void teleport(datapod::Pose pose);
 
         void toggle_section_work(int section_id);
         void toggle_all_sections_work();
         void toggle_all_except_section_work(int except_section_id);
-        std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
-        concord::Bound get_bound() const { return bound; }
+        std::vector<datapod::Point> get_corners() const { return utils::get_corners(pose, bound.size); }
+        datapod::Box get_bound() const { return bound; }
         void update_color(const pigment::RGB &new_color) { color = new_color; }
 
         // Destroy physics resources

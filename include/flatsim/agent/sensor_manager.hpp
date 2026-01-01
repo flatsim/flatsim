@@ -86,7 +86,7 @@ namespace fs {
          * @param pose Current robot pose
          * @param dt Time delta in seconds
          */
-        void update_all(const concord::Pose &pose, double dt);
+        void update_all(const datapod::Pose &pose, double dt);
 
         /**
          * @brief Update all sensors with robot pose and physics data
@@ -96,7 +96,7 @@ namespace fs {
          * @param angular_vel Angular velocity (rad/s)
          * @param dt Time delta in seconds
          */
-        void update_all_with_physics(const concord::Pose &pose, double linear_vel_x, double linear_vel_y,
+        void update_all_with_physics(const datapod::Pose &pose, double linear_vel_x, double linear_vel_y,
                                      double angular_vel, double dt);
 
         /**

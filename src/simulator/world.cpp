@@ -8,7 +8,7 @@ namespace simulator {
 
     World::~World() = default;
 
-    void World::init(concord::Datum datum, concord::Size size) {
+    void World::init(datapod::Geo datum, datapod::Size size) {
         settings_.init(datum, size);
         // Pass settings_ (which extends muli::WorldSettings) directly to muli::World
         // This ensures all muli defaults are properly inherited

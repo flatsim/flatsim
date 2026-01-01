@@ -6,7 +6,7 @@ namespace simulator {
         : rec(rec), robot_info(robot_info), robot_state(robot_state) {}
 
     void Section::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                       concord::Bound section_bound, int id) {
+                       datapod::Box section_bound, int id) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
@@ -15,15 +15,15 @@ namespace simulator {
         this->pose = section_bound.pose;
     }
 
-    void Section::tick(float dt, concord::Pose trans_pose) {
+    void Section::tick(float dt, datapod::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
 
         pose.point.x = new_pose.point.x;
         pose.point.y = new_pose.point.y;
-        pose.angle.yaw = new_pose.angle.yaw;
+        utils::set_yaw(pose, utils::get_yaw(new_pose));
     }
 
-    void Section::teleport(concord::Pose trans_pose) { pose = trans_pose; }
+    void Section::teleport(datapod::Pose trans_pose) { pose = trans_pose; }
 
     void Section::tock() {
         if (!robot_state->online) return;
@@ -31,7 +31,7 @@ namespace simulator {
 
         auto s_x = pose.point.x;
         auto s_y = pose.point.y;
-        auto s_th = pose.angle.yaw;
+        auto s_th = utils::get_yaw(pose);
         auto s_w = float(bound.size.x);
         auto s_h = float(bound.size.y);
 

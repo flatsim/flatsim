@@ -10,14 +10,23 @@
 //   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/loader.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <filesystem>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <rerun.hpp>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
@@ -57,7 +66,7 @@ int main(int argc, char **argv) {
 
     // Load tractor - spawn at first waypoint
     // Spawn tractor at path start, pointing in +X direction (yaw=0)
-    concord::Pose spawn_pose(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
     auto tractor_config = agent::Loader::load_from_json(machine_file, spawn_pose);
     tractor_config.uuid = "mpc_tractor";
     std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
@@ -110,7 +119,7 @@ int main(int argc, char **argv) {
     }
 
     // Create S-curve path
-    std::vector<concord::Point> s_curve_waypoints = {
+    std::vector<datapod::Point> s_curve_waypoints = {
         {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f}, {30.0f, 14.0f},
         {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f}, {60.0f, 14.0f}, {65.0f, 10.0f},
         {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},  {90.0f, 0.0f}};
@@ -149,7 +158,7 @@ int main(int argc, char **argv) {
 
             std::cout << "[MPC] " << step_count / 60 << "s: "
                       << "Pos(" << current_pose.point.x << "," << current_pose.point.y << "), "
-                      << "Yaw=" << current_pose.angle.yaw << ", "
+                      << "Yaw=" << utils::get_yaw(current_pose) << ", "
                       << "CTE=" << status.cross_track_error << "m, "
                       << "HeadingErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }

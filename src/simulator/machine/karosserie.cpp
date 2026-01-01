@@ -1,4 +1,5 @@
 #include "flatsim/simulator/machine/karosserie.hpp"
+#include "flatsim/utils.hpp"
 
 namespace simulator {
     Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
@@ -6,8 +7,8 @@ namespace simulator {
         : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
 
     void Karosserie::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                          concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter,
-                          int num_sections, bool has_physics) {
+                          datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, int num_sections,
+                          bool has_physics) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
@@ -30,11 +31,11 @@ namespace simulator {
 
                 // Calculate section position
                 float section_x = start_x + (i * section_width);
-                concord::Pose section_pose = bound.pose;
+                datapod::Pose section_pose = bound.pose;
                 section_pose.point.x = section_x;
 
                 // Create section bound with divided width
-                concord::Bound section_bound(section_pose, concord::Size(section_width, bound.size.y, bound.size.z));
+                datapod::Box section_bound(section_pose, datapod::Size(section_width, bound.size.y, bound.size.z));
 
                 section.init(color, parent_name, name + "_section", section_bound, i);
                 sections.push_back(section);
@@ -49,7 +50,7 @@ namespace simulator {
         }
     }
 
-    void Karosserie::tick(float dt, concord::Pose trans_pose) {
+    void Karosserie::tick(float dt, datapod::Pose trans_pose) {
         auto new_pose = utils::move(bound.pose, trans_pose);
 
         if (has_physics && karosserie) {
@@ -59,7 +60,7 @@ namespace simulator {
 
         pose.point.x = new_pose.point.x;
         pose.point.y = new_pose.point.y;
-        pose.angle.yaw = new_pose.angle.yaw;
+        utils::set_yaw(pose, utils::get_yaw(new_pose));
 
         // Update sections
         for (auto &section : sections) {
@@ -67,7 +68,7 @@ namespace simulator {
         }
     }
 
-    void Karosserie::teleport(concord::Pose trans_pose) {
+    void Karosserie::teleport(datapod::Pose trans_pose) {
         pose = trans_pose;
         if (has_physics && karosserie) {
             // Only update if it's a separate body (not part of compound shape)
@@ -103,7 +104,7 @@ namespace simulator {
         } else {
             auto k_x = pose.point.x;
             auto k_y = pose.point.y;
-            auto k_th = pose.angle.yaw;
+            auto k_th = utils::get_yaw(pose);
             auto k_w = float(bound.size.x);
             auto k_h = float(bound.size.y);
             rec->log_static(

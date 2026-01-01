@@ -57,13 +57,13 @@ namespace simulator {
     }
 
     // Constructor for LOCAL mode (no networking)
-    Simulator::Simulator(float width, float height, concord::Datum datum, std::shared_ptr<rerun::RecordingStream> rec)
+    Simulator::Simulator(float width, float height, datapod::Geo datum, std::shared_ptr<rerun::RecordingStream> rec)
         : conn_(Conn::LOCAL), ctx_(1), sim_settings_(width, height, datum), rec_(rec) {
 
         init_rerun();
 
         world_ = std::make_unique<World>(rec_);
-        world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+        world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
 
         // Initialize sensor data helper with physics world reference
         sensor_data_.set_world(world_->physics_ptr());
@@ -100,7 +100,7 @@ namespace simulator {
         spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
 
         world_ = std::make_unique<World>(rec_);
-        world_->init(sim_settings_.datum, concord::Size(sim_settings_.width, sim_settings_.height, 0.0));
+        world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
 
         // Initialize sensor data helper with physics world reference
         sensor_data_.set_world(world_->physics_ptr());
@@ -111,7 +111,7 @@ namespace simulator {
     }
 
     // Constructor for IPC/TCP mode with explicit parameters
-    Simulator::Simulator(Conn conn, const std::string &address, float width, float height, concord::Datum datum,
+    Simulator::Simulator(Conn conn, const std::string &address, float width, float height, datapod::Geo datum,
                          std::shared_ptr<rerun::RecordingStream> rec)
         : Simulator(conn, address, SimulatorSettings{width, height, datum}, rec) {}
 
@@ -152,7 +152,7 @@ namespace simulator {
         }
     }
 
-    void Simulator::teleport_machine(const std::string &uuid, const concord::Pose &pose) {
+    void Simulator::teleport_machine(const std::string &uuid, const datapod::Pose &pose) {
         auto it = machines_.find(uuid);
         if (it != machines_.end()) {
             it->second.teleport(pose);
@@ -181,7 +181,7 @@ namespace simulator {
     // Local Agent Management
     // ============================================================================
 
-    agent::Agent &Simulator::spawn_agent(const std::filesystem::path &json_path, concord::Pose spawn_pose,
+    agent::Agent &Simulator::spawn_agent(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
                                          std::optional<std::string> uuid, std::optional<pigment::RGB> color) {
         if (conn_ != Conn::LOCAL) {
             throw std::runtime_error("spawn_agent() only available in LOCAL mode");
@@ -202,7 +202,7 @@ namespace simulator {
 
         // Set teleport callback so Agent can call back to Simulator
         agent_ptr->set_teleport_callback(
-            [this](const std::string &uuid, const concord::Pose &pose) { this->teleport_machine(uuid, pose); });
+            [this](const std::string &uuid, const datapod::Pose &pose) { this->teleport_machine(uuid, pose); });
 
         local_agents_.push_back(std::move(agent_ptr));
         return *local_agents_.back();
@@ -484,7 +484,7 @@ namespace simulator {
     }
 
     void Simulator::tock() {
-        concord::Datum datum = world_->settings().get_datum();
+        datapod::Geo datum = world_->settings().get_datum();
         for (auto &[uuid, machine] : machines_) {
             machine.tock(datum);
         }

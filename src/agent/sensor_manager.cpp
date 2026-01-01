@@ -26,7 +26,7 @@ namespace fs {
         return nullptr;
     }
 
-    void SensorManager::update_all(const concord::Pose &pose, double dt) {
+    void SensorManager::update_all(const datapod::Pose &pose, double dt) {
         for (auto &sensor : sensors) {
             if (sensor) {
                 sensor->set_robot_pose(pose);
@@ -35,7 +35,7 @@ namespace fs {
         }
     }
 
-    void SensorManager::update_all_with_physics(const concord::Pose &pose, double linear_vel_x, double linear_vel_y,
+    void SensorManager::update_all_with_physics(const datapod::Pose &pose, double linear_vel_x, double linear_vel_y,
                                                 double angular_vel, double dt) {
         for (auto &sensor : sensors) {
             if (sensor) {

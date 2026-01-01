@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "flatsim/types.hpp"
 #include <fstream>
 #include <memory>
@@ -27,7 +26,7 @@ namespace fs {
          * @brief Set the current robot pose for sensors that need position information
          * @param pose Current pose of the robot carrying this sensor
          */
-        virtual void set_robot_pose(const concord::Pose &pose) {};
+        virtual void set_robot_pose(const datapod::Pose &pose) {};
 
         /**
          * @brief Set physics data for sensors that need velocity/acceleration

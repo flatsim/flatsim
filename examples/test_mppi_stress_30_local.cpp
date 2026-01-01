@@ -17,8 +17,8 @@
 #include <thread>
 #include <vector>
 
-static std::vector<concord::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     path.reserve(21);
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     (void)argv;
     std::cout << "=== MPPI Controller Stress Test: 30 Robots (LOCAL mode) ===" << std::endl;
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(800.0f, 800.0f, datum);
 
     constexpr int kNumRobots = 30;
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 
     std::vector<agent::Agent *> tractors;
     tractors.reserve(kNumRobots);
-    std::vector<concord::Point> path_starts;
+    std::vector<datapod::Point> path_starts;
     path_starts.reserve(kNumRobots);
 
     for (int i = 0; i < kNumRobots; ++i) {
@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
                                  static_cast<uint8_t>(color_dis(rng))};
 
         const std::string uuid = "tractor_" + std::to_string(i);
-        auto &tractor = sim.spawn_agent("examples/machines/tractor.json", concord::Pose(sx, sy, yaw), uuid, color);
+        auto &tractor =
+            sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(sx, sy, yaw), uuid, color);
         tractors.push_back(&tractor);
     }
 
@@ -126,8 +127,7 @@ int main(int argc, char **argv) {
             sim.tock();
         }
         const auto tick_end = std::chrono::high_resolution_clock::now();
-        const auto tick_us =
-            std::chrono::duration_cast<std::chrono::microseconds>(tick_end - tick_start).count();
+        const auto tick_us = std::chrono::duration_cast<std::chrono::microseconds>(tick_end - tick_start).count();
 
         bool all_completed = true;
         int completed_count = 0;
@@ -183,11 +183,10 @@ int main(int argc, char **argv) {
     }
 
     std::cout << "\n=== MPPI Stress Results (30 Robots) ===" << std::endl;
-    std::cout << "Completed: " << total_completed << "/" << kNumRobots << " (" << (100.0f * total_completed / kNumRobots)
-              << "%)" << std::endl;
+    std::cout << "Completed: " << total_completed << "/" << kNumRobots << " ("
+              << (100.0f * total_completed / kNumRobots) << "%)" << std::endl;
     std::cout << "Average max error: " << (total_max_error / kNumRobots) << "m" << std::endl;
     std::cout << "Average tracking error: " << (total_avg_error / kNumRobots) << "m" << std::endl;
 
     return 0;
 }
-

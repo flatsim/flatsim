@@ -130,19 +130,19 @@ package("entropy")
     end)
 package_end()
 
--- Define concord package (from git)
-package("concord")
+-- Define datapod package (from git)
+package("datapod")
     add_deps("cmake")
-    set_sourcedir(path.join(os.projectdir(), "build/_deps/concord-src"))
+    set_sourcedir(path.join(os.projectdir(), "build/_deps/datapod-src"))
 
     on_fetch(function (package)
         local sourcedir = package:sourcedir()
         if not os.isdir(sourcedir) then
-            print("Fetching concord from git...")
+            print("Fetching datapod from git...")
             os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "2.5.0",
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "0.0.15",
                             "-c", "advice.detachedHead=false",
-                            "https://github.com/robolibs/concord.git", sourcedir})
+                            "https://github.com/robolibs/datapod.git", sourcedir})
         end
     end)
 
@@ -209,7 +209,7 @@ package("drivekit")
         if not os.isdir(sourcedir) then
             print("Fetching drivekit from git...")
             os.mkdir(path.directory(sourcedir))
-            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "0.2.1",
+            os.execv("git", {"clone", "--quiet", "--depth", "1", "--branch", "0.0.2",
                             "-c", "advice.detachedHead=false",
                             "https://github.com/robolibs/drivekit.git", sourcedir})
         end
@@ -277,7 +277,7 @@ package_end()
 
 -- Add required packages
 add_requires("muli", "pigment", "entropy", "cista")
-add_requires("concord", "farmtrax", "drivekit", "zoneout")
+add_requires("datapod", "farmtrax", "drivekit", "zoneout")
 add_requires("rerun_sdk")
 
 -- Use pkgconfig to find system packages
@@ -314,7 +314,7 @@ target("flatsim_internal")
 
     -- Link dependencies (order matters: libraries with dependencies come first)
     add_packages("drivekit", "farmtrax", "zoneout")
-    add_packages("concord", "entropy", "pigment")
+    add_packages("datapod", "entropy", "pigment")
     add_packages("muli", "rerun_sdk", "zeromq", "cppzmq")
 
     -- Explicitly link only boost_json (avoid pulling in all boost libs)
@@ -351,7 +351,7 @@ if has_config("examples") then
             add_files(filepath)
             add_deps("flatsim_internal")
             add_packages("muli", "pigment", "entropy")
-            add_packages("concord", "zoneout", "farmtrax", "drivekit")
+            add_packages("datapod", "zoneout", "farmtrax", "drivekit")
             add_packages("rerun_sdk", "zeromq", "cppzmq", "cli11")
             add_includedirs("include")
 
@@ -374,7 +374,7 @@ if has_config("tests") then
             add_deps("flatsim_internal")
             -- Link order matters: libraries with dependencies come first
             add_packages("drivekit", "farmtrax", "zoneout")
-            add_packages("concord", "entropy", "pigment")
+            add_packages("datapod", "entropy", "pigment")
             add_packages("muli", "rerun_sdk", "zeromq", "cppzmq", "doctest")
             add_includedirs("include")
 

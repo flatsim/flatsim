@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -71,8 +70,8 @@ namespace fs {
         IMUData current_data;
         double update_frequency; // Hz
         double next_update_time;
-        concord::Pose robot_pose;                    // Current robot pose
-        concord::Pose last_pose;                     // Previous robot pose for velocity calculation
+        datapod::Pose robot_pose;                    // Current robot pose
+        datapod::Pose last_pose;                     // Previous robot pose for velocity calculation
         double linear_vel_x, linear_vel_y;           // Current linear velocity from physics (world frame)
         double angular_vel;                          // Current angular velocity from physics
         double last_linear_vel_x, last_linear_vel_y; // Previous velocities for acceleration calculation
@@ -120,7 +119,7 @@ namespace fs {
 
         // Sensor interface implementation
         void update(double dt) override;
-        void set_robot_pose(const concord::Pose &pose) override;
+        void set_robot_pose(const datapod::Pose &pose) override;
         void set_physics_data(double linear_vel_x, double linear_vel_y, double angular_vel) override;
         void update_from_simulator(const types::SensorData &data) override;
         void *get_data() override;

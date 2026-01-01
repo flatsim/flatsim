@@ -30,7 +30,7 @@ namespace agent {
         const drivekit::Tracker *tracker() const { return tracker_.get(); }
 
         // Update control based on current state, returns (linear, angular) velocity command
-        std::pair<float, float> update(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+        std::pair<float, float> update(const datapod::Pose &current_pose, float linear_vel, float angular_vel,
                                        float dt);
     };
 

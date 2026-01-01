@@ -5,13 +5,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "concord/concord.hpp"
 #include "pigment/pigment.hpp"
+#include <datapod/datapod.hpp>
 
 namespace types {
 
     // ============================================================================
-    // Main Types (using concord/pigment)
+    // Main Types (using datapod/pigment)
     // ============================================================================
 
     enum class PowerType { FUEL, BATTERY };
@@ -42,7 +42,7 @@ namespace types {
         std::string name;
         ContainerType type = ContainerType::HARVEST;
         float capacity;
-        concord::Bound bound;
+        datapod::Box bound;
     };
 
     // Backwards-compatible name (legacy JSON key is still "tank")
@@ -64,7 +64,7 @@ namespace types {
 
     struct Wheel {
         std::string name;
-        concord::Bound bound;
+        datapod::Box bound;
         pigment::RGB color;
         // Physics params (Simulator uses, Agent ignores)
         float steering_max = 0.0f; // Max steering angle (radians), 0 = fixed
@@ -78,14 +78,14 @@ namespace types {
 
     struct Section {
         std::string name;
-        concord::Bound bound; // LOCAL relative to karosserie
+        datapod::Box bound; // LOCAL relative to karosserie
         pigment::RGB color;
         bool working = false;
     };
 
     struct Karosserie {
         std::string name;
-        concord::Bound bound; // LOCAL relative to machine
+        datapod::Box bound; // LOCAL relative to machine
         pigment::RGB color;
         bool has_physics = true;
         std::vector<Section> sections;
@@ -93,7 +93,7 @@ namespace types {
 
     struct Hitch {
         std::string name;
-        concord::Bound bound; // LOCAL relative to machine
+        datapod::Box bound; // LOCAL relative to machine
         pigment::RGB color;
         bool is_master = true; // true = can pull, false = can be pulled
         bool hooked = false;
@@ -120,8 +120,8 @@ namespace types {
         std::vector<std::string> works_on;
         Capability capability;
         pigment::RGB color;
-        concord::Bound bound;
-        concord::Polygon outline;
+        datapod::Box bound;
+        datapod::Polygon outline;
         std::vector<Wheel> wheels;
         MachineControls controls;
         std::unordered_map<std::string, Hitch> hitches;
@@ -207,21 +207,21 @@ namespace types {
     // ============================================================================
 
     struct WorldSettings {
-        concord::Size size = concord::Size(100.0, 100.0, 0.0); // World bounds
-        concord::Datum datum;                                  // GPS reference point
+        datapod::Size size = datapod::Size(100.0, 100.0, 0.0); // World bounds
+        datapod::Geo datum;                                    // GPS reference point
     };
 
     struct StaticObstacle {
         size_t id = 0;
-        concord::Point position;
+        datapod::Point position;
         double radius = 0.5;      // Obstacle radius (m)
         double uncertainty = 0.1; // Position uncertainty std dev (m)
     };
 
     struct DynamicObstacle {
         size_t id = 0;
-        concord::Point position;
-        concord::Point velocity;           // Velocity (m/s)
+        datapod::Point position;
+        datapod::Point velocity;           // Velocity (m/s)
         double radius = 0.5;               // Obstacle radius (m)
         double uncertainty = 0.3;          // Position uncertainty std dev (m)
         double activation_distance = 10.0; // Distance to activate movement
@@ -238,26 +238,26 @@ namespace types {
             float x = 0.0f;
             float y = 0.0f;
 
-            concord::Point to_point() const { return concord::Point(x, y); }
-            concord::Size to_size() const { return concord::Size(x, y, 0.0); }
-            static Vec2 from_point(const concord::Point &p) {
+            datapod::Point to_point() const { return datapod::Point(x, y); }
+            datapod::Size to_size() const { return datapod::Size(x, y, 0.0); }
+            static Vec2 from_point(const datapod::Point &p) {
                 return {static_cast<float>(p.x), static_cast<float>(p.y)};
             }
-            static Vec2 from_size(const concord::Size &s) { return {static_cast<float>(s.x), static_cast<float>(s.y)}; }
+            static Vec2 from_size(const datapod::Size &s) { return {static_cast<float>(s.x), static_cast<float>(s.y)}; }
         };
 
         struct Pose {
             Vec2 position;
             float angle = 0.0f;
 
-            concord::Pose to_concord() const {
-                concord::Pose p;
+            datapod::Pose to_datapod() const {
+                datapod::Pose p;
                 p.point = position.to_point();
-                p.angle.yaw = angle;
+                p.rotation = datapod::Quaternion::from_euler(datapod::Euler{0.0, 0.0, static_cast<double>(angle)});
                 return p;
             }
-            static Pose from_concord(const concord::Pose &p) {
-                return {Vec2::from_point(p.point), static_cast<float>(p.angle.yaw)};
+            static Pose from_datapod(const datapod::Pose &p) {
+                return {Vec2::from_point(p.point), static_cast<float>(p.rotation.to_euler().yaw)};
             }
         };
 
@@ -276,10 +276,10 @@ namespace types {
             Pose pose;
             Vec2 size;
 
-            concord::Bound to_bound() const { return concord::Bound(pose.to_concord(), size.to_size()); }
+            datapod::Box to_box() const { return datapod::Box{pose.to_datapod(), size.to_size()}; }
 
-            static Bound from_bound(const concord::Bound &b) {
-                return {Pose::from_concord(b.pose), Vec2::from_size(b.size)};
+            static Bound from_box(const datapod::Box &b) {
+                return {Pose::from_datapod(b.pose), Vec2::from_size(b.size)};
             }
         };
 
@@ -298,7 +298,7 @@ namespace types {
             types::Wheel to_wheel() const {
                 types::Wheel w;
                 w.name = std::string(name.view());
-                w.bound = bound.to_bound();
+                w.bound = bound.to_box();
                 w.color = color.to_pigment();
                 w.steering_max = steering_max;
                 w.throttle_max = throttle_max;
@@ -313,7 +313,7 @@ namespace types {
             static Wheel from_wheel(const types::Wheel &w) {
                 Wheel s;
                 s.name = w.name;
-                s.bound = Bound::from_bound(w.bound);
+                s.bound = Bound::from_box(w.bound);
                 s.color = Color::from_pigment(w.color);
                 s.steering_max = w.steering_max;
                 s.throttle_max = w.throttle_max;
@@ -335,7 +335,7 @@ namespace types {
             types::Section to_section() const {
                 types::Section s;
                 s.name = std::string(name.view());
-                s.bound = bound.to_bound();
+                s.bound = bound.to_box();
                 s.color = color.to_pigment();
                 s.working = working;
                 return s;
@@ -344,7 +344,7 @@ namespace types {
             static Section from_section(const types::Section &s) {
                 Section r;
                 r.name = s.name;
-                r.bound = Bound::from_bound(s.bound);
+                r.bound = Bound::from_box(s.bound);
                 r.color = Color::from_pigment(s.color);
                 r.working = s.working;
                 return r;
@@ -361,7 +361,7 @@ namespace types {
             types::Karosserie to_karosserie() const {
                 types::Karosserie k;
                 k.name = std::string(name.view());
-                k.bound = bound.to_bound();
+                k.bound = bound.to_box();
                 k.color = color.to_pigment();
                 k.has_physics = has_physics;
                 for (const auto &s : sections) {
@@ -373,7 +373,7 @@ namespace types {
             static Karosserie from_karosserie(const types::Karosserie &k) {
                 Karosserie r;
                 r.name = k.name;
-                r.bound = Bound::from_bound(k.bound);
+                r.bound = Bound::from_box(k.bound);
                 r.color = Color::from_pigment(k.color);
                 r.has_physics = k.has_physics;
                 for (const auto &s : k.sections) {
@@ -393,7 +393,7 @@ namespace types {
             types::Hitch to_hitch() const {
                 types::Hitch h;
                 h.name = std::string(name.view());
-                h.bound = bound.to_bound();
+                h.bound = bound.to_box();
                 h.color = color.to_pigment();
                 h.is_master = is_master;
                 h.hooked = hooked;
@@ -403,7 +403,7 @@ namespace types {
             static Hitch from_hitch(const types::Hitch &h) {
                 Hitch r;
                 r.name = h.name;
-                r.bound = Bound::from_bound(h.bound);
+                r.bound = Bound::from_box(h.bound);
                 r.color = Color::from_pigment(h.color);
                 r.is_master = h.is_master;
                 r.hooked = h.hooked;
@@ -464,15 +464,15 @@ namespace types {
         struct Polygon {
             cista::raw::vector<Vec2> points;
 
-            concord::Polygon to_polygon() const {
-                std::vector<concord::Point> pts;
+            datapod::Polygon to_polygon() const {
+                datapod::Vector<datapod::Point> pts;
                 for (const auto &pt : points) pts.push_back(pt.to_point());
-                return concord::Polygon(pts);
+                return datapod::Polygon{pts};
             }
 
-            static Polygon from_polygon(const concord::Polygon &p) {
+            static Polygon from_polygon(const datapod::Polygon &p) {
                 Polygon r;
-                for (const auto &pt : p.getPoints()) r.points.push_back(Vec2::from_point(pt));
+                for (const auto &pt : p.vertices) r.points.push_back(Vec2::from_point(pt));
                 return r;
             }
         };
@@ -488,7 +488,7 @@ namespace types {
                 t.name = std::string(name.view());
                 t.type = static_cast<types::ContainerType>(type);
                 t.capacity = capacity;
-                t.bound = bound.to_bound();
+                t.bound = bound.to_box();
                 return t;
             }
 
@@ -497,7 +497,7 @@ namespace types {
                 r.name = t.name;
                 r.type = static_cast<uint8_t>(t.type);
                 r.capacity = t.capacity;
-                r.bound = Bound::from_bound(t.bound);
+                r.bound = Bound::from_box(t.bound);
                 return r;
             }
         };
@@ -565,7 +565,7 @@ namespace types {
                 for (const auto &s : works_on) m.works_on.push_back(std::string(s.view()));
                 m.capability = capability.to_capability();
                 m.color = color.to_pigment();
-                m.bound = bound.to_bound();
+                m.bound = bound.to_box();
                 m.outline = outline.to_polygon();
                 for (const auto &w : wheels) m.wheels.push_back(w.to_wheel());
                 m.controls = controls.to_controls();
@@ -593,7 +593,7 @@ namespace types {
                 for (const auto &s : m.works_on) r.works_on.push_back(cista::raw::string(s));
                 r.capability = Capability::from_capability(m.capability);
                 r.color = Color::from_pigment(m.color);
-                r.bound = Bound::from_bound(m.bound);
+                r.bound = Bound::from_box(m.bound);
                 r.outline = Polygon::from_polygon(m.outline);
                 for (const auto &w : m.wheels) r.wheels.push_back(Wheel::from_wheel(w));
                 r.controls = MachineControls::from_controls(m.controls);

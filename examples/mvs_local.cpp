@@ -16,20 +16,34 @@
 //   ./build/linux/x86_64/release/mvs_local [--joystick]
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "rerun/recording_stream.hpp"
+#include "flatsim/utils.hpp"
 
 #include <algorithm>
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <cstring>
+#include "flatsim/utils.hpp"
 #include <fcntl.h>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <linux/joystick.h>
+#include "flatsim/utils.hpp"
 #include <termios.h>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <unistd.h>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 static void set_stdin_raw(bool enable, termios &old_termios) {
     if (enable) {
@@ -62,24 +76,24 @@ int main(int argc, char **argv) {
     rec->log("", rerun::Clear::RECURSIVE);
     rec->log_with_static("", true, rerun::Clear::RECURSIVE);
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(3000.0f, 3000.0f, datum, rec);
 
     // Spawn a small fleet of machines.
     std::vector<agent::Agent *> robots;
     robots.reserve(6);
 
-    robots.push_back(&sim.spawn_agent("examples/machines/tractor.json", concord::Pose(0.0, 0.0, 0.0),
+    robots.push_back(&sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(0.0, 0.0, 0.0),
                                       std::string("tractor_0"), pigment::RGB(0, 255, 100)));
-    robots.push_back(&sim.spawn_agent("examples/machines/trailer.json", concord::Pose(0.0, -5.0, 0.0),
+    robots.push_back(&sim.spawn_agent("examples/machines/trailer.json", utils::make_pose_2d(0.0, -5.0, 0.0),
                                       std::string("trailer_0"), pigment::RGB(255, 150, 0)));
-    robots.push_back(&sim.spawn_agent("examples/machines/oxbo_harvester.json", concord::Pose(10.0, 10.0, 0.0),
+    robots.push_back(&sim.spawn_agent("examples/machines/oxbo_harvester.json", utils::make_pose_2d(10.0, 10.0, 0.0),
                                       std::string("oxbo_0"), pigment::RGB(255, 200, 0)));
-    robots.push_back(&sim.spawn_agent("examples/machines/trailer.json", concord::Pose(0.0, -10.0, 0.0),
+    robots.push_back(&sim.spawn_agent("examples/machines/trailer.json", utils::make_pose_2d(0.0, -10.0, 0.0),
                                       std::string("trailer_1"), pigment::RGB(255, 100, 50)));
-    robots.push_back(&sim.spawn_agent("examples/machines/truck.json", concord::Pose(20.0, 0.0, 0.0), std::string("truck_0"),
+    robots.push_back(&sim.spawn_agent("examples/machines/truck.json", utils::make_pose_2d(20.0, 0.0, 0.0), std::string("truck_0"),
                                       pigment::RGB(100, 100, 255)));
-    robots.push_back(&sim.spawn_agent("examples/machines/husky.json", concord::Pose(30.0, 10.0, 0.0), std::string("husky_0"),
+    robots.push_back(&sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(30.0, 10.0, 0.0), std::string("husky_0"),
                                       pigment::RGB(128, 0, 255)));
 
     std::cout << "=== MVS (LOCAL) ===\n";

@@ -24,7 +24,7 @@ namespace simulator {
 
         size_t id() const { return config_.id; }
         const types::StaticObstacle &config() const { return config_; }
-        const concord::Point &position() const { return config_.position; }
+        const datapod::Point &position() const { return config_.position; }
         double radius() const { return config_.radius; }
     };
 
@@ -45,11 +45,11 @@ namespace simulator {
         void update(float dt, double ref_x, double ref_y);
 
         // Predict future position at time t
-        concord::Point predict(double t) const;
+        datapod::Point predict(double t) const;
 
         size_t id() const { return config_.id; }
         const types::DynamicObstacle &config() const { return config_; }
-        const concord::Point &position() const { return config_.position; }
+        const datapod::Point &position() const { return config_.position; }
         double radius() const { return config_.radius; }
         bool is_active() const { return config_.is_active; }
     };

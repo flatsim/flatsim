@@ -4,6 +4,7 @@
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-    concord::Pose spawn_pose(10.0, 10.0, 0.0);
+    datapod::Pose spawn_pose = utils::make_pose_2d(10.0, 10.0, 0.0);
 
     // Load machine configuration
     types::Machine machine_config = agent::Loader::load_from_json(machine_file, spawn_pose);

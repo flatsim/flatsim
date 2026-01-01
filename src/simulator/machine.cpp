@@ -1,4 +1,6 @@
 #include "flatsim/simulator/machine.hpp"
+#include "flatsim/gps.hpp"
+#include "flatsim/utils.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -81,7 +83,7 @@ namespace simulator {
         chassis_->tick(dt);
     }
 
-    void Machine::tock(concord::Datum datum) {
+    void Machine::tock(datapod::Geo datum) {
         if (!chassis_) return;
         if (!rec_) return;
 
@@ -106,10 +108,10 @@ namespace simulator {
         if (chassis_->body) {
             auto x = chassis_->body->GetPosition().x;
             auto y = chassis_->body->GetPosition().y;
-            concord::Point current_pos{x, y};
-            auto wgs_coords = current_pos.toWGS(datum);
+            datapod::Point current_pos{x, y, 0.0};
+            auto wgs_coords = flatsim::gps::enu_to_gps(current_pos, datum);
             rec_->log_static(config_.uuid + "/gps",
-                             rerun::GeoPoints({{wgs_coords.lat, wgs_coords.lon}})
+                             rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
                                  .with_colors({rerun::Color(config_.color.r, config_.color.g, config_.color.b)}));
         }
     }
@@ -143,7 +145,7 @@ namespace simulator {
         return nullptr;
     }
 
-    void Machine::teleport(const concord::Pose &pose) {
+    void Machine::teleport(const datapod::Pose &pose) {
         if (chassis_) {
             chassis_->teleport(pose);
         }
@@ -162,7 +164,7 @@ namespace simulator {
         }
     }
 
-    void Machine::update_sensors(Data &data, const concord::Datum &datum, float dt) {
+    void Machine::update_sensors(Data &data, const datapod::Geo &datum, float dt) {
         if (!chassis_ || !chassis_->body) return;
 
         // Get current state
@@ -170,7 +172,7 @@ namespace simulator {
 
         // IMPORTANT: The physics body's angle 0 = +X direction, but the model's forward is +Y.
         // So we add M_PI/2 to convert body angle to heading (same as get_state() does for the agent).
-        float heading = pose.angle.yaw + M_PI / 2.0f;
+        float heading = utils::get_yaw(pose) + M_PI / 2.0f;
 
         auto vel = chassis_->body->GetLinearVelocity();
         float linear_vel = vel.x * std::cos(heading) + vel.y * std::sin(heading);
@@ -179,8 +181,8 @@ namespace simulator {
         // GPS - always fill if datum is set
         if (datum.is_set()) {
             // Use corrected heading for GPS
-            concord::Pose gps_pose = pose;
-            gps_pose.angle.yaw = heading;
+            datapod::Pose gps_pose = pose;
+            utils::set_yaw(gps_pose, heading);
             sensor_data_.gps = data.pose_to_gps(gps_pose, std::abs(linear_vel));
             sensor_data_.has_gps = true;
         }
@@ -194,8 +196,8 @@ namespace simulator {
         if (config_.lidar.has_value() && config_.lidar->enabled) {
             const auto &lidar_cfg = config_.lidar.value();
             // Use corrected heading for LIDAR scan direction
-            concord::Pose lidar_pose = pose;
-            lidar_pose.angle.yaw = heading;
+            datapod::Pose lidar_pose = pose;
+            utils::set_yaw(lidar_pose, heading);
             sensor_data_.lidar = data.scan_lidar(lidar_pose, lidar_cfg.min_range, lidar_cfg.max_range,
                                                  lidar_cfg.fov_deg, lidar_cfg.resolution_deg, filter_);
             sensor_data_.has_lidar = true;

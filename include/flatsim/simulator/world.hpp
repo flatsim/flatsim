@@ -13,13 +13,13 @@ namespace simulator {
     // WorldSettings extends muli::WorldSettings to inherit all physics defaults
     class WorldSettings : public muli::WorldSettings {
       private:
-        concord::Datum datum_;
-        concord::Size size_;
+        datapod::Geo datum_;
+        datapod::Size size_;
 
       public:
         WorldSettings() = default;
 
-        void init(concord::Datum datum, concord::Size size) {
+        void init(datapod::Geo datum, datapod::Size size) {
             datum_ = datum;
             size_ = size;
             // Set world bounds - this is critical for muli physics
@@ -29,8 +29,8 @@ namespace simulator {
             this->apply_gravity = false;
         }
 
-        concord::Datum get_datum() const { return datum_; }
-        concord::Size get_size() const { return size_; }
+        datapod::Geo get_datum() const { return datum_; }
+        datapod::Size get_size() const { return size_; }
     };
 
     class World {
@@ -51,7 +51,7 @@ namespace simulator {
         ~World();
 
         // Initialize world with datum and size (must call before use)
-        void init(concord::Datum datum, concord::Size size);
+        void init(datapod::Geo datum, datapod::Size size);
 
         // Physics tick (simulation step)
         void tick(float dt);

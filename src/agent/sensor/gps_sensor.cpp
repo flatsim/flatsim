@@ -234,7 +234,7 @@ namespace fs {
         return "$" + body + "*" + checksum + "\r\n";
     }
 
-    void GPSSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }
+    void GPSSensor::set_robot_pose(const datapod::Pose &pose) { robot_pose = pose; }
 
     void GPSSensor::update_from_simulator(const types::SensorData &data) {
         if (!data.has_gps) {
@@ -356,7 +356,7 @@ namespace fs {
         }
     }
 
-    void GPSSensor::convert_enu_to_wgs84(const concord::Pose &robot_pose) {
+    void GPSSensor::convert_enu_to_wgs84(const datapod::Pose &robot_pose) {
         // This is a simplified conversion - in a real system, you would need
         // proper geodetic transformations using the datum information
 
@@ -380,7 +380,7 @@ namespace fs {
         current_data.altitude = origin_alt + up;
 
         // Estimate velocity from position changes (simplified)
-        static concord::Pose last_pose = robot_pose;
+        static datapod::Pose last_pose = robot_pose;
         static double last_time = last_update_time;
 
         if (last_update_time > last_time) {

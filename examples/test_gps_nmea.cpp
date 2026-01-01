@@ -9,18 +9,30 @@
 // Sensors are added to the Machine's SensorManager which auto-enables SHM output.
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/loader.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/gps_sensor.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/imu_sensor.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "rerun/recording_stream.hpp"
+#include "flatsim/utils.hpp"
 
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char *argv[]) {
     (void)argc;
@@ -37,13 +49,13 @@ int main(int argc, char *argv[]) {
     rec->log("", rerun::Clear::RECURSIVE);
 
     // GPS datum (reference point for simulator world)
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
     // Create simulator in LOCAL mode with Rerun
     simulator::Simulator sim(500, 500, datum, rec);
 
     // Spawn tractor with custom UUID for easy SHM access
-    concord::Pose spawn_pose(0.0, 0.0, -1.5708f);
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f);
     auto &tractor = sim.spawn_agent("examples/machines/tractor.json", spawn_pose, std::string("test_gps_nmea"));
 
     std::cout << "Tractor loaded: " << tractor.name() << " (UUID: " << tractor.uuid() << ")" << std::endl;
@@ -93,7 +105,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Create circular path (endless loop)
-    std::vector<concord::Point> circular_path;
+    std::vector<datapod::Point> circular_path;
     float radius = 30.0f;
     float center_x = 40.0f;
     float center_y = 0.0f;

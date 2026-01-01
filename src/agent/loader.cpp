@@ -1,4 +1,5 @@
 #include "flatsim/agent/loader.hpp"
+#include "flatsim/utils.hpp"
 #include <boost/json.hpp>
 #include <cmath>
 #include <fstream>
@@ -51,7 +52,7 @@ namespace agent {
         return ss.str();
     }
 
-    types::Machine Loader::load_from_json(const std::filesystem::path &json_path, concord::Pose spawn_pose,
+    types::Machine Loader::load_from_json(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
                                           std::optional<pigment::RGB> color) {
 
         std::ifstream file(json_path);
@@ -93,7 +94,7 @@ namespace agent {
         float width = get_value<float>(dims.at("width"));
         float height = get_value<float>(dims.at("height"));
         machine.bound.pose = spawn_pose;
-        machine.bound.size = concord::Size(width, height, 0.0f);
+        machine.bound.size = datapod::Size{width, height, 0.0f};
 
         pigment::RGB machine_color = color.value_or(parse_color(j.at("color").as_object()));
         machine.color = machine_color;
@@ -182,18 +183,18 @@ namespace agent {
                             get_value<int>(color_json.at("b")));
     }
 
-    concord::Pose Loader::parse_pose(const boost::json::object &pos_json) {
+    datapod::Pose Loader::parse_pose(const boost::json::object &pos_json) {
         float x = get_value<float>(pos_json.at("x"));
         float y = get_value<float>(pos_json.at("y"));
         float yaw = get_value_or(pos_json, "yaw", 0.0f);
-        return concord::Pose(x, y, yaw);
+        return utils::make_pose(x, y, 0.0, yaw);
     }
 
-    concord::Size Loader::parse_size(const boost::json::object &size_json) {
+    datapod::Size Loader::parse_size(const boost::json::object &size_json) {
         float width = get_value<float>(size_json.at("width"));
         float height = get_value<float>(size_json.at("height"));
         float depth = get_value_or(size_json, "depth", 0.0f);
-        return concord::Size(width, height, depth);
+        return datapod::Size{width, height, depth};
     }
 
     void Loader::parse_wheels(types::Machine &machine, const boost::json::array &wheels_json) {
@@ -271,7 +272,7 @@ namespace agent {
             for (int i = 0; i < sections_count; i++) {
                 types::Section section;
                 section.name = "section_" + std::to_string(i);
-                section.bound.pose = concord::Pose(0.0, 0.0, 0.0);
+                section.bound.pose = utils::make_pose(0.0, 0.0, 0.0, 0.0);
                 section.bound.size = kaross.bound.size;
                 section.color = kaross.color;
                 kaross.sections.push_back(section);

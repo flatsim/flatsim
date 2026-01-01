@@ -6,17 +6,26 @@
 //   ./build/linux/x86_64/release/test_mca_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <algorithm>
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <filesystem>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
-static std::vector<concord::Point> corridor_path(float x0, float x1, float step, float y = 0.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> corridor_path(float x0, float x1, float step, float y = 0.0f) {
+    std::vector<datapod::Point> path;
     if (step <= 0.0f) {
         return path;
     }
@@ -36,10 +45,10 @@ int main(int argc, char **argv) {
     std::cout << "=== MCA (Monte Carlo Approximation / DRA-MPPI) Path Following Test (LOCAL mode) ===" << std::endl;
 
     std::filesystem::path machine_file = "examples/machines/tractor.json";
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
     simulator::Simulator sim(500.0f, 500.0f, datum);
-    concord::Pose spawn_pose(0.0, 0.0, -static_cast<float>(std::numbers::pi / 2.0));
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -static_cast<float>(std::numbers::pi / 2.0));
     auto &tractor = sim.spawn_agent(machine_file, spawn_pose);
 
     tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MCA);
@@ -87,16 +96,16 @@ int main(int argc, char **argv) {
     tractor.tracker()->set_path(path);
 
     // Obstacles (visual + physics); MCA obstacle avoidance requires passing WorldConstraints into drivekit::Tracker.
-    sim.world().add_obstacle(types::StaticObstacle{1, concord::Point{15.0, 0.0}, 0.6, 0.1});
-    sim.world().add_obstacle(types::StaticObstacle{2, concord::Point{30.0, 0.8}, 0.6, 0.1});
-    sim.world().add_obstacle(types::StaticObstacle{3, concord::Point{45.0, -0.8}, 0.6, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{1, datapod::Point{15.0, 0.0, 0.0}, 0.6, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{2, datapod::Point{30.0, 0.8, 0.0}, 0.6, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{3, datapod::Point{45.0, -0.8, 0.0}, 0.6, 0.1});
 
     sim.world().add_obstacle(
-        types::DynamicObstacle{1, concord::Point{20.0, -4.0}, concord::Point{0.0, 0.6}, 0.4, 0.3, 10.0, false});
+        types::DynamicObstacle{1, datapod::Point{20.0, -4.0, 0.0}, datapod::Point{0.0, 0.6, 0.0}, 0.4, 0.3, 10.0, false});
     sim.world().add_obstacle(
-        types::DynamicObstacle{2, concord::Point{40.0, 0.0}, concord::Point{-0.8, 0.0}, 0.4, 0.3, 15.0, false});
+        types::DynamicObstacle{2, datapod::Point{40.0, 0.0, 0.0}, datapod::Point{-0.8, 0.0, 0.0}, 0.4, 0.3, 15.0, false});
     sim.world().add_obstacle(
-        types::DynamicObstacle{3, concord::Point{35.0, 4.0}, concord::Point{0.0, -0.6}, 0.4, 0.3, 10.0, false});
+        types::DynamicObstacle{3, datapod::Point{35.0, 4.0, 0.0}, datapod::Point{0.0, -0.6, 0.0}, 0.4, 0.3, 10.0, false});
 
     std::cout << "[World] Static obstacles: " << sim.world().static_obstacles().size()
               << " | Dynamic obstacles: " << sim.world().dynamic_obstacles().size() << std::endl;
@@ -131,7 +140,7 @@ int main(int argc, char **argv) {
         if (step_count % 20 == 0) {
             std::cout << "[MCA] " << (step_count / 10) << "s "
                       << "Pos(" << pos.point.x << "," << pos.point.y << ") "
-                      << "Yaw=" << pos.angle.yaw << " "
+                      << "Yaw=" << utils::get_yaw(pos) << " "
                       << "CTE=" << status.cross_track_error << "m "
                       << "HeadErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }

@@ -24,8 +24,8 @@ namespace simulator {
       private:
         std::string name;
         pigment::RGB color;
-        concord::Bound bound;
-        concord::Pose pose;
+        datapod::Box bound;
+        datapod::Pose pose;
         uint32_t group;
         types::Machine *robot_info = nullptr;
         types::State *robot_state = nullptr;
@@ -42,7 +42,7 @@ namespace simulator {
 
         void tick(float dt);
         void tock(const std::string &label);
-        void teleport(concord::Pose);
+        void teleport(datapod::Pose);
         void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linear_damping, float angular_damping);
         muli::Transform get_transform() const;
@@ -52,8 +52,8 @@ namespace simulator {
         void toggle_all_except_section_work(const std::string &karosserie_name, int except_section_id);
 
         // Accessors
-        const concord::Pose &get_pose() const { return pose; }
-        const concord::Bound &get_bound() const { return bound; }
+        const datapod::Pose &get_pose() const { return pose; }
+        const datapod::Box &get_bound() const { return bound; }
         const std::string &get_name() const { return name; }
         muli::RigidBody *get_body() { return body; }
 

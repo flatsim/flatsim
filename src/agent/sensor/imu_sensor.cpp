@@ -1,4 +1,5 @@
 #include "flatsim/agent/sensor/imu_sensor.hpp"
+#include "flatsim/utils.hpp"
 #include <cmath>
 #include <random>
 
@@ -91,7 +92,7 @@ namespace fs {
         }
     }
 
-    void IMUSensor::set_robot_pose(const concord::Pose &pose) { robot_pose = pose; }
+    void IMUSensor::set_robot_pose(const datapod::Pose &pose) { robot_pose = pose; }
 
     void IMUSensor::set_physics_data(double vel_x, double vel_y, double ang_vel) {
         linear_vel_x = vel_x;
@@ -184,8 +185,8 @@ namespace fs {
         double accel_world_y = (linear_vel_y - last_linear_vel_y) / dt;
 
         // Transform from world frame to body frame
-        double cos_yaw = std::cos(robot_pose.angle.yaw);
-        double sin_yaw = std::sin(robot_pose.angle.yaw);
+        double cos_yaw = std::cos(utils::get_yaw(robot_pose));
+        double sin_yaw = std::sin(utils::get_yaw(robot_pose));
 
         // Rotation from world to body frame (2D, around Z axis)
         current_data.accel_x = accel_world_x * cos_yaw + accel_world_y * sin_yaw;
@@ -221,12 +222,12 @@ namespace fs {
         double mag_down = magnetic_intensity * std::sin(magnetic_inclination);
 
         // Transform to body frame using current orientation
-        double cos_yaw = std::cos(robot_pose.angle.yaw);
-        double sin_yaw = std::sin(robot_pose.angle.yaw);
-        double cos_pitch = std::cos(robot_pose.angle.pitch);
-        double sin_pitch = std::sin(robot_pose.angle.pitch);
-        double cos_roll = std::cos(robot_pose.angle.roll);
-        double sin_roll = std::sin(robot_pose.angle.roll);
+        double cos_yaw = std::cos(utils::get_yaw(robot_pose));
+        double sin_yaw = std::sin(utils::get_yaw(robot_pose));
+        double cos_pitch = std::cos(utils::get_pitch(robot_pose));
+        double sin_pitch = std::sin(utils::get_pitch(robot_pose));
+        double cos_roll = std::cos(utils::get_roll(robot_pose));
+        double sin_roll = std::sin(utils::get_roll(robot_pose));
 
         // Simplified rotation from NED to body frame
         current_data.mag_x = mag_north_comp * cos_yaw + mag_east * sin_yaw;

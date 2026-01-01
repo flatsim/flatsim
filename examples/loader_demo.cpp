@@ -1,5 +1,6 @@
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
 #include <iostream>
 #include <rerun.hpp>
@@ -12,14 +13,14 @@ int main() {
     rec->spawn().exit_on_failure();
     std::cout << "[Rerun] Visualization started" << std::endl;
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
     try {
-        concord::Pose spawn_pose;
+        datapod::Pose spawn_pose;
         spawn_pose.point.x = 0.0;
         spawn_pose.point.y = 0.0;
-        spawn_pose.angle.yaw = 0.0;
+        utils::set_yaw(spawn_pose, 0.0);
 
         auto machine = agent::Loader::load_from_json("examples/machines/husky.json", spawn_pose);
 

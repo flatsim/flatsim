@@ -17,8 +17,8 @@ namespace simulator {
 
       public:
         std::string name;
-        concord::Bound bound;
-        concord::Pose pose;
+        datapod::Box bound;
+        datapod::Pose pose;
         pigment::RGB color;
         bool hooked = false;
         bool is_master = true; // true = master (can pull), false = slave (can be pulled)
@@ -26,14 +26,14 @@ namespace simulator {
         Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
               types::Machine *robot_info, types::State *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  concord::Bound parent_bound, concord::Bound bound, muli::CollisionFilter filter, bool is_master);
-        void tick(float dt, concord::Pose trans_pose);
+                  datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, bool is_master);
+        void tick(float dt, datapod::Pose trans_pose);
         void tock();
 
-        void teleport(concord::Pose pose);
+        void teleport(datapod::Pose pose);
 
         void toggle_hook() { hooked = !hooked; }
-        std::vector<concord::Point> get_corners() const { return pose.get_corners(bound.size); }
-        concord::Bound get_bound() const { return bound; }
+        std::vector<datapod::Point> get_corners() const { return utils::get_corners(pose, bound.size); }
+        datapod::Box get_bound() const { return bound; }
     };
 } // namespace simulator

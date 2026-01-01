@@ -8,13 +8,21 @@
 // This process ONLY uses simulator:: namespace code
 
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/types.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <rerun.hpp>
+#include "flatsim/utils.hpp"
 #include <signal.h>
+#include "flatsim/utils.hpp"
 #include <string>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 
 static bool running = true;
 
@@ -47,7 +55,7 @@ int main(int argc, char **argv) {
     }
 
     // Create simulator with IPC communication (rerun connects automatically)
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(use_tcp ? simulator::Conn::TCP : simulator::Conn::IPC, host, 500.0f, 500.0f, datum);
 
     std::cout << "[Server] Simulator ready. Waiting for agent connections..." << std::endl;

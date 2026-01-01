@@ -38,10 +38,10 @@ namespace agent {
         bool is_navigation_enabled() const { return navigation_enabled_; }
 
         // Update navigation (called automatically from tick if enabled)
-        void update_navigation(const concord::Pose &current_pose, float linear_vel, float angular_vel, float dt);
+        void update_navigation(const datapod::Pose &current_pose, float linear_vel, float angular_vel, float dt);
 
         // Tick/tock pattern
-        void tick(const concord::Pose &current_pose, float linear_vel, float angular_vel, float dt);
+        void tick(const datapod::Pose &current_pose, float linear_vel, float angular_vel, float dt);
         void tock(std::shared_ptr<rerun::RecordingStream> rec);
 
         const std::vector<float> &get_steerings() const { return steerings; }

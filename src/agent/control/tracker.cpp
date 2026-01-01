@@ -87,7 +87,7 @@ namespace agent {
         }
     }
 
-    std::pair<float, float> Tracker::update(const concord::Pose &current_pose, float linear_vel, float angular_vel,
+    std::pair<float, float> Tracker::update(const datapod::Pose &current_pose, float linear_vel, float angular_vel,
                                             float dt) {
         if (!enabled_ || !tracker_) {
             return {0.0f, 0.0f};
@@ -107,7 +107,7 @@ namespace agent {
         static int debug_count = 0;
         if (debug_count++ % 60 == 0) {
             std::cout << "[Tracker::update] pose=(" << current_pose.point.x << "," << current_pose.point.y << ") "
-                      << "yaw=" << current_pose.angle.yaw << " vel=" << linear_vel << " angular=" << angular_vel
+                      << "yaw=" << utils::get_yaw(current_pose) << " vel=" << linear_vel << " angular=" << angular_vel
                       << " dt=" << dt << " -> linear=" << cmd.linear_velocity << " angular=" << cmd.angular_velocity
                       << " valid=" << cmd.valid << std::endl;
         }

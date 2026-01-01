@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -68,7 +67,7 @@ namespace fs {
         ScanPattern scan_pattern;
         double update_frequency; // Hz (scan rate)
         double next_update_time;
-        concord::Pose robot_pose; // Current robot pose
+        datapod::Pose robot_pose; // Current robot pose
 
         // Range parameters
         float min_range; // Minimum detection range (meters)
@@ -99,7 +98,7 @@ namespace fs {
 
         // Sensor interface implementation
         void update(double dt) override;
-        void set_robot_pose(const concord::Pose &pose) override;
+        void set_robot_pose(const datapod::Pose &pose) override;
         void update_from_simulator(const types::SensorData &data) override;
         void *get_data() override;
         std::string get_type() const override;

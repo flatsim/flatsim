@@ -1,9 +1,11 @@
 #include "flatsim/simulator/data.hpp"
+#include "flatsim/gps.hpp"
+#include "flatsim/utils.hpp"
 #include <cmath>
 
 namespace simulator {
 
-    types::LidarData Data::scan_lidar(const concord::Pose &pose, float min_range, float max_range, float fov_deg,
+    types::LidarData Data::scan_lidar(const datapod::Pose &pose, float min_range, float max_range, float fov_deg,
                                       float resolution_deg, const muli::CollisionFilter &filter) {
         types::LidarData data;
         data.min_range = min_range;
@@ -24,7 +26,7 @@ namespace simulator {
 
         // Sensor position
         muli::Vec2 sensor_pos(pose.point.x, pose.point.y);
-        float sensor_yaw = pose.angle.yaw;
+        float sensor_yaw = utils::get_yaw(pose);
 
         // Scan from -fov/2 to +fov/2
         float start_angle = -fov_rad / 2.0f;
@@ -67,25 +69,23 @@ namespace simulator {
         return data;
     }
 
-    types::GpsData Data::pose_to_gps(const concord::Pose &pose, float speed) {
+    types::GpsData Data::pose_to_gps(const datapod::Pose &pose, float speed) {
         types::GpsData data;
 
-        // Convert ENU to WGS84 using datum
-        // Simple approximation: 1 degree latitude ~ 111km, 1 degree longitude ~ 111km * cos(lat)
-        double lat_rad = datum_.lat * M_PI / 180.0;
-        double meters_per_deg_lat = 111320.0;
-        double meters_per_deg_lon = 111320.0 * std::cos(lat_rad);
+        // Convert ENU to WGS84 using flatsim::gps
+        datapod::Point enu_point = pose.point;
+        datapod::Geo gps_coords = flatsim::gps::enu_to_gps(enu_point, datum_);
 
-        data.latitude = datum_.lat + (pose.point.y / meters_per_deg_lat);
-        data.longitude = datum_.lon + (pose.point.x / meters_per_deg_lon);
-        data.altitude = datum_.alt + pose.point.z;
-        data.heading = pose.angle.yaw;
+        data.latitude = gps_coords.latitude;
+        data.longitude = gps_coords.longitude;
+        data.altitude = gps_coords.altitude;
+        data.heading = utils::get_yaw(pose);
         data.speed = speed;
 
         return data;
     }
 
-    types::ImuData Data::compute_imu(const concord::Pose &pose, float linear_vel, float angular_vel,
+    types::ImuData Data::compute_imu(const datapod::Pose &pose, float linear_vel, float angular_vel,
                                      float prev_linear_vel, float dt) {
         types::ImuData data;
 
@@ -101,7 +101,7 @@ namespace simulator {
         data.gyro_z = angular_vel;
 
         // Current yaw
-        data.yaw = pose.angle.yaw;
+        data.yaw = utils::get_yaw(pose);
 
         return data;
     }

@@ -309,7 +309,7 @@ namespace agent {
         // TODO: When brake force is implemented in WheelControl, set it here
     }
 
-    void Agent::teleport(const concord::Pose &pose) {
+    void Agent::teleport(const datapod::Pose &pose) {
         if (local_mode_) {
             // LOCAL mode: use callback to Simulator
             if (teleport_callback_) {

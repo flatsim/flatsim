@@ -19,7 +19,7 @@ namespace agent {
 
         types::Machine config_;
         types::State state_;
-        concord::Pose world_pose_;      // Updated from simulator state
+        datapod::Pose world_pose_;      // Updated from simulator state
         float linear_velocity_ = 0.0f;  // Forward velocity along heading
         float angular_velocity_ = 0.0f; // Angular velocity (yaw rate)
 
@@ -63,7 +63,7 @@ namespace agent {
         types::State &state_mut() { return state_; }
         const std::string &uuid() const { return config_.uuid; }
         const std::string &name() const { return config_.name; }
-        const concord::Pose &world_pose() const { return world_pose_; }
+        const datapod::Pose &world_pose() const { return world_pose_; }
         float linear_velocity() const { return linear_velocity_; }
         float angular_velocity() const { return angular_velocity_; }
         std::shared_ptr<rerun::RecordingStream> rec() const { return rec_; }
@@ -86,7 +86,7 @@ namespace agent {
         }
 
         // Position access (alias)
-        const concord::Pose &get_position() const { return world_pose_; }
+        const datapod::Pose &get_position() const { return world_pose_; }
 
         // Enable FIFO/SHM output for all sensors
         bool enable_sensor_shm_output() { return sensors.enable_fifo_output(config_.uuid); }

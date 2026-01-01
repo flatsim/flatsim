@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun.hpp"
@@ -24,8 +23,8 @@ namespace fs {
         float empty_rate; // units per second when emptying (fast for harvest)
         std::string name;
         std::string parent_name;
-        concord::Bound bound; // Visual representation bound
-        concord::Pose pose;   // Current world position/rotation
+        datapod::Box bound; // Visual representation bound
+        datapod::Pose pose; // Current world position/rotation
         pigment::RGB color;
 
       public:
@@ -58,18 +57,18 @@ namespace fs {
         float get_empty_rate() const { return empty_rate; }
         const std::string &get_name() const { return name; }
 
-        void init(const pigment::RGB &tank_color, const std::string &parent_name, const concord::Bound &tank_bound) {
+        void init(const pigment::RGB &tank_color, const std::string &parent_name, const datapod::Box &tank_bound) {
             this->color = tank_color;
             this->parent_name = parent_name;
             this->bound = tank_bound;
         }
 
-        void tick(float dt, concord::Pose trans_pose) {
+        void tick(float dt, datapod::Pose trans_pose) {
             auto new_pose = ::utils::move(bound.pose, trans_pose);
 
             pose.point.x = new_pose.point.x;
             pose.point.y = new_pose.point.y;
-            pose.angle.yaw = new_pose.angle.yaw;
+            utils::set_yaw(pose, utils::get_yaw(new_pose));
         }
 
         void tock(std::shared_ptr<rerun::RecordingStream> rec) { visualize(rec); }
@@ -79,7 +78,7 @@ namespace fs {
 
             auto t_x = float(pose.point.x);
             auto t_y = float(pose.point.y);
-            auto t_th = float(pose.angle.yaw);
+            auto t_th = float(utils::get_yaw(pose));
             auto t_w = float(bound.size.x);
             auto t_h = float(bound.size.y);
 

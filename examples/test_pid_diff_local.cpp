@@ -6,18 +6,28 @@
 //   ./build/linux/x86_64/release/test_pid_diff_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <algorithm>
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <cstdint>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
-static std::vector<concord::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
         const float x = offset_x + t * 40.0f * scale;
@@ -27,8 +37,8 @@ static std::vector<concord::Point> generate_s_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_u_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_u_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
         const float angle = static_cast<float>(std::numbers::pi) * t;
@@ -39,8 +49,8 @@ static std::vector<concord::Point> generate_u_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_o_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_o_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 24; ++i) {
         const float t = i / 24.0f;
         const float angle = 2.0f * static_cast<float>(std::numbers::pi) * t;
@@ -51,8 +61,8 @@ static std::vector<concord::Point> generate_o_shape(float offset_x, float offset
     return path;
 }
 
-static std::vector<concord::Point> generate_l_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_l_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     for (int i = 0; i <= 10; ++i) {
         const float y = offset_y + i * 3.0f * scale;
         path.push_back({offset_x, y});
@@ -69,14 +79,14 @@ int main(int argc, char **argv) {
     (void)argv;
     std::cout << "=== PID Differential Drive Test (LOCAL mode) ===" << std::endl;
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    const std::vector<concord::Point> spawns = {{-50.0f, -50.0f}, {50.0f, -50.0f}, {-50.0f, 50.0f}, {50.0f, 50.0f}};
+    const std::vector<datapod::Point> spawns = {{-50.0f, -50.0f}, {50.0f, -50.0f}, {-50.0f, 50.0f}, {50.0f, 50.0f}};
     const std::vector<pigment::RGB> colors = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}};
     const std::vector<const char *> shape_names = {"S-shape", "U-shape", "O-shape", "L-shape"};
 
-    std::vector<std::vector<concord::Point>> paths = {
+    std::vector<std::vector<datapod::Point>> paths = {
         generate_s_shape(static_cast<float>(spawns[0].x), static_cast<float>(spawns[0].y), 1.0f),
         generate_u_shape(static_cast<float>(spawns[1].x), static_cast<float>(spawns[1].y), 1.0f),
         generate_o_shape(static_cast<float>(spawns[2].x), static_cast<float>(spawns[2].y), 1.0f),
@@ -86,7 +96,7 @@ int main(int argc, char **argv) {
     huskies.reserve(4);
     for (int i = 0; i < 4; ++i) {
         const std::string uuid = "husky_" + std::to_string(i);
-        auto &husky = sim.spawn_agent("examples/machines/husky.json", concord::Pose(spawns[i].x, spawns[i].y, 0.0), uuid,
+        auto &husky = sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(spawns[i].x, spawns[i].y, 0.0), uuid,
                                       colors[i]);
         huskies.push_back(&husky);
     }

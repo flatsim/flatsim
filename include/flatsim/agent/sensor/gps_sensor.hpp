@@ -1,6 +1,5 @@
 #pragma once
 
-#include "concord/concord.hpp"
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
@@ -56,7 +55,7 @@ namespace fs {
         GPSData current_data;
         double update_frequency; // Hz
         double next_update_time;
-        concord::Pose robot_pose; // Current robot pose
+        datapod::Pose robot_pose; // Current robot pose
 
         // RTK simulation parameters
         bool rtk_enabled;
@@ -133,7 +132,7 @@ namespace fs {
 
         // Sensor interface implementation
         void update(double dt) override;
-        void set_robot_pose(const concord::Pose &pose) override;
+        void set_robot_pose(const datapod::Pose &pose) override;
         void update_from_simulator(const types::SensorData &data) override;
         void *get_data() override;
         std::string get_type() const override;
@@ -199,6 +198,6 @@ namespace fs {
         /**
          * @brief Convert ENU coordinates to WGS84
          */
-        void convert_enu_to_wgs84(const concord::Pose &robot_pose);
+        void convert_enu_to_wgs84(const datapod::Pose &robot_pose);
     };
 } // namespace fs

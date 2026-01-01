@@ -1,4 +1,5 @@
 #include "flatsim/simulator/machine/chassis.hpp"
+#include "flatsim/utils.hpp"
 
 namespace simulator {
 
@@ -20,7 +21,7 @@ namespace simulator {
         muli::Transform t;
         t.position.x = bound.pose.point.x;
         t.position.y = bound.pose.point.y;
-        t.rotation = bound.pose.angle.yaw;
+        t.rotation = utils::get_yaw(bound.pose);
 
         // Create empty body for compound shape
         body = world->CreateEmptyBody(t);
@@ -80,7 +81,7 @@ namespace simulator {
                 muli::Transform karos_transform;
                 karos_transform.position.x = k.bound.pose.point.x;
                 karos_transform.position.y = k.bound.pose.point.y;
-                karos_transform.rotation = k.bound.pose.angle.yaw;
+                karos_transform.rotation = utils::get_yaw(k.bound.pose);
 
                 // Add as collider to main chassis body and set filter explicitly
                 auto karos_collider = body->CreateBoxCollider(k.bound.size.x, k.bound.size.y, 0.02f, karos_transform);
@@ -170,11 +171,11 @@ namespace simulator {
         }
     }
 
-    void Chassis::teleport(concord::Pose pose) {
+    void Chassis::teleport(datapod::Pose pose) {
         muli::Transform t;
         t.position.x = pose.point.x;
         t.position.y = pose.point.y;
-        t.rotation = pose.angle.yaw;
+        t.rotation = utils::get_yaw(pose);
         body->SetTransform(t);
         body->SetSleeping(true);
 

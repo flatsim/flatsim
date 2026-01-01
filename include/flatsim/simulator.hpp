@@ -34,10 +34,10 @@ namespace simulator {
     struct SimulatorSettings {
         float width;
         float height;
-        concord::Datum datum;
+        datapod::Geo datum;
 
         // Force users to specify all parameters
-        SimulatorSettings(float w, float h, concord::Datum d) : width(w), height(h), datum(d) {}
+        SimulatorSettings(float w, float h, datapod::Geo d) : width(w), height(h), datum(d) {}
     };
 
     class Simulator {
@@ -93,11 +93,10 @@ namespace simulator {
       public:
         // Constructor for LOCAL mode (no networking)
         // NOTE: datum is REQUIRED - GPS coordinates won't work without it
-        Simulator(float width, float height, concord::Datum datum,
-                  std::shared_ptr<rerun::RecordingStream> rec = nullptr);
+        Simulator(float width, float height, datapod::Geo datum, std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         // Constructor for IPC/TCP mode with explicit parameters
-        Simulator(Conn conn, const std::string &address, float width, float height, concord::Datum datum,
+        Simulator(Conn conn, const std::string &address, float width, float height, datapod::Geo datum,
                   std::shared_ptr<rerun::RecordingStream> rec = nullptr);
 
         // Constructor for IPC/TCP mode with settings struct
@@ -111,7 +110,7 @@ namespace simulator {
         void tock();
 
         // LOCAL mode: Spawn agent directly (returns reference)
-        agent::Agent &spawn_agent(const std::filesystem::path &json_path, concord::Pose spawn_pose,
+        agent::Agent &spawn_agent(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
                                   std::optional<std::string> uuid = std::nullopt,
                                   std::optional<pigment::RGB> color = std::nullopt);
 
@@ -145,7 +144,7 @@ namespace simulator {
         void apply_control(const types::WheelControl &control, float dt);
 
         // Teleport a machine to a new pose
-        void teleport_machine(const std::string &uuid, const concord::Pose &pose);
+        void teleport_machine(const std::string &uuid, const datapod::Pose &pose);
 
         // Destroy a machine
         bool destroy_machine(const std::string &uuid);
@@ -161,7 +160,7 @@ namespace simulator {
         std::shared_ptr<rerun::RecordingStream> rec() const { return rec_; }
 
         // Datum access
-        concord::Datum get_datum() const { return sim_settings_.datum; }
+        datapod::Geo get_datum() const { return sim_settings_.datum; }
 
         // Sensor data access
         const types::SensorData &get_sensor_data(const std::string &uuid) const;

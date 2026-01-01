@@ -11,7 +11,7 @@ set(PROJECT_VERSION "0.0.3")
 #   Find:   set(LIB_DEPS "name" ...)  # Uses find_package
 #   Pkg:    set(LIB_DEPS "pkg::name" ...)  # Uses pkg-config
 set(LIB_DEPS
-    "concord|https://github.com/robolibs/concord.git|2.5.0"
+    "datapod|https://github.com/robolibs/datapod.git|main"
     "pigment|https://github.com/robolibs/pigment.git|1.0.0"
     "entropy|https://github.com/robolibs/entropy.git|1.1.0"
     "zoneout|https://github.com/robolibs/zoneout.git|1.4.0"

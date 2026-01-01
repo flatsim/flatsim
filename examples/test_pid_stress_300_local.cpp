@@ -6,19 +6,30 @@
 //   ./build/linux/x86_64/release/test_pid_stress_300_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <algorithm>
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <cstdint>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <numbers>
+#include "flatsim/utils.hpp"
 #include <random>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
-static std::vector<concord::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
+    std::vector<datapod::Point> path;
     path.reserve(21);
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
@@ -34,7 +45,7 @@ int main(int argc, char **argv) {
     (void)argv;
     std::cout << "=== PID Controller Stress Test: 300 Robots (LOCAL mode) ===" << std::endl;
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(1500.0f, 1500.0f, datum);
 
     constexpr int kNumRobots = 300;
@@ -56,7 +67,7 @@ int main(int argc, char **argv) {
         const pigment::RGB color{static_cast<uint8_t>(color_dis(rng)), static_cast<uint8_t>(color_dis(rng)),
                                  static_cast<uint8_t>(color_dis(rng))};
         const std::string uuid = "tractor_" + std::to_string(i);
-        auto &tractor = sim.spawn_agent("examples/machines/tractor.json", concord::Pose(x, y, 0.0), uuid, color);
+        auto &tractor = sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(x, y, 0.0), uuid, color);
         tractors.push_back(&tractor);
         if ((i + 1) % 50 == 0 || i == kNumRobots - 1) {
             std::cout << "[Setup] Spawned " << (i + 1) << "/" << kNumRobots << std::endl;

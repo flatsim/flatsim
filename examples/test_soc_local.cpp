@@ -12,6 +12,7 @@
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -20,8 +21,8 @@
 #include <thread>
 #include <vector>
 
-static std::vector<concord::Point> corridor_path(float x0, float x1, float step, float y = 0.0f) {
-    std::vector<concord::Point> path;
+static std::vector<datapod::Point> corridor_path(float x0, float x1, float step, float y = 0.0f) {
+    std::vector<datapod::Point> path;
     if (step <= 0.0f) {
         return path;
     }
@@ -41,10 +42,10 @@ int main(int argc, char **argv) {
     std::cout << "=== SOC (SVG-MPPI) Path Following Test (LOCAL mode) ===" << std::endl;
 
     std::filesystem::path machine_file = "examples/machines/tractor.json";
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
     simulator::Simulator sim(500.0f, 500.0f, datum);
-    concord::Pose spawn_pose(0.0, 0.0, -static_cast<float>(std::numbers::pi / 2.0));
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -static_cast<float>(std::numbers::pi / 2.0));
     auto &tractor = sim.spawn_agent(machine_file, spawn_pose);
 
     tractor.controls().tracker().set_controller_type(drivekit::TrackerType::SOC);
@@ -90,16 +91,16 @@ int main(int argc, char **argv) {
     tractor.tracker()->set_path(drivekit::PathGoal(path_pts, 1.0f, 2.0f, false));
 
     // Obstacles (physics + visualization).
-    sim.world().add_obstacle(types::StaticObstacle{1, concord::Point{15.0, 0.0}, 0.8, 0.1});
-    sim.world().add_obstacle(types::StaticObstacle{2, concord::Point{30.0, 0.8}, 0.8, 0.1});
-    sim.world().add_obstacle(types::StaticObstacle{3, concord::Point{45.0, -0.8}, 0.8, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{1, datapod::Point{15.0, 0.0, 0.0}, 0.8, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{2, datapod::Point{30.0, 0.8, 0.0}, 0.8, 0.1});
+    sim.world().add_obstacle(types::StaticObstacle{3, datapod::Point{45.0, -0.8, 0.0}, 0.8, 0.1});
 
-    sim.world().add_obstacle(
-        types::DynamicObstacle{1, concord::Point{20.0, -4.0}, concord::Point{0.0, 0.6}, 0.5, 0.3, 10.0, false});
-    sim.world().add_obstacle(
-        types::DynamicObstacle{2, concord::Point{40.0, 0.0}, concord::Point{-0.8, 0.0}, 0.5, 0.3, 15.0, false});
-    sim.world().add_obstacle(
-        types::DynamicObstacle{3, concord::Point{35.0, 4.0}, concord::Point{0.0, -0.6}, 0.5, 0.3, 10.0, false});
+    sim.world().add_obstacle(types::DynamicObstacle{1, datapod::Point{20.0, -4.0, 0.0}, datapod::Point{0.0, 0.6, 0.0},
+                                                    0.5, 0.3, 10.0, false});
+    sim.world().add_obstacle(types::DynamicObstacle{2, datapod::Point{40.0, 0.0, 0.0}, datapod::Point{-0.8, 0.0, 0.0},
+                                                    0.5, 0.3, 15.0, false});
+    sim.world().add_obstacle(types::DynamicObstacle{3, datapod::Point{35.0, 4.0, 0.0}, datapod::Point{0.0, -0.6, 0.0},
+                                                    0.5, 0.3, 10.0, false});
 
     std::cout << "[World] Static obstacles: " << sim.world().static_obstacles().size()
               << " | Dynamic obstacles: " << sim.world().dynamic_obstacles().size() << std::endl;
@@ -151,4 +152,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-

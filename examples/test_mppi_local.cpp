@@ -6,13 +6,21 @@
 //   ./build/linux/x86_64/release/test_mppi_local
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <cmath>
+#include "flatsim/utils.hpp"
 #include <filesystem>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 #include <vector>
+#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -26,10 +34,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    auto &tractor = sim.spawn_agent(machine_file, concord::Pose(0.0, 0.0, -1.5708f), "mppi_0");
+    auto &tractor = sim.spawn_agent(machine_file, utils::make_pose_2d(0.0, 0.0, -1.5708f), "mppi_0");
     std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
 
     tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
@@ -57,7 +65,7 @@ int main(int argc, char **argv) {
     cfg.weight_acceleration = 20.0;
     mppi->set_mppi_config(cfg);
 
-    std::vector<concord::Point> s_curve_path = {
+    std::vector<datapod::Point> s_curve_path = {
         {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f},
         {30.0f, 14.0f}, {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f},
         {60.0f, 14.0f}, {65.0f, 10.0f}, {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},

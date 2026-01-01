@@ -2,12 +2,19 @@
 // Demonstrates high-level Agent API (set_velocity) with in-process Simulator
 
 #include "flatsim/agent.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/agent/loader.hpp"
+#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
+#include "flatsim/utils.hpp"
 #include <iostream>
+#include "flatsim/utils.hpp"
 #include <rerun.hpp>
+#include "flatsim/utils.hpp"
 #include <thread>
+#include "flatsim/utils.hpp"
 
 int main() {
     std::cout << "[Example] Simple demo - Simulator + Agent in same process" << std::endl;
@@ -16,11 +23,11 @@ int main() {
     rec->spawn().exit_on_failure();
     std::cout << "[Rerun] Visualization started" << std::endl;
 
-    concord::Datum datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
     try {
-        concord::Pose spawn_pose(0.0, 0.0, 0.0);
+        datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, 0.0);
         auto machine = agent::Loader::load_from_json("examples/machines/tractor.json", spawn_pose);
 
         std::cout << "[Loader] Loaded: " << machine.name << std::endl;
@@ -46,7 +53,7 @@ int main() {
             if (i % 60 == 0) {
                 auto pose = robot.machine().world_pose();
                 std::cout << "[Robot] Tick " << i << " - Pos: (" << pose.point.x << ", " << pose.point.y
-                          << ") yaw=" << pose.angle.yaw << std::endl;
+                          << ") yaw=" << utils::get_yaw(pose) << std::endl;
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
