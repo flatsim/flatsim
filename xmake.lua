@@ -18,13 +18,13 @@ local LIB_DEPS = {
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.2.1"},
     {"cista", "https://github.com/felixguendling/cista.git", "v0.16"},
     {"muli", "https://github.com/flatsim/flywheel.git", "master"},
-}
-
-local EXAMPLE_DEPS = {
-    "pkgconfig::rerun_sdk",
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
     {system = "boost"},
+    {system = "rerun_sdk"},
+}
+
+local EXAMPLE_DEPS = {
 }
 local TEST_DEPS = {
     {"doctest", "https://github.com/doctest/doctest.git", "v2.4.11"},
@@ -38,11 +38,11 @@ set_languages("c++20")
 add_rules("mode.debug", "mode.release")
 
 -- Compiler selection option
--- Usage: xmake f --toolchain=gcc or xmake f --toolchain=clang
-option("toolchain", {default = nil, showmenu = true, description = "Compiler toolchain: gcc, clang, or nil for default"})
+-- Usage: xmake f --compiler=gcc or xmake f --compiler=clang
+option("compiler", {default = nil, showmenu = true, description = "Compiler: gcc, clang, or nil for default"})
 
-if has_config("toolchain") then
-    local tc = get_config("toolchain")
+if has_config("compiler") then
+    local tc = get_config("compiler")
     if tc == "gcc" then
         set_toolchains("gcc")
     elseif tc == "clang" then
@@ -109,7 +109,7 @@ local function process_dep(dep)
 
     -- Table with "system" key: system package with alias
     if dep.system then
-        add_requires(dep.system, {system = true})
+        add_requires(dep.system, {system = true, optional = true})
         return dep.system
     end
 

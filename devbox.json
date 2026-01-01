@@ -16,6 +16,8 @@
     "tbb.dev",
     "cli11@latest",
     "libsodium@latest",
+    "zig@latest",
+    "xmake@latest"
   ],
   "shell": {
     "init_hook": [
