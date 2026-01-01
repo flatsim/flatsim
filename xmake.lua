@@ -179,7 +179,7 @@ end
 -- Main library
 target(PROJECT_NAME)
     set_kind("static")
-    add_files("src/" .. PROJECT_NAME .. "/**.cpp")
+    add_files("src/**.cpp")
     add_headerfiles("include/(" .. PROJECT_NAME .. "/**.hpp)")
     add_includedirs("include", {public = true})
     add_installfiles("include/(" .. PROJECT_NAME .. "/**.hpp)")

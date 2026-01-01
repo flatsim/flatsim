@@ -19,12 +19,13 @@ set(LIB_DEPS
     "drivekit|https://github.com/robolibs/drivekit.git|0.2.1"
     "cista|https://github.com/felixguendling/cista.git|v0.16"
     "muli|https://github.com/Sopiro/Muli|master"
-)
-set(EXAMPLE_DEPS
     "pkg::rerun_sdk"
     "pkg::ZeroMQ"
     "pkg::cppzmq"
-    "pkg::Boost"
+    {system = "boost"},
+)
+
+set(EXAMPLE_DEPS
 )
 set(TEST_DEPS
     "doctest|https://github.com/doctest/doctest.git|v2.4.12"

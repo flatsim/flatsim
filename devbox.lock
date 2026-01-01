@@ -452,27 +452,6 @@
         }
       }
     },
-    "pkgconfig@latest": {
-      "last_modified": "2023-02-24T09:01:09Z",
-      "resolved": "github:NixOS/nixpkgs/7d0ed7f2e5aea07ab22ccb338d27fbe347ed2f11#pkgconfig",
-      "source": "devbox-search",
-      "version": "0.29.2",
-      "systems": {
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "path": "/nix/store/lrb01sby9jg4hfqhr32s28igg77bhcwr-pkg-config-wrapper-0.29.2",
-              "default": true
-            },
-            {
-              "name": "man",
-              "path": "/nix/store/p1daqgj07pz2yykvd8qydi4zl11ahp0h-pkg-config-wrapper-0.29.2-man",
-              "default": true
-            }
-          ]
-        }
-      }
-    },
     "rerun@latest": {
       "last_modified": "2025-11-23T21:50:36Z",
       "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#rerun",
