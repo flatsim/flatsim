@@ -5,8 +5,6 @@
     "pkgconfig@latest",
     "clang@latest",
     "clang-tools@latest",
-    "gcc@13.3",
-    "gcc.cc.lib",
     "stdenv@latest",
     "boost@latest",
     "boost.dev",
@@ -18,12 +16,6 @@
     "tbb.dev",
     "cli11@latest",
     "libsodium@latest",
-    "eigen@latest",
-    "rustc@latest",
-    "cargo@latest",
-    "rust-analyzer@latest",
-    "clippy@latest",
-    "vscode-extensions.llvm-org.lldb-vscode@latest"
   ],
   "shell": {
     "init_hook": [

@@ -1,220 +1,241 @@
 cmake_minimum_required(VERSION 3.15)
 
-# set(CMAKE_C_COMPILER gcc-13)
-# set(CMAKE_CXX_COMPILER g++-13)
+# ==================================================================================================
+# Project configuration
+# ==================================================================================================
+set(PROJECT_NAME flatsim)
+set(PROJECT_VERSION "0.0.3")
 
-set(project_name flatsim)
-project(${project_name} VERSION 0.1.0 LANGUAGES CXX)
+# Dependencies formats:
+#   Git:    set(LIB_DEPS "name|https://github.com/org/repo.git|tag" ...)
+#   Find:   set(LIB_DEPS "name" ...)  # Uses find_package
+#   Pkg:    set(LIB_DEPS "pkg::name" ...)  # Uses pkg-config
+set(LIB_DEPS
+    "concord|https://github.com/robolibs/concord.git|2.5.0"
+    "pigment|https://github.com/robolibs/pigment.git|1.0.0"
+    "entropy|https://github.com/robolibs/entropy.git|1.1.0"
+    "zoneout|https://github.com/robolibs/zoneout.git|1.4.0"
+    "farmtrax|https://github.com/robolibs/farmtrax.git|1.1.1"
+    "drivekit|https://github.com/robolibs/drivekit.git|0.2.1"
+    "cista|https://github.com/felixguendling/cista.git|v0.16"
+    "muli|https://github.com/Sopiro/Muli|master"
+)
+set(EXAMPLE_DEPS
+    "pkg::rerun_sdk"
+    "pkg::ZeroMQ"
+    "pkg::cppzmq"
+    "pkg::Boost"
+)
+set(TEST_DEPS
+    "doctest|https://github.com/doctest/doctest.git|v2.4.12"
+)
 
-add_compile_options(-Wall -Wextra -Wpedantic)
-cmake_policy(SET CMP0074 NEW)
-cmake_policy(SET CMP0135 NEW)
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(MULI_BUILD_DEMO OFF CACHE BOOL "Disable MULI demo" FORCE)
+
+# ==================================================================================================
+# Compiler selection (must be before project())
+# ==================================================================================================
+# Usage: cmake -DCOMPILER=clang .. or cmake -DCOMPILER=gcc ..
+set(COMPILER "" CACHE STRING "Compiler to use: gcc, clang, or empty for system default")
+
+if(COMPILER STREQUAL "clang")
+    find_program(CLANG_C_COMPILER clang)
+    find_program(CLANG_CXX_COMPILER clang++)
+    if(CLANG_C_COMPILER AND CLANG_CXX_COMPILER)
+        set(CMAKE_C_COMPILER ${CLANG_C_COMPILER})
+        set(CMAKE_CXX_COMPILER ${CLANG_CXX_COMPILER})
+        message(STATUS "Using Clang compiler: ${CLANG_CXX_COMPILER}")
+    else()
+        message(FATAL_ERROR "Clang compiler not found")
+    endif()
+elseif(COMPILER STREQUAL "gcc")
+    find_program(GCC_C_COMPILER gcc)
+    find_program(GCC_CXX_COMPILER g++)
+    if(GCC_C_COMPILER AND GCC_CXX_COMPILER)
+        set(CMAKE_C_COMPILER ${GCC_C_COMPILER})
+        set(CMAKE_CXX_COMPILER ${GCC_CXX_COMPILER})
+        message(STATUS "Using GCC compiler: ${GCC_CXX_COMPILER}")
+    else()
+        message(FATAL_ERROR "GCC compiler not found")
+    endif()
+endif()
+
+# ==================================================================================================
+# Project setup
+# ==================================================================================================
+project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES CXX)
+
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Performance optimizations
-set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
-# Removed -flto to prevent excessive memory usage during compilation
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math" CACHE STRING "Release flags")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math" CACHE STRING "Release flags")
-set(params
-    -Wno-reorder
-    -Wno-unused-variable
-    -Wno-unused-but-set-variable
-    -Wno-unused-parameter
-)
+# Compiler-specific flags
+set(COMMON_FLAGS -Wall -Wextra -Wpedantic -Wno-reorder -Wno-narrowing -Wno-array-bounds
+    -Wno-unused-variable -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-gnu-line-marker)
 
-set(link_options
-    "LINKER:--no-as-needed"
-)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(${COMMON_FLAGS} -Wno-stringop-overflow)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(${COMMON_FLAGS} -Wno-unknown-warning-option)
+else()
+    add_compile_options(${COMMON_FLAGS})
+endif()
 
-option(RERUN_DOWNLOAD_AND_BUILD_ARROW "Download and build arrow" OFF)
-set(HAS_RERUN ON CACHE BOOL "Enable Rerun visualization" FORCE)
+# Project name uppercase (needed for option names)
+string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
-string(TOUPPER ${project_name} project_name_upper)
-option(${project_name_upper}_BUILD_EXAMPLES "Build examples" OFF)
-option(${project_name_upper}_ENABLE_TESTS "Enable tests" OFF)
-option(${project_name_upper}_ENABLE_RUST "Enable Rust components" OFF)
+# SIMD configuration option
+option(${PROJECT_NAME_UPPER}_ENABLE_SIMD "Enable SIMD optimizations" ON)
+
+# Architecture-specific SIMD flags
+if(${PROJECT_NAME_UPPER}_ENABLE_SIMD)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
+        add_compile_options(-mavx -mavx2 -mfma)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        # ARM64: NEON is enabled by default
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+        add_compile_options(-mfpu=neon -mfloat-abi=hard)
+    endif()
+else()
+    # Define macro to disable SIMD in the code
+    add_compile_definitions(GEOSON_SIMD_DISABLED)
+    message(STATUS "SIMD optimizations disabled")
+endif()
+option(${PROJECT_NAME_UPPER}_BUILD_EXAMPLES "Build examples" OFF)
+option(${PROJECT_NAME_UPPER}_ENABLE_TESTS "Enable tests" OFF)
+option(SHORT_NAMESPACE "Enable short namespace alias" ON)
+option(EXPOSE_ALL "Expose all submodule functions in namespace" OFF)
+
 include(FetchContent)
 
-# When developing offline or in constrained environments, avoid trying to
-# update already-fetched FetchContent dependencies from the network.
-set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+# ==================================================================================================
+# Helper function: process dependencies
+# ==================================================================================================
+function(process_deps dep_list out_targets)
+    set(targets)
+    foreach(dep IN LISTS ${dep_list})
+        # Check if it's a git dependency (contains |)
+        string(FIND "${dep}" "|" has_pipe)
+        # Check if it's a pkg-config dependency (starts with pkg::)
+        string(FIND "${dep}" "pkg::" is_pkg)
 
-# If a local Muli checkout already exists in the binary directory, reuse it
-# instead of fetching from Git. This makes builds work without network access
-# as long as the dependency was fetched once beforehand.
-if(EXISTS "${CMAKE_BINARY_DIR}/_deps/muli-src")
-  set(FETCHCONTENT_SOURCE_DIR_MULI "${CMAKE_BINARY_DIR}/_deps/muli-src")
+        if(has_pipe GREATER -1)
+            # Parse: name|url|tag
+            string(REPLACE "|" ";" dep_parts "${dep}")
+            list(GET dep_parts 0 dep_name)
+            list(GET dep_parts 1 dep_url)
+            list(GET dep_parts 2 dep_tag)
+
+            FetchContent_Declare(${dep_name}
+                GIT_REPOSITORY "${dep_url}"
+                GIT_TAG "${dep_tag}"
+                GIT_SHALLOW TRUE
+            )
+            FetchContent_MakeAvailable(${dep_name})
+            list(APPEND targets ${dep_name})
+        elseif(is_pkg EQUAL 0)
+            # pkg-config dependency: pkg::name
+            string(SUBSTRING "${dep}" 5 -1 pkg_name)
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(${pkg_name} REQUIRED IMPORTED_TARGET ${pkg_name})
+            list(APPEND targets PkgConfig::${pkg_name})
+        else()
+            # Simple dependency - use find_package
+            find_package(${dep} REQUIRED)
+            list(APPEND targets ${dep}::${dep})
+        endif()
+    endforeach()
+    set(${out_targets} ${targets} PARENT_SCOPE)
+endfunction()
+
+# ==================================================================================================
+# Process library dependencies
+# ==================================================================================================
+process_deps(LIB_DEPS LIB_DEP_TARGETS)
+
+# ==================================================================================================
+# Main library
+# ==================================================================================================
+file(GLOB_RECURSE LIB_SOURCES CONFIGURE_DEPENDS "src/${PROJECT_NAME}/*.cpp")
+
+if(LIB_SOURCES)
+    add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+        $<$<BOOL:${SHORT_NAMESPACE}>:SHORT_NAMESPACE>
+        $<$<BOOL:${EXPOSE_ALL}>:OPTINUM_EXPOSE_ALL>
+    )
+else()
+    add_library(${PROJECT_NAME} INTERFACE)
+    target_include_directories(${PROJECT_NAME} INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    if(SHORT_NAMESPACE)
+        target_compile_definitions(${PROJECT_NAME} INTERFACE SHORT_NAMESPACE)
+    endif()
+    if(EXPOSE_ALL)
+        target_compile_definitions(${PROJECT_NAME} INTERFACE OPTINUM_EXPOSE_ALL)
+    endif()
 endif()
 
-# Rust integration removed - we're calling C++ from Rust instead
+if(LIB_DEP_TARGETS)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${LIB_DEP_TARGETS})
+endif()
 
-# --------------------------------------------------------------------------------------------------
-# External Dependencies
-set(ext_deps)
+add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-# Muli Physics Engine
-set(MULI_BUILD_DEMO OFF)
-FetchContent_Declare(muli GIT_REPOSITORY https://github.com/Sopiro/Muli GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(muli)
-include_directories(${muli_SOURCE_DIR}/include)
-list(APPEND ext_deps muli)
-
-find_package(rerun_sdk REQUIRED)
-find_package(ZeroMQ REQUIRED)
-find_package(cppzmq REQUIRED)
-find_package(Boost REQUIRED COMPONENTS json)
-
-list(APPEND ext_deps rerun_sdk zmq cppzmq Boost::json)
-
-FetchContent_Declare(concord GIT_REPOSITORY https://github.com/robolibs/concord.git GIT_TAG 2.5.0)
-FetchContent_MakeAvailable(concord)
-list(APPEND ext_deps concord::concord)
-
-FetchContent_Declare(pigment GIT_REPOSITORY https://github.com/robolibs/pigment.git GIT_TAG 0.3.1)
-FetchContent_MakeAvailable(pigment)
-list(APPEND ext_deps pigment::pigment)
-
-FetchContent_Declare(entropy GIT_REPOSITORY https://github.com/robolibs/entropy.git GIT_TAG 1.1.0)
-FetchContent_MakeAvailable(entropy)
-list(APPEND ext_deps entropy::entropy)
-
-FetchContent_Declare(zoneout GIT_REPOSITORY https://github.com/robolibs/zoneout.git GIT_TAG 1.4.0)
-FetchContent_MakeAvailable(zoneout)
-list(APPEND ext_deps zoneout::zoneout)
-
-FetchContent_Declare(farmtrax GIT_REPOSITORY https://github.com/robolibs/farmtrax.git GIT_TAG 1.1.1)
-FetchContent_MakeAvailable(farmtrax)
-list(APPEND ext_deps farmtrax::farmtrax)
-
-FetchContent_Declare(drivekit GIT_REPOSITORY https://github.com/robolibs/drivekit.git GIT_TAG 0.2.1)
-FetchContent_MakeAvailable(drivekit)
-list(APPEND ext_deps drivekit::drivekit)
-
-# Cista - high-performance zero-copy serialization
-FetchContent_Declare(cista GIT_REPOSITORY https://github.com/felixguendling/cista.git GIT_TAG v0.16)
-FetchContent_MakeAvailable(cista)
-include_directories(${cista_SOURCE_DIR}/include)
-list(APPEND ext_deps cista)
-
-# --------------------------------------------------------------------------------------------------
-add_library(${project_name} INTERFACE)
-# Allow users to link via `${project_name}::${project_name}`
-add_library(${project_name}::${project_name} ALIAS ${project_name})
-target_include_directories(${project_name} INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-install(
-  DIRECTORY include/
-  DESTINATION include
-)
-include_directories(include)
-
-# --------------------------------------------------------------------------------------------------
+# ==================================================================================================
+# Installation
+# ==================================================================================================
 include(GNUInstallDirs)
 
-#Install headers
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-#Install and export the INTERFACE target
-install(TARGETS ${project_name} EXPORT ${project_name}Targets)
-
-#Install the export file so that `find_package(${project_name})` works
-install(EXPORT ${project_name}Targets
-  FILE ${project_name}Targets.cmake
-  NAMESPACE ${project_name}::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${project_name}
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets)
+install(EXPORT ${PROJECT_NAME}Targets
+    FILE ${PROJECT_NAME}Targets.cmake
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+export(EXPORT ${PROJECT_NAME}Targets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
+    NAMESPACE ${PROJECT_NAME}::
 )
 
-#Also export it for in‐source FetchContent usage
-export(EXPORT ${project_name}Targets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/${project_name}Targets.cmake"
-  NAMESPACE ${project_name}::
-)
+# ==================================================================================================
+# Examples
+# ==================================================================================================
+if(${PROJECT_NAME_UPPER}_BUILD_EXAMPLES)
+    process_deps(EXAMPLE_DEPS EXAMPLE_DEP_TARGETS)
+    set(ALL_EXAMPLE_DEPS ${LIB_DEP_TARGETS} ${EXAMPLE_DEP_TARGETS})
 
-
-# --------------------------------------------------------------------------------------------------
-file(GLOB_RECURSE internal_deps
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-)
-
-# Add Rust shim files if Rust is enabled
-if(${project_name_upper}_ENABLE_RUST)
-    list(APPEND internal_deps
-        "${CMAKE_CURRENT_SOURCE_DIR}/rust/rust_shim.cpp"
-    )
+    file(GLOB example_sources CONFIGURE_DEPENDS examples/*.cpp)
+    foreach(src_file IN LISTS example_sources)
+        get_filename_component(exec_name "${src_file}" NAME_WE)
+        add_executable(${exec_name} "${src_file}")
+        target_compile_definitions(${exec_name} PRIVATE SHORT_NAMESPACE HAS_RERUN PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+        target_link_libraries(${exec_name} ${PROJECT_NAME}::${PROJECT_NAME} ${ALL_EXAMPLE_DEPS})
+        install(TARGETS ${exec_name} DESTINATION bin)
+    endforeach()
 endif()
 
-# Create a static library from internal sources to avoid recompiling for each executable
-add_library(${project_name}_internal STATIC ${internal_deps})
-target_compile_options(${project_name}_internal PRIVATE ${params})
-target_link_libraries(${project_name}_internal PUBLIC ${ext_deps})
-target_include_directories(${project_name}_internal PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rust>
-    $<INSTALL_INTERFACE:include>
-)
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+if(${PROJECT_NAME_UPPER}_ENABLE_TESTS)
+    enable_testing()
+    process_deps(TEST_DEPS TEST_DEP_TARGETS)
+    set(ALL_TEST_DEPS ${LIB_DEP_TARGETS} ${TEST_DEP_TARGETS})
 
-# Rust FFI removed - we're calling C++ from Rust instead
-
-# --------------------------------------------------------------------------------------------------
-if(${project_name_upper}_BUILD_EXAMPLES)
-  file(GLOB exe CONFIGURE_DEPENDS examples/*.cpp)
-  # ----------------------------------------------
-  FetchContent_Declare(cli11 GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git GIT_TAG v2.5.0)
-  FetchContent_MakeAvailable(cli11)
-  list(APPEND ext_deps CLI11::CLI11)
-
-  set(exec_names)
-  foreach(src_file IN LISTS exe)
-    get_filename_component(exec_name "${src_file}" NAME_WE)
-    add_executable(${exec_name} "${src_file}")
-    target_compile_options(${exec_name} PRIVATE ${params})
-    target_compile_options(${exec_name} PRIVATE ${CURL_CFLAGS_OTHER})
-    # Link against the static library instead of compiling all sources again
-    target_link_libraries(${exec_name} ${project_name}_internal ${ext_deps})
-    target_link_options(${exec_name} PRIVATE ${link_options})
-    target_include_directories(${exec_name} PRIVATE ${CURL_INCLUDE_DIRS})
-    install(TARGETS ${exec_name} DESTINATION bin)
-    list(APPEND exec_names ${exec_name})
-  endforeach()
-  # ----------------------------------------------
-  foreach(exec IN LISTS exec_names)
-    file(REMOVE "${CMAKE_CURRENT_LIST_DIR}/.execs")
-    file(WRITE "${CMAKE_CURRENT_LIST_DIR}/.execs")
-    get_filename_component(exec_name "${exec}" NAME)
-    file(APPEND "${CMAKE_CURRENT_LIST_DIR}/.execs" "${CMAKE_CURRENT_LIST_DIR}/build/${exec_name}\n")
-  endforeach()
-  # ----------------------------------------------
-  install(TARGETS
-    ${exec_names}
-    DESTINATION lib/${PROJECT_NAME}
-  )
-endif()
-
-
-# --------------------------------------------------------------------------------------------------
-if(${project_name_upper}_ENABLE_TESTS)
-  enable_testing()
-  add_definitions(-DENABLE_DOCTEST_IN_LIBRARY)
-  include(FetchContent)
-  FetchContent_Declare(DocTest GIT_REPOSITORY "https://github.com/onqtam/doctest")
-  FetchContent_MakeAvailable(DocTest)
-
-  file(GLOB test_src CONFIGURE_DEPENDS test/*.cpp)
-
-  foreach(src_file IN LISTS test_src)
-    get_filename_component(test_name "${src_file}" NAME_WE)
-    add_executable(${test_name} "${src_file}")
-    target_compile_options(${test_name} PRIVATE ${params})
-    # Link against the static library instead of compiling all sources again
-    target_link_libraries(${test_name} ${project_name}_internal ${ext_deps} doctest_with_main)
-    target_link_options(${test_name} PRIVATE ${link_options})
-    add_test(NAME ${test_name} COMMAND ${test_name})
-  endforeach()
+    file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS test/*.cpp)
+    foreach(src_file IN LISTS test_sources)
+        get_filename_component(test_name "${src_file}" NAME_WE)
+        add_executable(${test_name} "${src_file}")
+        target_compile_definitions(${test_name} PRIVATE SHORT_NAMESPACE DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+        target_link_libraries(${test_name} ${PROJECT_NAME}::${PROJECT_NAME} ${ALL_TEST_DEPS})
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
 endif()
