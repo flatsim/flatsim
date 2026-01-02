@@ -149,7 +149,7 @@ namespace simulator {
                 .with_radii({{0.02f}})
                 .with_fill_mode(rerun::FillMode::Solid)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(th))})
-                .with_colors({rerun::Color(color.r, color.g, color.b)}));
+                .with_colors({rerun::Color(color.r(), color.g(), color.b())}));
     }
 
     void Wheel::configure_physics_for_size() {

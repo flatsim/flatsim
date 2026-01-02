@@ -41,6 +41,6 @@ namespace simulator {
                 .with_radii({{0.02f}})
                 .with_fill_mode(this->hooked ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                 .with_rotation_axis_angles({rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
-                .with_colors({rerun::Color(color.r, color.g, color.b)}));
+                .with_colors({rerun::Color(color.r(), color.g(), color.b())}));
     }
 } // namespace simulator

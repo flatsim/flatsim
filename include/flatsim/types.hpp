@@ -266,9 +266,7 @@ namespace types {
             uint8_t b = 255;
 
             pigment::RGB to_pigment() const { return pigment::RGB(r, g, b); }
-            static Color from_pigment(const pigment::RGB &c) {
-                return {static_cast<uint8_t>(c.r), static_cast<uint8_t>(c.g), static_cast<uint8_t>(c.b)};
-            }
+            static Color from_pigment(const pigment::RGB &c) { return {c.r(), c.g(), c.b()}; }
         };
 
         struct Bound {

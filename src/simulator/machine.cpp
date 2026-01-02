@@ -112,7 +112,7 @@ namespace simulator {
             auto wgs_coords = flatsim::gps::enu_to_gps(current_pos, datum);
             rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
-                                 .with_colors({rerun::Color(config_.color.r, config_.color.g, config_.color.b)}));
+                                 .with_colors({rerun::Color(config_.color.r(), config_.color.g(), config_.color.b())}));
         }
     }
 

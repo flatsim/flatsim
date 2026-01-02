@@ -115,7 +115,7 @@ namespace simulator {
                     .with_fill_mode(this->working ? rerun::FillMode::Solid : rerun::FillMode::MajorWireframe)
                     .with_rotation_axis_angles(
                         {rerun::RotationAxisAngle({0.0f, 0.0f, 1.0f}, rerun::Angle::radians(k_th))})
-                    .with_colors({rerun::Color(color.r, color.g, color.b)}));
+                    .with_colors({rerun::Color(color.r(), color.g(), color.b())}));
         }
     }
 
