@@ -7,8 +7,8 @@ namespace simulator {
         return std::sqrt(std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2));
     }
 
-    Chassis::Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                     muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state)
+    Chassis::Chassis(std::shared_ptr<flywheel::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                     flywheel::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state)
         : world(world), rec(rec), filter(filter), robot_info(robot_info), robot_state(robot_state) {}
 
     void Chassis::init(types::Machine &robo) {
@@ -18,7 +18,7 @@ namespace simulator {
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
                                 //
-        muli::Transform t;
+        flywheel::Transform t;
         t.position.x = bound.pose.point.x;
         t.position.y = bound.pose.point.y;
         t.rotation = utils::get_yaw(bound.pose);
@@ -78,7 +78,7 @@ namespace simulator {
             // Add karosserie as collider to chassis body if it has physics
             if (k.has_physics) {
                 // Calculate relative transform of karosserie to chassis
-                muli::Transform karos_transform;
+                flywheel::Transform karos_transform;
                 karos_transform.position.x = k.bound.pose.point.x;
                 karos_transform.position.y = k.bound.pose.point.y;
                 karos_transform.rotation = utils::get_yaw(k.bound.pose);
@@ -109,7 +109,7 @@ namespace simulator {
         }
     }
 
-    muli::Transform Chassis::get_transform() const { return body->GetTransform(); }
+    flywheel::Transform Chassis::get_transform() const { return body->GetTransform(); }
 
     void Chassis::tock(const std::string &label) {
         if (!robot_state->online) return;
@@ -172,7 +172,7 @@ namespace simulator {
     }
 
     void Chassis::teleport(datapod::Pose pose) {
-        muli::Transform t;
+        flywheel::Transform t;
         t.position.x = pose.point.x;
         t.position.y = pose.point.y;
         t.rotation = utils::get_yaw(pose);
@@ -214,17 +214,17 @@ namespace simulator {
 
         // Also apply direct braking to the chassis body for immediate effect
         if (body) {
-            muli::Vec2 v = body->GetLinearVelocity();
-            float speed = muli::Length(v);
+            flywheel::Vec2 v = body->GetLinearVelocity();
+            float speed = flywheel::Length(v);
 
-            if (speed > muli::epsilon) {
+            if (speed > flywheel::epsilon) {
                 // Apply impulse opposite to velocity
-                muli::Vec2 brake_impulse = -muli::Normalize(v) * brake_force * body->GetMass() * 0.5f;
+                flywheel::Vec2 brake_impulse = -flywheel::Normalize(v) * brake_force * body->GetMass() * 0.5f;
 
                 // Clamp to not exceed current momentum
                 float max_impulse = body->GetMass() * speed;
-                if (muli::Length(brake_impulse) > max_impulse) {
-                    brake_impulse = muli::Normalize(brake_impulse) * max_impulse;
+                if (flywheel::Length(brake_impulse) > max_impulse) {
+                    brake_impulse = flywheel::Normalize(brake_impulse) * max_impulse;
                 }
 
                 body->ApplyLinearImpulse(body->GetPosition(), brake_impulse, true);
@@ -232,7 +232,7 @@ namespace simulator {
 
             // Also brake angular velocity
             float angular_vel = body->GetAngularVelocity();
-            if (muli::Abs(angular_vel) > muli::epsilon) {
+            if (flywheel::Abs(angular_vel) > flywheel::epsilon) {
                 float angular_brake = -angular_vel * brake_force * 0.5f;
                 body->ApplyTorque(angular_brake, true);
             }

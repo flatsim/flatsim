@@ -7,7 +7,7 @@
 #include "flatsim/simulator/machine/wheel.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
-#include "muli/world.h"
+#include "flywheel/world.h"
 #include <rerun.hpp>
 
 namespace simulator {
@@ -15,11 +15,11 @@ namespace simulator {
     class Chassis {
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::shared_ptr<muli::World> world;
+        std::shared_ptr<flywheel::World> world;
         std::vector<Wheel> wheels;
-        std::vector<muli::MotorJoint *> joints;
-        std::vector<muli::AngleJoint *> angle_joints;
-        muli::CollisionFilter filter;
+        std::vector<flywheel::MotorJoint *> joints;
+        std::vector<flywheel::AngleJoint *> angle_joints;
+        flywheel::CollisionFilter filter;
 
       private:
         std::string name;
@@ -33,10 +33,10 @@ namespace simulator {
       public:
         std::vector<Karosserie> karosseries;
         std::vector<Hitch> hitches;
-        muli::RigidBody *body; // Owned by physics world
+        flywheel::RigidBody *body; // Owned by physics world
 
-        Chassis(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-                muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
+        Chassis(std::shared_ptr<flywheel::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+                flywheel::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
 
         void init(types::Machine &robo);
 
@@ -45,7 +45,7 @@ namespace simulator {
         void teleport(datapod::Pose);
         void update(std::vector<float> steering, std::vector<float> throttle, float dt);
         void wheel_damping(float linear_damping, float angular_damping);
-        muli::Transform get_transform() const;
+        flywheel::Transform get_transform() const;
         void toggle_section_work(const std::string &karosserie_name, int section_id);
         void toggle_all_sections_work(const std::string &karosserie_name);
         void update_color(const pigment::RGB &new_color);
@@ -55,7 +55,7 @@ namespace simulator {
         const datapod::Pose &get_pose() const { return pose; }
         const datapod::Box &get_bound() const { return bound; }
         const std::string &get_name() const { return name; }
-        muli::RigidBody *get_body() { return body; }
+        flywheel::RigidBody *get_body() { return body; }
 
         // Apply braking to all wheels
         void brake(float brake_force);

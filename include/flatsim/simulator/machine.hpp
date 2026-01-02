@@ -8,7 +8,7 @@
 #include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine/chassis.hpp"
 #include "flatsim/types.hpp"
-#include "muli/world.h"
+#include "flywheel/world.h"
 #include <rerun.hpp>
 
 namespace simulator {
@@ -19,8 +19,8 @@ namespace simulator {
     class Machine {
       private:
         std::shared_ptr<rerun::RecordingStream> rec_;
-        std::shared_ptr<muli::World> world_;
-        muli::CollisionFilter filter_;
+        std::shared_ptr<flywheel::World> world_;
+        flywheel::CollisionFilter filter_;
 
         types::Machine config_;
         types::State state_;
@@ -33,7 +33,7 @@ namespace simulator {
 
       public:
         Machine() = default;
-        Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+        Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
                 const types::Machine &config, uint32_t group);
 
         // Lifecycle
@@ -60,7 +60,7 @@ namespace simulator {
         Hitch *find_hitch(const std::string &name);
 
         // Accessors
-        muli::RigidBody *body() const { return chassis_ ? chassis_->body : nullptr; }
+        flywheel::RigidBody *body() const { return chassis_ ? chassis_->body : nullptr; }
         const types::Machine &config() const { return config_; }
         types::Machine &config_mut() { return config_; }
         const types::State &state() const { return state_; }
@@ -68,7 +68,7 @@ namespace simulator {
         const std::string &uuid() const { return config_.uuid; }
         Chassis *chassis() { return chassis_.get(); }
         const Chassis *chassis() const { return chassis_.get(); }
-        const muli::CollisionFilter &get_filter() const { return filter_; }
+        const flywheel::CollisionFilter &get_filter() const { return filter_; }
 
         // Teleport machine to new pose
         void teleport(const datapod::Pose &pose);

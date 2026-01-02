@@ -6,7 +6,7 @@
 namespace simulator {
 
     types::LidarData Data::scan_lidar(const datapod::Pose &pose, float min_range, float max_range, float fov_deg,
-                                      float resolution_deg, const muli::CollisionFilter &filter) {
+                                      float resolution_deg, const flywheel::CollisionFilter &filter) {
         types::LidarData data;
         data.min_range = min_range;
         data.max_range = max_range;
@@ -25,7 +25,7 @@ namespace simulator {
         data.valid.reserve(num_beams);
 
         // Sensor position
-        muli::Vec2 sensor_pos(pose.point.x, pose.point.y);
+        flywheel::Vec2 sensor_pos(pose.point.x, pose.point.y);
         float sensor_yaw = utils::get_yaw(pose);
 
         // Scan from -fov/2 to +fov/2
@@ -36,30 +36,30 @@ namespace simulator {
             float world_angle = sensor_yaw + beam_angle;
 
             // Ray direction
-            muli::Vec2 direction(std::cos(world_angle), std::sin(world_angle));
-            muli::Vec2 ray_end = sensor_pos + direction * max_range;
+            flywheel::Vec2 direction(std::cos(world_angle), std::sin(world_angle));
+            flywheel::Vec2 ray_end = sensor_pos + direction * max_range;
 
             // Raycast
             float closest_distance = max_range;
             bool hit = false;
 
-            world_->RayCastAny(
-                sensor_pos, ray_end, 0.0f,
-                [&](muli::Collider *collider, muli::Vec2 point, muli::Vec2 normal, float fraction) -> float {
-                    // Check collision filter - skip if same group (own robot)
-                    const auto &collider_filter = collider->GetFilter();
-                    if ((collider_filter.bit & filter.bit) != 0) {
-                        return 1.0f; // Continue raycasting
-                    }
+            world_->RayCastAny(sensor_pos, ray_end, 0.0f,
+                               [&](flywheel::Collider *collider, flywheel::Vec2 point, flywheel::Vec2 normal,
+                                   float fraction) -> float {
+                                   // Check collision filter - skip if same group (own robot)
+                                   const auto &collider_filter = collider->GetFilter();
+                                   if ((collider_filter.bit & filter.bit) != 0) {
+                                       return 1.0f; // Continue raycasting
+                                   }
 
-                    // Valid hit
-                    float distance = fraction * max_range;
-                    if (distance >= min_range && distance < closest_distance) {
-                        closest_distance = distance;
-                        hit = true;
-                    }
-                    return fraction;
-                });
+                                   // Valid hit
+                                   float distance = fraction * max_range;
+                                   if (distance >= min_range && distance < closest_distance) {
+                                       closest_distance = distance;
+                                       hit = true;
+                                   }
+                                   return fraction;
+                               });
 
             data.ranges.push_back(closest_distance);
             data.angles.push_back(beam_angle);

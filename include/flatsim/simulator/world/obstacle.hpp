@@ -3,9 +3,9 @@
 #include <cmath>
 
 #include "flatsim/types.hpp"
-#include "muli/common.h"
-#include "muli/rigidbody.h"
-#include "muli/world.h"
+#include "flywheel/common.h"
+#include "flywheel/rigidbody.h"
+#include "flywheel/world.h"
 
 namespace simulator {
 
@@ -13,14 +13,14 @@ namespace simulator {
     class StaticObstacle {
       private:
         types::StaticObstacle config_;
-        muli::RigidBody *body_ = nullptr;
+        flywheel::RigidBody *body_ = nullptr;
 
       public:
         StaticObstacle() = default;
         StaticObstacle(const types::StaticObstacle &config) : config_(config) {}
 
-        void create(muli::World &world);
-        void destroy(muli::World &world);
+        void create(flywheel::World &world);
+        void destroy(flywheel::World &world);
 
         size_t id() const { return config_.id; }
         const types::StaticObstacle &config() const { return config_; }
@@ -32,14 +32,14 @@ namespace simulator {
     class DynamicObstacle {
       private:
         types::DynamicObstacle config_;
-        muli::RigidBody *body_ = nullptr;
+        flywheel::RigidBody *body_ = nullptr;
 
       public:
         DynamicObstacle() = default;
         DynamicObstacle(const types::DynamicObstacle &config) : config_(config) {}
 
-        void create(muli::World &world);
-        void destroy(muli::World &world);
+        void create(flywheel::World &world);
+        void destroy(flywheel::World &world);
 
         // Update position based on proximity to reference point
         void update(float dt, double ref_x, double ref_y);

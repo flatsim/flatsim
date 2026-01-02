@@ -2,7 +2,7 @@
 
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
-#include "muli/world.h"
+#include "flywheel/world.h"
 #include <rerun.hpp>
 
 namespace simulator {
@@ -12,18 +12,18 @@ namespace simulator {
     class Wheel {
       private:
         std::shared_ptr<rerun::RecordingStream> rec;
-        std::shared_ptr<muli::World> world;
+        std::shared_ptr<flywheel::World> world;
         std::string name;
         std::string parent_name;
         pigment::RGB color;
         datapod::Box bound;
         datapod::Pose pose;
-        muli::CollisionFilter filter;
+        flywheel::CollisionFilter filter;
         types::Machine *robot_info = nullptr;
         types::State *robot_state = nullptr;
 
-        muli::RigidBody *wheel; // Owned by physics world
-        muli::Vec2 forward, normal;
+        flywheel::RigidBody *wheel; // Owned by physics world
+        flywheel::Vec2 forward, normal;
         float force, torque;
         float brake, drag;
         float friction, max_impulse;
@@ -38,8 +38,8 @@ namespace simulator {
 
       public:
         Wheel() = default;
-        Wheel(std::shared_ptr<muli::World> world, std::shared_ptr<rerun::RecordingStream> rec,
-              muli::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
+        Wheel(std::shared_ptr<flywheel::World> world, std::shared_ptr<rerun::RecordingStream> rec,
+              flywheel::CollisionFilter filter, types::Machine *robot_info, types::State *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
                   datapod::Box bound, datapod::Box parent_bound, float _force, float _friction, float _maxImpulse,
                   float _brake, float _drag, float throttle_max, float steering_max);
@@ -48,7 +48,7 @@ namespace simulator {
         void tock();
         void teleport(datapod::Pose pose);
         void destroy();
-        void update(float steering, float throttle, muli::MotorJoint *joint, float dt);
+        void update(float steering, float throttle, flywheel::MotorJoint *joint, float dt);
         void configure_physics_for_size();
 
         datapod::Box get_bound() const { return bound; }
@@ -67,8 +67,8 @@ namespace simulator {
         float get_steering_rate() const { return steering_rate; }
         float get_throttle_rate() const { return throttle_rate; }
 
-        muli::RigidBody *get_wheel() { return wheel; }
-        muli::Vec2 get_position() const { return wheel ? wheel->GetPosition() : muli::Vec2(0, 0); }
+        flywheel::RigidBody *get_wheel() { return wheel; }
+        flywheel::Vec2 get_position() const { return wheel ? wheel->GetPosition() : flywheel::Vec2(0, 0); }
         void update_color(const pigment::RGB &new_color) { color = new_color; }
 
         // Apply braking force to stop the wheel

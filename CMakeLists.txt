@@ -3,34 +3,25 @@ cmake_minimum_required(VERSION 3.15)
 # ==================================================================================================
 # Project configuration
 # ==================================================================================================
-set(PROJECT_NAME flatsim)
-set(PROJECT_VERSION "0.0.3")
+set(PROJECT_NAME farmtrax)
+set(PROJECT_VERSION "0.0.4")
 
 # Dependencies formats:
 #   Git:    set(LIB_DEPS "name|https://github.com/org/repo.git|tag" ...)
 #   Find:   set(LIB_DEPS "name" ...)  # Uses find_package
 #   Pkg:    set(LIB_DEPS "pkg::name" ...)  # Uses pkg-config
 set(LIB_DEPS
-    "datapod|https://github.com/robolibs/datapod.git|main"
-    "pigment|https://github.com/robolibs/pigment.git|1.0.0"
-    "entropy|https://github.com/robolibs/entropy.git|1.1.0"
-    "zoneout|https://github.com/robolibs/zoneout.git|1.4.0"
-    "farmtrax|https://github.com/robolibs/farmtrax.git|1.1.1"
-    "drivekit|https://github.com/robolibs/drivekit.git|0.2.1"
-    "muli|https://github.com/Sopiro/Muli|master"
-    "pkg::rerun_sdk"
-    "pkg::ZeroMQ"
-    "pkg::cppzmq"
-    {system = "boost"},
+    "datapod|https://github.com/robolibs/datapod.git|0.0.16"
+    "optinum|https://github.com/robolibs/optinum.git|0.0.13"
+    "graphix|https://github.com/robolibs/graphix.git|0.0.4"
+    "concord|https://github.com/robolibs/concord.git|0.0.5"
 )
-
 set(EXAMPLE_DEPS
+    "pkg::rerun_sdk"
 )
 set(TEST_DEPS
     "doctest|https://github.com/doctest/doctest.git|v2.4.12"
 )
-
-set(MULI_BUILD_DEMO OFF CACHE BOOL "Disable MULI demo" FORCE)
 
 # ==================================================================================================
 # Compiler selection (must be before project())
@@ -68,6 +59,8 @@ project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+cmake_policy(SET CMP0074 NEW)
+cmake_policy(SET CMP0135 NEW)
 
 # Compiler-specific flags
 set(COMMON_FLAGS -Wall -Wextra -Wpedantic -Wno-reorder -Wno-narrowing -Wno-array-bounds
@@ -98,7 +91,7 @@ if(${PROJECT_NAME_UPPER}_ENABLE_SIMD)
     endif()
 else()
     # Define macro to disable SIMD in the code
-    add_compile_definitions(GEOSON_SIMD_DISABLED)
+    add_compile_definitions(FARMTRAX_SIMD_DISABLED)
     message(STATUS "SIMD optimizations disabled")
 endif()
 option(${PROJECT_NAME_UPPER}_BUILD_EXAMPLES "Build examples" OFF)
@@ -129,7 +122,6 @@ function(process_deps dep_list out_targets)
             FetchContent_Declare(${dep_name}
                 GIT_REPOSITORY "${dep_url}"
                 GIT_TAG "${dep_tag}"
-                GIT_SHALLOW TRUE
             )
             FetchContent_MakeAvailable(${dep_name})
             list(APPEND targets ${dep_name})

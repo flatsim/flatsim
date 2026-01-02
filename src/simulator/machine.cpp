@@ -6,7 +6,7 @@
 
 namespace simulator {
 
-    Machine::Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+    Machine::Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
                      const types::Machine &config, uint32_t group)
         : rec_(rec), world_(world), config_(config) {
         // Create collision filter (use bit/mask system)

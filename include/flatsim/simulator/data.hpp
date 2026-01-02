@@ -1,8 +1,8 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include "muli/collision_filter.h"
-#include "muli/world.h"
+#include "flywheel/collision_filter.h"
+#include "flywheel/world.h"
 #include <memory>
 
 namespace simulator {
@@ -15,12 +15,12 @@ namespace simulator {
       public:
         Data() = default;
 
-        void set_world(std::shared_ptr<muli::World> world) { world_ = world; }
+        void set_world(std::shared_ptr<flywheel::World> world) { world_ = world; }
         void set_datum(const datapod::Geo &datum) { datum_ = datum; }
 
         // LIDAR - Raycast in physics world, returns ranges/angles
         types::LidarData scan_lidar(const datapod::Pose &pose, float min_range, float max_range, float fov_deg,
-                                    float resolution_deg, const muli::CollisionFilter &filter);
+                                    float resolution_deg, const flywheel::CollisionFilter &filter);
 
         // GPS - Convert ENU pose to WGS84
         types::GpsData pose_to_gps(const datapod::Pose &pose, float speed);
@@ -30,7 +30,7 @@ namespace simulator {
                                    float prev_linear_vel, float dt);
 
       private:
-        std::shared_ptr<muli::World> world_;
+        std::shared_ptr<flywheel::World> world_;
         datapod::Geo datum_;
     };
 

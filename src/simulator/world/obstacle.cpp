@@ -6,21 +6,21 @@ namespace simulator {
     // StaticObstacle
     // ============================================================================
 
-    void StaticObstacle::create(muli::World &world) {
+    void StaticObstacle::create(flywheel::World &world) {
         if (body_) return; // Already created
 
         float x = static_cast<float>(config_.position.x);
         float y = static_cast<float>(config_.position.y);
         float r = static_cast<float>(config_.radius);
 
-        muli::Transform tf;
-        tf.position = muli::Vec2(x, y);
-        tf.rotation = muli::Rotation(0.0f);
+        flywheel::Transform tf;
+        tf.position = flywheel::Vec2(x, y);
+        tf.rotation = flywheel::Rotation(0.0f);
 
-        body_ = world.CreateCircle(r, tf, muli::RigidBody::static_body);
+        body_ = world.CreateCircle(r, tf, flywheel::RigidBody::static_body);
     }
 
-    void StaticObstacle::destroy(muli::World &world) {
+    void StaticObstacle::destroy(flywheel::World &world) {
         if (body_) {
             world.Destroy(body_);
             body_ = nullptr;
@@ -31,21 +31,21 @@ namespace simulator {
     // DynamicObstacle
     // ============================================================================
 
-    void DynamicObstacle::create(muli::World &world) {
+    void DynamicObstacle::create(flywheel::World &world) {
         if (body_) return; // Already created
 
         float x = static_cast<float>(config_.position.x);
         float y = static_cast<float>(config_.position.y);
         float r = static_cast<float>(config_.radius);
 
-        muli::Transform tf;
-        tf.position = muli::Vec2(x, y);
-        tf.rotation = muli::Rotation(0.0f);
+        flywheel::Transform tf;
+        tf.position = flywheel::Vec2(x, y);
+        tf.rotation = flywheel::Rotation(0.0f);
 
-        body_ = world.CreateCircle(r, tf, muli::RigidBody::kinematic_body);
+        body_ = world.CreateCircle(r, tf, flywheel::RigidBody::kinematic_body);
     }
 
-    void DynamicObstacle::destroy(muli::World &world) {
+    void DynamicObstacle::destroy(flywheel::World &world) {
         if (body_) {
             world.Destroy(body_);
             body_ = nullptr;
@@ -67,7 +67,7 @@ namespace simulator {
 
             if (body_) {
                 body_->SetPosition(
-                    muli::Vec2(static_cast<float>(config_.position.x), static_cast<float>(config_.position.y)));
+                    flywheel::Vec2(static_cast<float>(config_.position.x), static_cast<float>(config_.position.y)));
             }
         }
     }

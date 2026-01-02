@@ -153,7 +153,7 @@ namespace simulator {
         types::ser::WorldState get_world_state() const;
 
         // Access to physics world and world wrapper
-        muli::World &get_world() { return world_->physics(); }
+        flywheel::World &get_world() { return world_->physics(); }
         World &world() { return *world_; }
 
         // Rerun access

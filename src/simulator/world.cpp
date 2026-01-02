@@ -10,9 +10,9 @@ namespace simulator {
 
     void World::init(datapod::Geo datum, datapod::Size size) {
         settings_.init(datum, size);
-        // Pass settings_ (which extends muli::WorldSettings) directly to muli::World
-        // This ensures all muli defaults are properly inherited
-        physics_ = std::make_shared<muli::World>(settings_);
+        // Pass settings_ (which extends flywheel::WorldSettings) directly to flywheel::World
+        // This ensures all flywheel defaults are properly inherited
+        physics_ = std::make_shared<flywheel::World>(settings_);
         std::cout << "[World] Created (" << size.x << "x" << size.y << ")" << std::endl;
     }
 

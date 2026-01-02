@@ -2,12 +2,12 @@
 #include "flatsim/utils.hpp"
 
 namespace simulator {
-    Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+    Hitch::Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
                  types::Machine *robot_info, types::State *robot_state)
         : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
 
     void Hitch::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                     datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, bool is_master) {
+                     datapod::Box parent_bound, datapod::Box bound, flywheel::CollisionFilter filter, bool is_master) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;

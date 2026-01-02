@@ -6,12 +6,12 @@
 
 #include "flatsim/simulator/world/obstacle.hpp"
 #include "flatsim/types.hpp"
-#include "muli/world.h"
+#include "flywheel/world.h"
 
 namespace simulator {
 
-    // WorldSettings extends muli::WorldSettings to inherit all physics defaults
-    class WorldSettings : public muli::WorldSettings {
+    // WorldSettings extends flywheel::WorldSettings to inherit all physics defaults
+    class WorldSettings : public flywheel::WorldSettings {
       private:
         datapod::Geo datum_;
         datapod::Size size_;
@@ -22,9 +22,9 @@ namespace simulator {
         void init(datapod::Geo datum, datapod::Size size) {
             datum_ = datum;
             size_ = size;
-            // Set world bounds - this is critical for muli physics
-            this->world_bounds =
-                muli::AABB(muli::Vec2(-size.x / 2.0f, -size.y / 2.0f), muli::Vec2(size.x / 2.0f, size.y / 2.0f));
+            // Set world bounds - this is critical for flywheel physics
+            this->world_bounds = flywheel::AABB(flywheel::Vec2(-size.x / 2.0f, -size.y / 2.0f),
+                                                flywheel::Vec2(size.x / 2.0f, size.y / 2.0f));
             // Disable gravity for top-down 2D simulation
             this->apply_gravity = false;
         }
@@ -36,7 +36,7 @@ namespace simulator {
     class World {
       private:
         WorldSettings settings_;
-        std::shared_ptr<muli::World> physics_;
+        std::shared_ptr<flywheel::World> physics_;
 
         std::vector<StaticObstacle> static_obstacles_;
         std::vector<DynamicObstacle> dynamic_obstacles_;
@@ -69,13 +69,13 @@ namespace simulator {
         void update_obstacles(float dt, double ref_x, double ref_y);
 
         // Accessors
-        muli::World &physics() { return *physics_; }
-        const muli::World &physics() const { return *physics_; }
-        std::shared_ptr<muli::World> physics_ptr() {
-            return std::shared_ptr<muli::World>(physics_.get(), [](muli::World *) {});
+        flywheel::World &physics() { return *physics_; }
+        const flywheel::World &physics() const { return *physics_; }
+        std::shared_ptr<flywheel::World> physics_ptr() {
+            return std::shared_ptr<flywheel::World>(physics_.get(), [](flywheel::World *) {});
         }
         const WorldSettings &settings() const { return settings_; }
-        std::shared_ptr<muli::World> get_world() const { return physics_; }
+        std::shared_ptr<flywheel::World> get_world() const { return physics_; }
 
         std::vector<StaticObstacle> &static_obstacles() { return static_obstacles_; }
         std::vector<DynamicObstacle> &dynamic_obstacles() { return dynamic_obstacles_; }

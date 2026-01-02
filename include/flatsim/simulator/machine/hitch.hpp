@@ -2,14 +2,14 @@
 
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
-#include "muli/collision_filter.h"
-#include "muli/world.h"
+#include "flywheel/collision_filter.h"
+#include "flywheel/world.h"
 #include <rerun.hpp>
 
 namespace simulator {
     class Hitch {
       private:
-        std::shared_ptr<muli::World> world;
+        std::shared_ptr<flywheel::World> world;
         std::shared_ptr<rerun::RecordingStream> rec;
         std::string parent_name;
         types::Machine *robot_info = nullptr;
@@ -23,10 +23,10 @@ namespace simulator {
         bool hooked = false;
         bool is_master = true; // true = master (can pull), false = slave (can be pulled)
 
-        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+        Hitch(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
               types::Machine *robot_info, types::State *robot_state);
         void init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                  datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, bool is_master);
+                  datapod::Box parent_bound, datapod::Box bound, flywheel::CollisionFilter filter, bool is_master);
         void tick(float dt, datapod::Pose trans_pose);
         void tock();
 

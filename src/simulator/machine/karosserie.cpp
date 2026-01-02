@@ -2,13 +2,13 @@
 #include "flatsim/utils.hpp"
 
 namespace simulator {
-    Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<muli::World> world,
+    Karosserie::Karosserie(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
                            types::Machine *robot_info, types::State *robot_state)
         : rec(rec), world(world), robot_info(robot_info), robot_state(robot_state) {}
 
     void Karosserie::init(const pigment::RGB &color, const std::string &parent_name, const std::string &name,
-                          datapod::Box parent_bound, datapod::Box bound, muli::CollisionFilter filter, int num_sections,
-                          bool has_physics) {
+                          datapod::Box parent_bound, datapod::Box bound, flywheel::CollisionFilter filter,
+                          int num_sections, bool has_physics) {
         this->name = name;
         this->parent_name = parent_name;
         this->color = color;
@@ -82,15 +82,15 @@ namespace simulator {
         }
     }
 
-    muli::Transform Karosserie::get_transform() const {
+    flywheel::Transform Karosserie::get_transform() const {
         if (karosserie) {
             return karosserie->GetTransform();
         }
         // For compound shape karosseries, return identity transform
-        return muli::Transform();
+        return flywheel::Transform();
     }
 
-    muli::RigidBody *Karosserie::get_body() const {
+    flywheel::RigidBody *Karosserie::get_body() const {
         return karosserie; // Will be nullptr for compound shape karosseries
     }
 

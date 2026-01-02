@@ -204,7 +204,7 @@ namespace fs {
         }
 
         // Use angular velocity directly from physics engine
-        // In 2D physics (muli), we only have Z-axis rotation
+        // In 2D physics (flywheel), we only have Z-axis rotation
         current_data.gyro_x = 0.0;         // No roll in 2D
         current_data.gyro_y = 0.0;         // No pitch in 2D
         current_data.gyro_z = angular_vel; // Yaw rate from physics

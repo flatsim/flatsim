@@ -20,10 +20,10 @@ CC ?=
 ifdef CC
     ifeq ($(CC),gcc)
         CMAKE_COMPILER_FLAG := -DCOMPILER=gcc
-        XMAKE_COMPILER_FLAG := --toolchain=gcc
+        XMAKE_COMPILER_FLAG := --compiler=gcc
     else ifeq ($(CC),clang)
         CMAKE_COMPILER_FLAG := -DCOMPILER=clang
-        XMAKE_COMPILER_FLAG := --toolchain=clang
+        XMAKE_COMPILER_FLAG := --compiler=clang
     endif
 endif
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include "muli/muli.h"
+#include "flywheel/flywheel.h"
 #include <algorithm>
 #include <cmath>
 #include <datapod/datapod.hpp>
@@ -135,15 +135,15 @@ namespace utils {
         return (R - (trackWidth * 0.5f)) / R;
     }
 
-    inline muli::Transform pose_to_transform(const datapod::Pose &pose) {
-        muli::Rotation rot(get_yaw(pose));
-        muli::Vec2 pos;
+    inline flywheel::Transform pose_to_transform(const datapod::Pose &pose) {
+        flywheel::Rotation rot(get_yaw(pose));
+        flywheel::Vec2 pos;
         pos.x = pose.point.x;
         pos.y = pose.point.y;
-        return muli::Transform{pos, rot};
+        return flywheel::Transform{pos, rot};
     }
 
-    inline datapod::Pose transform_to_pose(const muli::Transform &transform) {
+    inline datapod::Pose transform_to_pose(const flywheel::Transform &transform) {
         datapod::Pose pose;
         pose.point.x = transform.position.x;
         pose.point.y = transform.position.y;
