@@ -12,7 +12,7 @@ local LIB_DEPS = {
     {"datapod", "https://github.com/robolibs/datapod.git", "0.0.17"},
     -- {"concord", "https://github.com/robolibs/concord.git", "2.5.0"},
     {"pigment", "https://github.com/robolibs/pigment.git", "0.0.3"},
-    {"entropy", "https://github.com/robolibs/entropy.git", "1.1.0"},
+    {"entropy", "https://github.com/robolibs/entropy.git", "0.0.4"},
     -- {"zoneout", "https://github.com/robolibs/zoneout.git", "1.4.0"},
     -- {"farmtrax", "https://github.com/robolibs/farmtrax.git", "1.1.1"},
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.2"},
