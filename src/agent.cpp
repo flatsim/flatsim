@@ -82,7 +82,7 @@ namespace agent {
         req.type = types::ser::MsgType::SPAWN;
         req.machine = types::ser::Machine::from_machine(machine_.config());
 
-        auto data = cista::serialize(req);
+        auto data = datapod::serialize(req);
         spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
         std::cout << "[Agent] Sent SPAWN for: " << machine_.config().name << std::endl;
 
@@ -92,12 +92,12 @@ namespace agent {
         if (result) {
             std::vector<uint8_t> buffer(static_cast<uint8_t *>(reply.data()),
                                         static_cast<uint8_t *>(reply.data()) + reply.size());
-            auto *resp = cista::deserialize<types::ser::Response>(buffer);
-            if (resp && resp->success) {
+            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
+            if (resp.success) {
                 // Connect control and state sockets for this machine
                 std::string uuid = machine_.uuid();
-                std::string uplink_addr(resp->zmq.uplink_endpoint.view());
-                std::string downlink_addr(resp->zmq.downlink_endpoint.view());
+                std::string uplink_addr(resp.zmq.uplink_endpoint.view());
+                std::string downlink_addr(resp.zmq.downlink_endpoint.view());
 
                 // Backwards-compatible fallback if talking to an older simulator.
                 if (uplink_addr.empty() || downlink_addr.empty()) {
@@ -120,9 +120,9 @@ namespace agent {
                 std::cout << "[Agent] Connected downlink: " << downlink_addr << std::endl;
 
                 // Create RecordingStream using info from simulator
-                std::string rerun_addr(resp->rerun.grpc_address.view());
-                std::string rec_id(resp->rerun.recording_id.view());
-                std::string app_id(resp->rerun.application_id.view());
+                std::string rerun_addr(resp.rerun.grpc_address.view());
+                std::string rec_id(resp.rerun.recording_id.view());
+                std::string app_id(resp.rerun.application_id.view());
 
                 rec_ = std::make_shared<rerun::RecordingStream>(app_id, rec_id);
                 auto conn_result = rec_->connect_grpc(rerun_addr);
@@ -139,7 +139,7 @@ namespace agent {
                 install_sensor_callbacks();
 
                 // Update state from response
-                for (const auto &ms : resp->state.machines) {
+                for (const auto &ms : resp.state.machines) {
                     if (std::string(ms.uuid.view()) == machine_.uuid()) {
                         machine_.update_state(ms);
                         break;
@@ -162,9 +162,9 @@ namespace agent {
 
         types::ser::Request req;
         req.type = types::ser::MsgType::DESPAWN;
-        req.uuid = machine_.uuid();
+        req.uuid = datapod::String(machine_.uuid());
 
-        auto data = cista::serialize(req);
+        auto data = datapod::serialize(req);
         spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
 
         zmq::message_t reply;
@@ -172,8 +172,8 @@ namespace agent {
         if (result) {
             std::vector<uint8_t> buffer(static_cast<uint8_t *>(reply.data()),
                                         static_cast<uint8_t *>(reply.data()) + reply.size());
-            auto *resp = cista::deserialize<types::ser::Response>(buffer);
-            if (resp && resp->success) {
+            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
+            if (resp.success) {
                 spawned_ = false;
                 return true;
             }
@@ -214,7 +214,7 @@ namespace agent {
         if (tick_count % 5 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
             types::ser::Request hb_req;
             hb_req.type = types::ser::MsgType::HEARTBEAT;
-            hb_req.uuid = machine_.uuid();
+            hb_req.uuid = datapod::String(machine_.uuid());
 
             auto hb_data = flatsim::wire::pack(flatsim::wire::Kind::HEARTBEAT, hb_req);
             uplink_socket_->send(zmq::buffer(hb_data), zmq::send_flags::dontwait);

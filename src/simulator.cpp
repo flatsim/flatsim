@@ -3,8 +3,8 @@
 #include "flatsim/agent/loader.hpp"
 #include "flatsim/tagged_zmq.hpp"
 #include <chrono>
-#include <cista/serialization.h>
 #include <cstdlib>
+#include <datapod/serialization/serialize.hpp>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -240,7 +240,8 @@ namespace simulator {
             auto it = downlink_sockets_.find(uuid);
             if (it != downlink_sockets_.end() && it->second) {
                 try {
-                    auto data = flatsim::wire::pack(flatsim::wire::Kind::STATE, state);
+                    auto mutable_state = state; // datapod::serialize needs non-const
+                    auto data = flatsim::wire::pack(flatsim::wire::Kind::STATE, mutable_state);
                     it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
                 } catch (const zmq::error_t &) {
                 }
@@ -327,13 +328,13 @@ namespace simulator {
         std::vector<uint8_t> buffer(static_cast<uint8_t *>(spawn_request.data()),
                                     static_cast<uint8_t *>(spawn_request.data()) + spawn_request.size());
 
-        auto *req = cista::deserialize<types::ser::Request>(buffer);
+        auto req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(buffer);
         types::ser::Response resp;
 
-        if (!req) {
+        if (false) {
             resp.success = false;
-        } else if (req->type == types::ser::MsgType::SPAWN) {
-            auto machine = req->machine.to_machine();
+        } else if (req.type == types::ser::MsgType::SPAWN) {
+            auto machine = req.machine.to_machine();
             std::string uuid = machine.uuid;
 
             create_machine(machine);
@@ -368,15 +369,15 @@ namespace simulator {
 
             resp.success = true;
             resp.state = get_world_state();
-            resp.rerun.grpc_address = cista::offset::string(rerun_grpc_addr_);
-            resp.rerun.recording_id = cista::offset::string(recording_id_);
-            resp.rerun.application_id = cista::offset::string(application_id_);
-            resp.zmq.uplink_endpoint = cista::offset::string(uplink_ep);
-            resp.zmq.downlink_endpoint = cista::offset::string(downlink_ep);
+            resp.rerun.grpc_address = datapod::String(rerun_grpc_addr_);
+            resp.rerun.recording_id = datapod::String(recording_id_);
+            resp.rerun.application_id = datapod::String(application_id_);
+            resp.zmq.uplink_endpoint = datapod::String(uplink_ep);
+            resp.zmq.downlink_endpoint = datapod::String(downlink_ep);
 
             std::cout << "[Simulator] Spawned: " << uuid << std::endl;
-        } else if (req->type == types::ser::MsgType::DESPAWN) {
-            std::string uuid_str(req->uuid.view());
+        } else if (req.type == types::ser::MsgType::DESPAWN) {
+            std::string uuid_str(req.uuid.view());
             if (uplink_sockets_.count(uuid_str)) {
                 uplink_sockets_[uuid_str]->close();
                 uplink_sockets_.erase(uuid_str);
@@ -392,7 +393,7 @@ namespace simulator {
             resp.success = false;
         }
 
-        auto data = cista::serialize(resp);
+        auto data = datapod::serialize(resp);
         spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
     }
 
@@ -507,7 +508,8 @@ namespace simulator {
             auto it = downlink_sockets_.find(uuid);
             if (it != downlink_sockets_.end() && it->second) {
                 try {
-                    auto data = flatsim::wire::pack(flatsim::wire::Kind::SENSORS, state);
+                    auto mutable_state = state; // datapod::serialize needs non-const
+                    auto data = flatsim::wire::pack(flatsim::wire::Kind::SENSORS, mutable_state);
                     it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
                 } catch (const zmq::error_t &) {
                 }

@@ -17,7 +17,6 @@ set(LIB_DEPS
     "zoneout|https://github.com/robolibs/zoneout.git|1.4.0"
     "farmtrax|https://github.com/robolibs/farmtrax.git|1.1.1"
     "drivekit|https://github.com/robolibs/drivekit.git|0.2.1"
-    "cista|https://github.com/felixguendling/cista.git|v0.16"
     "muli|https://github.com/Sopiro/Muli|master"
     "pkg::rerun_sdk"
     "pkg::ZeroMQ"

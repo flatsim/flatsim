@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cista/serialization.h>
 #include <cstdint>
+#include <datapod/serialization/serialize.hpp>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -16,8 +16,8 @@ namespace flatsim::wire {
         LIDAR_CFG = 5,
     };
 
-    template <typename T> inline std::vector<uint8_t> pack(Kind kind, const T &payload) {
-        auto data = cista::serialize(payload);
+    template <typename T> inline std::vector<uint8_t> pack(Kind kind, T &payload) {
+        auto data = datapod::serialize(payload);
         std::vector<uint8_t> out;
         out.reserve(1 + data.size());
         out.push_back(static_cast<uint8_t>(kind));
@@ -41,11 +41,7 @@ namespace flatsim::wire {
     }
 
     template <typename T> inline T deserialize(std::vector<uint8_t> payload) {
-        auto *ptr = cista::deserialize<T>(payload);
-        if (!ptr) {
-            throw std::runtime_error("tagged_zmq: failed to deserialize payload");
-        }
-        return *ptr;
+        return datapod::deserialize<datapod::Mode::NONE, T>(payload);
     }
 
 } // namespace flatsim::wire

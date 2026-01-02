@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cista/serialization.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -284,7 +283,7 @@ namespace types {
         };
 
         struct Wheel {
-            cista::raw::string name;
+            datapod::String name;
             Bound bound;
             Color color;
             float steering_max = 0.0f;
@@ -312,7 +311,7 @@ namespace types {
 
             static Wheel from_wheel(const types::Wheel &w) {
                 Wheel s;
-                s.name = w.name;
+                s.name = datapod::String(w.name);
                 s.bound = Bound::from_box(w.bound);
                 s.color = Color::from_pigment(w.color);
                 s.steering_max = w.steering_max;
@@ -327,7 +326,7 @@ namespace types {
         };
 
         struct Section {
-            cista::raw::string name;
+            datapod::String name;
             Bound bound;
             Color color;
             bool working = false;
@@ -343,7 +342,7 @@ namespace types {
 
             static Section from_section(const types::Section &s) {
                 Section r;
-                r.name = s.name;
+                r.name = datapod::String(s.name);
                 r.bound = Bound::from_box(s.bound);
                 r.color = Color::from_pigment(s.color);
                 r.working = s.working;
@@ -352,11 +351,11 @@ namespace types {
         };
 
         struct Karosserie {
-            cista::raw::string name;
+            datapod::String name;
             Bound bound;
             Color color;
             bool has_physics = true;
-            cista::raw::vector<Section> sections;
+            datapod::Vector<Section> sections;
 
             types::Karosserie to_karosserie() const {
                 types::Karosserie k;
@@ -372,7 +371,7 @@ namespace types {
 
             static Karosserie from_karosserie(const types::Karosserie &k) {
                 Karosserie r;
-                r.name = k.name;
+                r.name = datapod::String(k.name);
                 r.bound = Bound::from_box(k.bound);
                 r.color = Color::from_pigment(k.color);
                 r.has_physics = k.has_physics;
@@ -384,7 +383,7 @@ namespace types {
         };
 
         struct Hitch {
-            cista::raw::string name;
+            datapod::String name;
             Bound bound;
             Color color;
             bool is_master = true;
@@ -402,7 +401,7 @@ namespace types {
 
             static Hitch from_hitch(const types::Hitch &h) {
                 Hitch r;
-                r.name = h.name;
+                r.name = datapod::String(h.name);
                 r.bound = Bound::from_box(h.bound);
                 r.color = Color::from_pigment(h.color);
                 r.is_master = h.is_master;
@@ -412,9 +411,9 @@ namespace types {
         };
 
         struct Capability {
-            cista::raw::vector<cista::raw::string> work_on;
-            cista::raw::vector<cista::raw::string> connect_to;
-            cista::raw::vector<cista::raw::string> unload_to;
+            datapod::Vector<datapod::String> work_on;
+            datapod::Vector<datapod::String> connect_to;
+            datapod::Vector<datapod::String> unload_to;
 
             types::Capability to_capability() const {
                 types::Capability c;
@@ -426,19 +425,19 @@ namespace types {
 
             static Capability from_capability(const types::Capability &c) {
                 Capability r;
-                for (const auto &s : c.work_on) r.work_on.push_back(cista::raw::string(s));
-                for (const auto &s : c.connect_to) r.connect_to.push_back(cista::raw::string(s));
-                for (const auto &s : c.unload_to) r.unload_to.push_back(cista::raw::string(s));
+                for (const auto &s : c.work_on) r.work_on.push_back(datapod::String(s));
+                for (const auto &s : c.connect_to) r.connect_to.push_back(datapod::String(s));
+                for (const auto &s : c.unload_to) r.unload_to.push_back(datapod::String(s));
                 return r;
             }
         };
 
         struct MachineControls {
-            cista::raw::vector<float> steerings_max;
-            cista::raw::vector<float> throttles_max;
-            cista::raw::vector<float> steerings_diff;
-            cista::raw::vector<float> throttles_diff;
-            cista::raw::vector<bool> left_side;
+            datapod::Vector<float> steerings_max;
+            datapod::Vector<float> throttles_max;
+            datapod::Vector<float> steerings_diff;
+            datapod::Vector<float> throttles_diff;
+            datapod::Vector<bool> left_side;
 
             types::MachineControls to_controls() const {
                 types::MachineControls c;
@@ -462,7 +461,7 @@ namespace types {
         };
 
         struct Polygon {
-            cista::raw::vector<Vec2> points;
+            datapod::Vector<Vec2> points;
 
             datapod::Polygon to_polygon() const {
                 datapod::Vector<datapod::Point> pts;
@@ -478,7 +477,7 @@ namespace types {
         };
 
         struct Tank {
-            cista::raw::string name;
+            datapod::String name;
             uint8_t type = 0; // 0=HARVEST, 1=WASTE
             float capacity = 0.0f;
             Bound bound;
@@ -494,7 +493,7 @@ namespace types {
 
             static Tank from_tank(const types::Tank &t) {
                 Tank r;
-                r.name = t.name;
+                r.name = datapod::String(t.name);
                 r.type = static_cast<uint8_t>(t.type);
                 r.capacity = t.capacity;
                 r.bound = Bound::from_box(t.bound);
@@ -503,7 +502,7 @@ namespace types {
         };
 
         struct Power {
-            cista::raw::string name;
+            datapod::String name;
             uint8_t type = 0; // 0=FUEL, 1=BATTERY
             float capacity = 0.0f;
             float consumption_rate = 0.0f;
@@ -521,7 +520,7 @@ namespace types {
 
             static Power from_power(const types::Power &p) {
                 Power r;
-                r.name = p.name;
+                r.name = datapod::String(p.name);
                 r.type = static_cast<uint8_t>(p.type);
                 r.capacity = p.capacity;
                 r.consumption_rate = p.consumption_rate;
@@ -534,25 +533,25 @@ namespace types {
             uint32_t rci = 0;
             uint32_t group = 0;
             bool slave = false;
-            cista::raw::string name;
-            cista::raw::string uuid;
-            cista::raw::string type;
-            cista::raw::vector<cista::raw::string> works_on;
+            datapod::String name;
+            datapod::String uuid;
+            datapod::String type;
+            datapod::Vector<datapod::String> works_on;
             Capability capability;
             Color color;
             Bound bound;
             Polygon outline;
-            cista::raw::vector<Wheel> wheels;
+            datapod::Vector<Wheel> wheels;
             MachineControls controls;
-            cista::raw::vector<Hitch> hitches;
-            cista::raw::vector<Karosserie> karosseries;
+            datapod::Vector<Hitch> hitches;
+            datapod::Vector<Karosserie> karosseries;
             bool has_tank = false;
             Tank tank;
             bool has_power = false;
             Power power_source;
             uint8_t role = 0; // 0=MASTER, 1=FOLLOWER, 2=SLAVE
             float turning_radius = 1.0f;
-            cista::raw::string seqid;
+            datapod::String seqid;
 
             types::Machine to_machine() const {
                 types::Machine m;
@@ -587,10 +586,10 @@ namespace types {
                 r.rci = m.rci;
                 r.group = m.group;
                 r.slave = m.slave;
-                r.name = m.name;
-                r.uuid = m.uuid;
-                r.type = m.type;
-                for (const auto &s : m.works_on) r.works_on.push_back(cista::raw::string(s));
+                r.name = datapod::String(m.name);
+                r.uuid = datapod::String(m.uuid);
+                r.type = datapod::String(m.type);
+                for (const auto &s : m.works_on) r.works_on.push_back(datapod::String(s));
                 r.capability = Capability::from_capability(m.capability);
                 r.color = Color::from_pigment(m.color);
                 r.bound = Bound::from_box(m.bound);
@@ -609,14 +608,27 @@ namespace types {
                 }
                 r.role = static_cast<uint8_t>(m.role);
                 r.turning_radius = m.turning_radius;
-                r.seqid = m.seqid;
+                r.seqid = datapod::String(m.seqid);
                 return r;
+            }
+
+            // Custom members() function for datapod serialization (struct has >10 fields)
+            auto members() {
+                return std::tie(rci, group, slave, name, uuid, type, works_on, capability, color, bound, outline,
+                                wheels, controls, hitches, karosseries, has_tank, tank, has_power, power_source, role,
+                                turning_radius, seqid);
+            }
+
+            auto members() const {
+                return std::tie(rci, group, slave, name, uuid, type, works_on, capability, color, bound, outline,
+                                wheels, controls, hitches, karosseries, has_tank, tank, has_power, power_source, role,
+                                turning_radius, seqid);
             }
         };
 
         // Serializable bicycle control (velocity-based)
         struct BicycleControl {
-            cista::raw::string uuid;
+            datapod::String uuid;
             float linear = 0.0f;
             float angular = 0.0f;
             float brake = 0.0f;
@@ -632,7 +644,7 @@ namespace types {
 
             static BicycleControl from_control(const types::BicycleControl &c) {
                 BicycleControl r;
-                r.uuid = c.uuid;
+                r.uuid = datapod::String(c.uuid);
                 r.linear = c.linear;
                 r.angular = c.angular;
                 r.brake = c.brake;
@@ -642,9 +654,9 @@ namespace types {
 
         // Serializable per-wheel control
         struct WheelControl {
-            cista::raw::string uuid;
-            cista::raw::vector<float> steering;
-            cista::raw::vector<float> throttle;
+            datapod::String uuid;
+            datapod::Vector<float> steering;
+            datapod::Vector<float> throttle;
             float brake = 0.0f;
 
             types::WheelControl to_control() const {
@@ -658,7 +670,7 @@ namespace types {
 
             static WheelControl from_control(const types::WheelControl &c) {
                 WheelControl r;
-                r.uuid = c.uuid;
+                r.uuid = datapod::String(c.uuid);
                 for (const auto &s : c.steering) r.steering.push_back(s);
                 for (const auto &t : c.throttle) r.throttle.push_back(t);
                 r.brake = c.brake;
@@ -674,19 +686,19 @@ namespace types {
         };
 
         struct MachineState {
-            cista::raw::string uuid;
+            datapod::String uuid;
             uint64_t tick_seq = 0;
             Pose pose;
             Vec2 velocity;
             float angular_vel = 0.0f;
-            cista::raw::vector<WheelState> wheels;
+            datapod::Vector<WheelState> wheels;
         };
 
         // Sensor data from simulator (sent separately like MachineState)
         struct LidarData {
-            cista::raw::vector<float> ranges;
-            cista::raw::vector<float> angles;
-            cista::raw::vector<uint8_t> valid; // 0 or 1
+            datapod::Vector<float> ranges;
+            datapod::Vector<float> angles;
+            datapod::Vector<uint8_t> valid; // 0 or 1
             float min_range = 0.1f;
             float max_range = 30.0f;
 
@@ -740,7 +752,7 @@ namespace types {
         };
 
         struct SensorState {
-            cista::raw::string uuid;
+            datapod::String uuid;
             uint64_t tick_seq = 0;
             LidarData lidar;
             GpsData gps;
@@ -762,7 +774,7 @@ namespace types {
 
             static SensorState from_sensor_data(const std::string &uuid, const types::SensorData &d) {
                 SensorState s;
-                s.uuid = uuid;
+                s.uuid = datapod::String(uuid);
                 s.lidar = LidarData::from_lidar(d.lidar);
                 s.gps = GpsData::from_gps(d.gps);
                 s.imu = ImuData::from_imu(d.imu);
@@ -775,7 +787,7 @@ namespace types {
 
         // LIDAR configuration update from agent -> simulator
         struct LidarConfigMsg {
-            cista::raw::string uuid;
+            datapod::String uuid;
             bool enabled = true;
             float min_range = 0.5f;
             float max_range = 15.0f;
@@ -794,7 +806,7 @@ namespace types {
 
             static LidarConfigMsg from_config(const std::string &uuid, const types::LidarConfig &c) {
                 LidarConfigMsg m;
-                m.uuid = uuid;
+                m.uuid = datapod::String(uuid);
                 m.enabled = c.enabled;
                 m.min_range = c.min_range;
                 m.max_range = c.max_range;
@@ -805,7 +817,7 @@ namespace types {
         };
 
         struct WorldState {
-            cista::raw::vector<MachineState> machines;
+            datapod::Vector<MachineState> machines;
         };
 
         // Message types for ZMQ protocol
@@ -819,22 +831,22 @@ namespace types {
 
         struct Request {
             MsgType type;
-            Machine machine;         // For SPAWN
-            WheelControl control;    // For CONTROL (per-wheel)
-            cista::raw::string uuid; // For DESPAWN and HEARTBEAT
+            Machine machine;      // For SPAWN
+            WheelControl control; // For CONTROL (per-wheel)
+            datapod::String uuid; // For DESPAWN and HEARTBEAT
         };
 
         struct RerunInfo {
-            cista::raw::string grpc_address;   // e.g., "127.0.0.1:9876"
-            cista::raw::string recording_id;   // Shared recording ID
-            cista::raw::string application_id; // Application name
+            datapod::String grpc_address;   // e.g., "127.0.0.1:9876"
+            datapod::String recording_id;   // Shared recording ID
+            datapod::String application_id; // Application name
         };
 
         // ZMQ endpoints for agent <-> simulator communication
         // For IPC these are full `ipc://...` endpoints; for TCP full `tcp://host:port` endpoints.
         struct ZmqInfo {
-            cista::raw::string uplink_endpoint;   // agent -> simulator (PUSH/PULL)
-            cista::raw::string downlink_endpoint; // simulator -> agent (PUB/SUB)
+            datapod::String uplink_endpoint;   // agent -> simulator (PUSH/PULL)
+            datapod::String downlink_endpoint; // simulator -> agent (PUB/SUB)
         };
 
         struct Response {

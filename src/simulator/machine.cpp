@@ -118,7 +118,7 @@ namespace simulator {
 
     types::ser::MachineState Machine::get_state() const {
         types::ser::MachineState ms;
-        ms.uuid = config_.uuid;
+        ms.uuid = datapod::String(config_.uuid);
 
         if (chassis_ && chassis_->body) {
             ms.pose.position.x = chassis_->body->GetPosition().x;
