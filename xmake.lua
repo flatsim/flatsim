@@ -19,7 +19,7 @@ local LIB_DEPS = {
     {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.6"},
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
-    {system = "boost"},
+    {system = "boost_json"},
     {system = "rerun_sdk"},
 }
 
