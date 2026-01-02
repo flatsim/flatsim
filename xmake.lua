@@ -185,6 +185,9 @@ target(PROJECT_NAME)
 
     for _, dep in ipairs(LIB_DEP_NAMES) do add_packages(dep) end
 
+    -- Enable rerun visualization in drivekit
+    add_defines("HAS_RERUN", {public = true})
+
     if has_config("short_namespace") then
         add_defines("SHORT_NAMESPACE", {public = true})
     end
