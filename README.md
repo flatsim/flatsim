@@ -40,6 +40,25 @@ Examples (build system dependent):
 - agent_client      # connects to simulator server and exercises Agent API
 - simple            # single-process example that demonstrates Simulator + Agent
 
+Client–server quick start (IPC / TCP)
+
+IPC (same machine):
+```bash
+# Server (defaults to IPC, can force with --ipc)
+FLATSIM_IPC_DIR=./build/ipc ./build/simulator_server --ipc
+# Client (connects via IPC)
+./build/agent_client --ipc
+```
+
+TCP (different machines):
+```bash
+# Server (bind to all interfaces)
+./build/simulator_server --tcp --host 0.0.0.0
+# Client (connect to server IP)
+./build/agent_client --tcp --host 192.168.1.10
+```
+Note: For TCP, ensure the client can reach the server (open firewall/ports). The server prints the advertised host/port on startup.
+
 Key components
 - simulator::Simulator — physics world, machine creation, tick/tock loop, lidar scans, teleport
 - agent::Agent — local or remote Agent; handles controls, sensors, spawn/despawn
