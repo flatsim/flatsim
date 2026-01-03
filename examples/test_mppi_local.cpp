@@ -1,26 +1,11 @@
-// MPPI (Model Predictive Path Integral) Path Following Test (LOCAL mode - single process)
-//
-// Migrated from `examples_old/test_mppi.cpp` to the current Agent/Simulator APIs.
-//
-// Run:
-//   ./build/linux/x86_64/release/test_mppi_local
-
 #include "flatsim/agent.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
-#include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <cmath>
-#include "flatsim/utils.hpp"
 #include <filesystem>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 #include <vector>
-#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -66,10 +51,9 @@ int main(int argc, char **argv) {
     mppi->set_mppi_config(cfg);
 
     std::vector<datapod::Point> s_curve_path = {
-        {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f},
-        {30.0f, 14.0f}, {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f},
-        {60.0f, 14.0f}, {65.0f, 10.0f}, {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},
-        {90.0f, 0.0f},
+        {0.0f, 0.0f},   {5.0f, 0.0f},   {10.0f, 1.0f},  {15.0f, 3.0f},  {20.0f, 6.0f},  {25.0f, 10.0f}, {30.0f, 14.0f},
+        {35.0f, 17.0f}, {40.0f, 19.0f}, {45.0f, 20.0f}, {50.0f, 19.0f}, {55.0f, 17.0f}, {60.0f, 14.0f}, {65.0f, 10.0f},
+        {70.0f, 6.0f},  {75.0f, 3.0f},  {80.0f, 1.0f},  {85.0f, 0.0f},  {90.0f, 0.0f},
     };
 
     tractor.tracker()->set_path(drivekit::PathGoal(s_curve_path, 2.0f, 2.0f, false));
@@ -84,9 +68,8 @@ int main(int argc, char **argv) {
     int cte_samples = 0;
 
     while (!tractor.tracker()->is_path_completed()) {
-        const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() -
-                                                                              start_time)
-                                 .count();
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
         if (elapsed > 300) {
             std::cout << "Timeout reached!\n";
             break;
@@ -120,4 +103,3 @@ int main(int argc, char **argv) {
     std::cout << "Final position: (" << final_pos.point.x << ", " << final_pos.point.y << ")\n";
     return 0;
 }
-

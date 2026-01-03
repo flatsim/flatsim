@@ -1,7 +1,7 @@
 #include "flatsim/simulator/machine.hpp"
-#include "flatsim/gps.hpp"
 #include "flatsim/utils.hpp"
 #include <cmath>
+#include <concord/concord.hpp>
 #include <iostream>
 
 namespace simulator {
@@ -109,7 +109,8 @@ namespace simulator {
             auto x = chassis_->body->GetPosition().x;
             auto y = chassis_->body->GetPosition().y;
             datapod::Point current_pos{x, y, 0.0};
-            auto wgs_coords = flatsim::gps::enu_to_gps(current_pos, datum);
+            concord::frame::ENU enu{current_pos, datum};
+            auto wgs_coords = concord::frame::to_wgs(enu);
             rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
                                  .with_colors({rerun::Color(config_.color.r(), config_.color.g(), config_.color.b())}));

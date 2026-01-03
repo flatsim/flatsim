@@ -1,7 +1,7 @@
 #include "flatsim/simulator/data.hpp"
-#include "flatsim/gps.hpp"
 #include "flatsim/utils.hpp"
 #include <cmath>
+#include <concord/concord.hpp>
 
 namespace simulator {
 
@@ -72,9 +72,10 @@ namespace simulator {
     types::GpsData Data::pose_to_gps(const datapod::Pose &pose, float speed) {
         types::GpsData data;
 
-        // Convert ENU to WGS84 using flatsim::gps
+        // Convert ENU to WGS84 using concord
         datapod::Point enu_point = pose.point;
-        datapod::Geo gps_coords = flatsim::gps::enu_to_gps(enu_point, datum_);
+        concord::frame::ENU enu{enu_point, datum_};
+        concord::earth::WGS gps_coords = concord::frame::to_wgs(enu);
 
         data.latitude = gps_coords.latitude;
         data.longitude = gps_coords.longitude;

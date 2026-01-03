@@ -2,7 +2,7 @@
 -- NOTE: Due to xmake description domain limitations, PROJECT_NAME must be hardcoded
 --       and kept in sync with the NAME file. The VERSION is read dynamically.
 local PROJECT_NAME = "flatsim"
-local PROJECT_VERSION = "0.0.3"
+local PROJECT_VERSION = "0.0.2"
 
 -- Dependencies formats:
 --   Git:    {"name", "https://github.com/org/repo.git", "tag"}
@@ -10,13 +10,13 @@ local PROJECT_VERSION = "0.0.3"
 --   System: "pkgconfig::libname" or {system = "boost"}
 local LIB_DEPS = {
     {"datapod", "https://github.com/robolibs/datapod.git", "0.0.17"},
-    -- {"concord", "https://github.com/robolibs/concord.git", "2.5.0"},
+    {"concord", "https://github.com/robolibs/concord.git", "0.0.5"},
     {"pigment", "https://github.com/robolibs/pigment.git", "0.0.3"},
     {"entropy", "https://github.com/robolibs/entropy.git", "0.0.4"},
     -- {"zoneout", "https://github.com/robolibs/zoneout.git", "1.4.0"},
     -- {"farmtrax", "https://github.com/robolibs/farmtrax.git", "1.1.1"},
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.2"},
-    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.8"},
+    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.9"},
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
     {system = "boost_json"},

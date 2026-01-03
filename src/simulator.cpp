@@ -7,6 +7,9 @@
 #include <datapod/serialization/serialize.hpp>
 #include <filesystem>
 #include <iostream>
+#include <rerun.hpp>
+#include <rerun/blueprint/archetypes/map_background.hpp>
+#include <rerun/blueprint/components/map_provider.hpp>
 #include <vector>
 
 namespace simulator {
@@ -50,7 +53,10 @@ namespace simulator {
             (void)rec_->connect_grpc(rerun_grpc_addr_);
         }
 
+        auto map_bg = rerun::blueprint::archetypes::MapBackground{}.with_provider(
+            rerun::blueprint::components::MapProvider::MapboxDark);
         if (rec_) {
+            rec_->log("mapbox", std::move(map_bg));
             rec_->log("", rerun::Clear::RECURSIVE);
             rec_->log_with_static("", true, rerun::Clear::RECURSIVE);
         }
