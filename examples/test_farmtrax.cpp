@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "echo/banner.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator.hpp"
@@ -64,7 +65,7 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
 
     if (data.ranges.empty()) {
         if (debug_output) {
-            std::cout << robot_id << " LIDAR: no data yet\n";
+            echo::debug(robot_id, " LIDAR: no data yet");
         }
         return std::numeric_limits<float>::max();
     }
@@ -120,9 +121,8 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
                         rerun::LineStrips3D(lines).with_colors(all_beam_colors).with_radii({0.01f}));
 
         if (debug_output) {
-            std::cout << robot_id << " LIDAR: " << data.ranges.size() << " beams, min_fwd=" << std::fixed
-                      << std::setprecision(2) << min_forward_distance << "m, min_all=" << min_distance
-                      << "m, max_range=" << data.max_range << "m\n";
+            echo::debug(robot_id, " LIDAR: ", data.ranges.size(), " beams, min_fwd=", std::fixed, std::setprecision(2),
+                        min_forward_distance, "m, min_all=", min_distance, "m, max_range=", data.max_range, "m");
         }
     }
 
@@ -179,8 +179,9 @@ std::vector<datapod::Point> generate_dubins_path(const std::vector<std::shared_p
 }
 
 int main() {
-    std::cout << "=== Farmtrax Multi-Machine Field Coverage Test ===" << std::endl;
-    std::cout << "Features: Robot colors, Collision avoidance, Dubins curves\n" << std::endl;
+    echo::banner("FARMTRAX TEST", echo::BoxStyle::Double);
+    echo::info("Features: Robot colors, Collision avoidance, Dubins curves");
+    echo::separator();
 
     // Initialize Rerun logging
     auto rec = std::make_shared<rerun::RecordingStream>("farmtrax_test", "space");
@@ -202,27 +203,27 @@ int main() {
     poly.vertices.push_back(datapod::Point{0.0, 100.0, 0.0});
     poly.vertices.push_back(datapod::Point{0.0, 0.0, 0.0});
 
-    std::cout << "Creating square field (100m x 100m)\n";
+    echo::info("Creating square field (100m x 100m)");
 
     farmtrax::Field field(poly, world_datum, true, 100000.0);
     field.gen_field(4.0, 90.0, 0);
 
     int num_machines = 3;
-    std::cout << "Number of machines: " << num_machines << "\n";
+    echo::info("Number of machines: ", num_machines);
 
     auto part_cnt = field.get_parts().size();
-    std::cout << "Total field parts: " << part_cnt << "\n";
+    echo::info("Total field parts: ", part_cnt);
 
     if (field.get_parts().empty()) {
-        std::cerr << "No field parts generated!\n";
+        echo::error("No field parts generated!");
         return 1;
     }
 
     const auto &part = field.get_parts()[0];
     auto part_area = part.boundary.polygon.area();
-    std::cout << "Field area: " << std::fixed << std::setprecision(1) << part_area << " sq.m (" << (part_area / 10000.0)
-              << " hectares)\n";
-    std::cout << "Headlands: " << part.headlands.size() << ", Swaths: " << part.swaths.size() << "\n";
+    echo::info("Field area: ", std::fixed, std::setprecision(1), part_area, " sq.m (", (part_area / 10000.0),
+               " hectares)");
+    echo::info("Headlands: ", part.headlands.size(), ", Swaths: ", part.swaths.size());
 
     auto fieldPtr = std::make_shared<farmtrax::Part>(field.get_parts()[0]);
     farmtrax::Divy divy(fieldPtr, farmtrax::DivisionType::ALTERNATE, num_machines);
@@ -238,27 +239,27 @@ int main() {
     // Load tractors and assign paths
     for (int m = 0; m < num_machines; ++m) {
         if (res.swaths_per_machine.at(m).empty()) {
-            std::cout << "Machine " << m << " has no swaths assigned\n";
+            echo::warn("Machine ", m, " has no swaths assigned");
             continue;
         }
 
-        std::cout << "\n--- Machine " << m << " ---\n";
-        std::cout << "Assigned swaths: " << res.swaths_per_machine.at(m).size() << "\n";
+        echo::separator("Machine " + std::to_string(m));
+        echo::info("Assigned swaths: ", res.swaths_per_machine.at(m).size());
 
         farmtrax::Nety nety(res.swaths_per_machine.at(m));
         nety.field_traversal();
 
         const auto &swaths = nety.get_swaths();
-        std::cout << "Optimized swaths: " << swaths.size() << "\n";
+        echo::info("Optimized swaths: ", swaths.size());
 
         std::vector<datapod::Point> path = generate_dubins_path(swaths, turning_radius, 0.5f);
 
         if (path.empty()) {
-            std::cout << "Machine " << m << " has empty path after optimization\n";
+            echo::warn("Machine ", m, " has empty path after optimization");
             continue;
         }
 
-        std::cout << "Generated path with " << path.size() << " waypoints (including Dubins curves)\n";
+        echo::info("Generated path with ", path.size(), " waypoints (including Dubins curves)");
 
         float spawn_x = path[0].x;
         float spawn_y = path[0].y - (m * 8.0f);
@@ -276,7 +277,7 @@ int main() {
         auto &tractor =
             sim.spawn_agent("examples/machines/tractor.json", spawn_pose, uuid, ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
-        std::cout << "Loaded tractor " << m << " at (" << spawn_x << ", " << spawn_y << ") UUID: " << uuid << "\n";
+        echo::info("Loaded tractor ", m, " at (", spawn_x, ", ", spawn_y, ") UUID: ", uuid);
 
         // Get robot size for LIDAR configuration
         float robot_size = get_robot_size(tractor);
@@ -299,7 +300,7 @@ int main() {
                                                        lidar_cfg.resolution_deg // resolution
         );
         tractor.machine().sensors.add(std::move(lidar));
-        std::cout << "Added LIDAR sensor to Robot " << m << "\n";
+        echo::info("Added LIDAR sensor to Robot ", m);
 
         // Configure MPPI controller
         tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
@@ -331,12 +332,12 @@ int main() {
 
         active_machines.push_back(m);
         agents.push_back(&tractor);
-        std::cout << "Path set with " << path.size() << " waypoints\n";
+        echo::info("Path set with ", path.size(), " waypoints");
     }
 
-    std::cout << "\n=== Starting Simulation ===" << std::endl;
-    std::cout << "Active machines: " << active_machines.size() << "\n";
-    std::cout << "Collision avoidance: Robots will stop when LIDAR detects obstacle\n";
+    echo::separator("SIMULATION START");
+    echo::info("Active machines: ", active_machines.size());
+    echo::info("Collision avoidance: Robots will stop when LIDAR detects obstacle");
 
     std::vector<bool> robot_stopped(num_machines, false);
 
@@ -350,7 +351,7 @@ int main() {
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
 
         if (elapsed > 600) {
-            std::cout << "Timeout reached!\n";
+            echo::warn("Timeout reached!");
             break;
         }
 
@@ -367,7 +368,7 @@ int main() {
 
             if (lidar) {
                 auto pos_m = robot.get_position();
-                bool debug = (step_count % 60 == 0); // Print every second
+                bool debug = false; // Disable LIDAR debug output (too noisy)
 
                 float min_obstacle_dist =
                     check_lidar_forward(lidar, 0.52f, pos_m, rec, robot.uuid(), robot.machine().config().color, debug);
@@ -375,8 +376,8 @@ int main() {
                 if (min_obstacle_dist < safe_distance) {
                     should_stop = true;
                     if (!robot_stopped[m]) {
-                        std::cout << "Robot " << m << " stopping (LIDAR detected obstacle at " << std::fixed
-                                  << std::setprecision(1) << min_obstacle_dist << "m, safe=" << safe_distance << "m)\n";
+                        echo::warn("Robot ", m, " stopping (LIDAR detected obstacle at ", std::fixed,
+                                   std::setprecision(1), min_obstacle_dist, "m, safe=", safe_distance, "m)");
                     }
                 }
             }
@@ -388,7 +389,7 @@ int main() {
             } else if (!should_stop && robot_stopped[m]) {
                 robot.machine().set_navigation_enabled(true);
                 robot_stopped[m] = false;
-                std::cout << "Robot " << m << " resuming\n";
+                echo::info("Robot ", m, " resuming");
             }
 
             if (robot_stopped[m]) {
@@ -409,14 +410,14 @@ int main() {
 
         // Print progress every 5 seconds
         if (step_count % 300 == 0) {
-            std::cout << "\nTime: " << elapsed << "s\n";
+            echo::separator("Time: " + std::to_string(elapsed) + "s");
             for (size_t i = 0; i < agents.size(); ++i) {
                 int m = active_machines[i];
                 auto pos = agents[i]->get_position();
                 auto completed = agents[i]->tracker()->is_path_completed();
                 std::string status = completed ? "[COMPLETED]" : (robot_stopped[m] ? "[STOPPED]" : "[RUNNING]");
-                std::cout << "  Machine " << m << ": (" << std::fixed << std::setprecision(1) << pos.point.x << ", "
-                          << pos.point.y << ") " << status << "\n";
+                echo::info("Machine ", m, ": (", std::fixed, std::setprecision(1), pos.point.x, ", ", pos.point.y, ") ",
+                           status);
             }
         }
 
@@ -424,14 +425,15 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
+    echo::separator();
     if (all_completed) {
-        std::cout << "\n=== All machines completed their paths! ===" << std::endl;
+        echo::box("All machines completed their paths!", echo::BoxStyle::Double);
     } else {
-        std::cout << "\n=== Simulation ended (timeout or incomplete) ===" << std::endl;
+        echo::box("Simulation ended (timeout or incomplete)", echo::BoxStyle::Dashed);
     }
 
-    std::cout << "Total field work time: " << step_count / 60.0f << " seconds\n";
-    std::cout << "Check Rerun visualization for complete field coverage\n";
+    echo::info("Total field work time: ", step_count / 60.0f, " seconds");
+    echo::info("Check Rerun visualization for complete field coverage");
 
     return 0;
 }

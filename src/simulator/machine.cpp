@@ -48,21 +48,6 @@ namespace simulator {
             return;
         }
 
-        // Debug: print controls every 60 calls
-        static int ctrl_debug = 0;
-        if (ctrl_debug++ % 60 == 0) {
-
-            for (size_t i = 0; i < control.steering.size(); ++i) {
-
-                if (i < control.steering.size() - 1) std::cout << ",";
-            }
-
-            for (size_t i = 0; i < control.throttle.size(); ++i) {
-
-                if (i < control.throttle.size() - 1) std::cout << ",";
-            }
-        }
-
         // Apply per-wheel steering and throttle
         chassis_->update(control.steering, control.throttle, dt);
     }
