@@ -95,12 +95,12 @@ float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, con
         if (is_valid_hit) {
             pigment::RGB red_color{255, 0, 0};
             auto mixed_color = color.mix(red_color, 0.5);
-            all_beam_colors.push_back(rerun::Color(mixed_color.r, mixed_color.g, mixed_color.b, 255));
+            all_beam_colors.push_back(rerun::Color(mixed_color.r(), mixed_color.g(), mixed_color.b()));
             if (is_forward && range < min_forward_distance) {
                 min_forward_distance = range;
             }
         } else {
-            all_beam_colors.push_back(rerun::Color(color.r, color.g, color.b, 150));
+            all_beam_colors.push_back(rerun::Color(color.r(), color.g(), color.b()));
         }
 
         if (is_valid_hit && range < min_distance) {
@@ -150,27 +150,22 @@ std::vector<datapod::Point> generate_dubins_path(const std::vector<std::shared_p
     for (size_t i = 0; i < working_swaths.size(); ++i) {
         const auto &swath = working_swaths[i];
 
-        path.push_back(swath->line.getStart());
-        path.push_back(swath->line.getEnd());
+        path.push_back(swath->line.start);
+        path.push_back(swath->line.end);
 
         if (i + 1 < working_swaths.size()) {
             const auto &next_swath = working_swaths[i + 1];
 
-            float dx_curr = swath->line.getEnd().x - swath->line.getStart().x;
-            float dy_curr = swath->line.getEnd().y - swath->line.getStart().y;
+            float dx_curr = swath->line.end.x - swath->line.start.x;
+            float dy_curr = swath->line.end.y - swath->line.start.y;
             float yaw_end = std::atan2(dy_curr, dx_curr);
 
-            float dx_next = next_swath->line.getEnd().x - next_swath->line.getStart().x;
-            float dy_next = next_swath->line.getEnd().y - next_swath->line.getStart().y;
+            float dx_next = next_swath->line.end.x - next_swath->line.start.x;
+            float dy_next = next_swath->line.end.y - next_swath->line.start.y;
             float yaw_start = std::atan2(dy_next, dx_next);
 
-            datapod::Pose start_pose;
-            start_pose.point = swath->line.getEnd();
-            start_pose.angle.yaw = yaw_end;
-
-            datapod::Pose end_pose;
-            end_pose.point = next_swath->line.getStart();
-            end_pose.angle.yaw = yaw_start;
+            farmtrax::turners::Pose2D start_pose(swath->line.end, yaw_end);
+            farmtrax::turners::Pose2D end_pose(next_swath->line.start, yaw_start);
 
             auto dubins_path = dubins.plan_path(start_pose, end_pose, step_size);
 
@@ -201,16 +196,16 @@ int main() {
 
     // Create a simple square field (100m x 100m)
     datapod::Polygon poly;
-    poly.addPoint(datapod::Point{0.0, 0.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{100.0, 0.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{100.0, 100.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{0.0, 100.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{0.0, 0.0, 0.0, 0.0});
+    poly.vertices.push_back(datapod::Point{0.0, 0.0, 0.0});
+    poly.vertices.push_back(datapod::Point{100.0, 0.0, 0.0});
+    poly.vertices.push_back(datapod::Point{100.0, 100.0, 0.0});
+    poly.vertices.push_back(datapod::Point{0.0, 100.0, 0.0});
+    poly.vertices.push_back(datapod::Point{0.0, 0.0, 0.0});
 
     std::cout << "Creating square field (100m x 100m)\n";
 
     farmtrax::Field field(poly, world_datum, true, 100000.0);
-    field.gen_field(4.0, 0.0, 2);
+    field.gen_field(4.0, 90.0, 0);
 
     int num_machines = 3;
     std::cout << "Number of machines: " << num_machines << "\n";
@@ -224,7 +219,7 @@ int main() {
     }
 
     const auto &part = field.get_parts()[0];
-    auto part_area = boost::geometry::area(part.boundary.b_polygon);
+    auto part_area = part.boundary.polygon.area();
     std::cout << "Field area: " << std::fixed << std::setprecision(1) << part_area << " sq.m (" << (part_area / 10000.0)
               << " hectares)\n";
     std::cout << "Headlands: " << part.headlands.size() << ", Swaths: " << part.swaths.size() << "\n";
@@ -277,7 +272,7 @@ int main() {
 
         // Spawn tractor with unique UUID and color
         std::string uuid = "tractor_" + std::to_string(m);
-        datapod::Pose spawn_pose(spawn_x, spawn_y, spawn_yaw - 1.5708f);
+        datapod::Pose spawn_pose = utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f);
         auto &tractor =
             sim.spawn_agent("examples/machines/tractor.json", spawn_pose, uuid, ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 

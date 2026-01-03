@@ -9,14 +9,15 @@ local PROJECT_VERSION = "0.0.3"
 --   Local:  {"name", "../path/to/local"}  (optional: uses git if not found)
 --   System: "pkgconfig::libname" or {system = "boost"}
 local LIB_DEPS = {
-    {"datapod", "https://github.com/robolibs/datapod.git", "0.0.17"},
-    {"concord", "https://github.com/robolibs/concord.git", "0.0.5"},
-    {"pigment", "https://github.com/robolibs/pigment.git", "0.0.3"},
-    {"entropy", "https://github.com/robolibs/entropy.git", "0.0.4"},
+    {"echo", "https://github.com/bresilla/echo.git", "0.0.7"},
+    {"datapod", "https://github.com/robolibs/datapod.git", "0.0.22"},
+    {"concord", "https://github.com/robolibs/concord.git", "0.0.6"},
+    {"pigment", "https://github.com/robolibs/pigment.git", "0.0.4"},
+    {"entropy", "https://github.com/robolibs/entropy.git", "0.0.5"},
     -- {"zoneout", "https://github.com/robolibs/zoneout.git", "1.4.0"},
-    -- {"farmtrax", "https://github.com/robolibs/farmtrax.git", "1.1.1"},
-    {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.2"},
-    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.9"},
+    {"farmtrax", "https://github.com/robolibs/farmtrax.git", "0.0.6"},
+    {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.4"},
+    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.7"},
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
     {system = "boost_json"},
@@ -53,7 +54,7 @@ end
 local COMMON_FLAGS = {
     "-Wall", "-Wextra", "-Wpedantic",
     "-Wno-reorder", "-Wno-narrowing", "-Wno-array-bounds",
-    "-Wno-unused-variable", "-Wno-unused-parameter",
+    "-Wno-unused-variable", "-Wno-unused-parameter", "-Wno-maybe-uninitialized",
     "-Wno-unused-but-set-variable", "-Wno-gnu-line-marker", "-Wno-comment"
 }
 

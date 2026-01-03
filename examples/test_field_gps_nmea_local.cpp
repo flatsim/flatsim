@@ -52,27 +52,22 @@ generate_dubins_path(const std::vector<std::shared_ptr<const farmtrax::Swath>> &
 
     for (size_t i = 0; i < working_swaths.size(); ++i) {
         const auto &swath = working_swaths[i];
-        path.push_back(swath->line.getStart());
-        path.push_back(swath->line.getEnd());
+        path.push_back(swath->line.start);
+        path.push_back(swath->line.end);
 
         if (i + 1 < working_swaths.size()) {
             const auto &next_swath = working_swaths[i + 1];
 
-            const float dx_curr = swath->line.getEnd().x - swath->line.getStart().x;
-            const float dy_curr = swath->line.getEnd().y - swath->line.getStart().y;
+            const float dx_curr = swath->line.end.x - swath->line.start.x;
+            const float dy_curr = swath->line.end.y - swath->line.start.y;
             const float yaw_end = std::atan2(dy_curr, dx_curr);
 
-            const float dx_next = next_swath->line.getEnd().x - next_swath->line.getStart().x;
-            const float dy_next = next_swath->line.getEnd().y - next_swath->line.getStart().y;
+            const float dx_next = next_swath->line.end.x - next_swath->line.start.x;
+            const float dy_next = next_swath->line.end.y - next_swath->line.start.y;
             const float yaw_start = std::atan2(dy_next, dx_next);
 
-            datapod::Pose start_pose;
-            start_pose.point = swath->line.getEnd();
-            utils::set_yaw(start_pose, yaw_end);
-
-            datapod::Pose end_pose;
-            end_pose.point = next_swath->line.getStart();
-            utils::set_yaw(end_pose, yaw_start);
+            farmtrax::turners::Pose2D start_pose(swath->line.end, yaw_end);
+            farmtrax::turners::Pose2D end_pose(next_swath->line.start, yaw_start);
 
             auto dubins_path = dubins.plan_path(start_pose, end_pose, step_size);
             for (size_t j = 1; j + 1 < dubins_path.waypoints.size(); ++j) {
@@ -100,17 +95,17 @@ int main(int argc, char **argv) {
     // World is 500x500 centered at 0,0 (so -250 to +250).
     // Border: 500/6 ~= 83m => field spans roughly [-167, +167].
     datapod::Polygon poly;
-    poly.addPoint(datapod::Point{-167.0, -167.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{167.0, -167.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{167.0, 167.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{-167.0, 167.0, 0.0, 0.0});
-    poly.addPoint(datapod::Point{-167.0, -167.0, 0.0, 0.0});
+    poly.vertices.push_back(datapod::Point{-167.0, -167.0, 0.0});
+    poly.vertices.push_back(datapod::Point{167.0, -167.0, 0.0});
+    poly.vertices.push_back(datapod::Point{167.0, 167.0, 0.0});
+    poly.vertices.push_back(datapod::Point{-167.0, 167.0, 0.0});
+    poly.vertices.push_back(datapod::Point{-167.0, -167.0, 0.0});
 
     farmtrax::Field field(poly, datum, true, 100000.0);
-    field.gen_field(18.0, 0.0, 1);
+    field.gen_field(18.0, 90.0, 0);
 
     const auto &part = field.get_parts()[0];
-    auto part_area = boost::geometry::area(part.boundary.b_polygon);
+    auto part_area = part.boundary.polygon.area();
     std::cout << "\nUsing part 0:\n";
     std::cout << "Field area: " << std::fixed << std::setprecision(1) << part_area << " sq.m (" << (part_area / 10000.0)
               << " hectares)\n";

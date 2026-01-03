@@ -2,6 +2,8 @@
 #include "flatsim/simulator.hpp"
 #include <chrono>
 #include <cmath>
+#include <echo/banner.hpp>
+#include <echo/echo.hpp>
 #include <filesystem>
 #include <iostream>
 #include <thread>
@@ -11,7 +13,9 @@ int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
-    std::cout << "=== MPPI Path Following Test (LOCAL mode) ===" << std::endl;
+    echo::banner("MPPI");
+
+    echo::info(" === MPPI Path Following Test (LOCAL mode) ===");
 
     std::filesystem::path machine_file = "examples/machines/tractor.json";
     if (!std::filesystem::exists(machine_file)) {
@@ -24,6 +28,8 @@ int main(int argc, char **argv) {
 
     auto &tractor = sim.spawn_agent(machine_file, utils::make_pose_2d(0.0, 0.0, -1.5708f), "mppi_0");
     std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
+
+    // echo::info("Tractor loaded: " + tractor.name() + " (" + tractor.uuid() + ")");
 
     tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
     tractor.controls().tracker().set_enabled(true);

@@ -129,6 +129,10 @@ namespace utils {
         return new_pose;
     }
 
+    ///@brief Scales the distance between the robot and the center of the track
+    ///@param angleRad The angle of the robot
+    ///@param trackWidth The width of the track
+    ///@return The scaled distance
     inline float ackermann_scale(float angleRad, float trackWidth) {
         if (std::fabs(angleRad) < 1e-6f) return 1.0f;
         float R = trackWidth / std::tan(angleRad);
@@ -144,7 +148,7 @@ namespace utils {
     }
     ///@brief Convert a Flywheel Transform to a Datapod Pose
     ///@param transform The Flywheel Transform
-    ///@return ds 
+    ///@return sdd
     inline datapod::Pose transform_to_pose(const flywheel::Transform &transform) {
         datapod::Pose pose;
         pose.point.x = transform.position.x;
