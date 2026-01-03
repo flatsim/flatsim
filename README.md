@@ -1,105 +1,54 @@
-
 <img align="right" width="26%" src="./book/src/images/logo.png">
 
 flatsim
 ===
 
-simple robotics simulator using:
-- [kokkos](https://github.com/kokkos/kokkos) gpu programming
-- [muli](https://github.com/Sopiro/Muli) for physics
-- [rerun](https://github.com/rerun-io/rerun) visualization
-- [concord](https://github.com/onlyhead/concord) cordniate transformer
-- [zoneout](https://github.com/onlyhead/zoneout) zones management
+Lightweight 2D robotics simulator (C++) with a small, pragmatic core and clear Agent ↔ Simulator split.
 
+Key libraries used (current):
+- datapod — geographic types & serialization (WGS/ENU, Pose, Geo, etc.)
+- flywheel — 2D rigid-body physics and collisions
+- rerun — optional visualization / recording stream
+- pigment — simple RGB helpers used by examples & loaders
+- ZeroMQ (libzmq / cppzmq) — IPC/TCP transport between Agent and Simulator
+- boost::json — config / machine loader
 
-A short video:
+Note: previous versions and older docs mention kokkos, muli, concord, zoneout and other dependencies. The codebase has moved — those are no longer primary dependencies.
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/xjRNYtFulUs/0.jpg)](https://www.youtube.com/watch?v=xjRNYtFulUs)
-
-## Architecture
-
-Flatsim provides a clean, modular architecture that separates physics simulation from robot control and navigation. The system supports flexible deployment patterns from single-process to distributed multi-machine setups.
-
-### Core API: fs::Simulator
-
-The main simulation API based on the protocol layer for clean separation of concerns:
+Quick example (single-process / LOCAL mode):
 
 ```cpp
-// Create simulator
-auto sim = std::make_shared<fs::Simulator>(rec);
+// Create simulator (datum required for GPS conversions)
+datapod::Geo datum{51.989, 5.658, 53.8};
+simulator::Simulator sim(500.0f, 500.0f, datum);
 
-// Initialize world
-sim->init(world_datum, world_size);
-sim->add_robot(robot_info);
+// Spawn a robot from JSON file
+datapod::Pose pose{datapod::Point{5.0f, 0.0f, 0.0f}, datapod::Quaternion::from_euler({0,0,0})};
+auto &robot = sim.spawn_agent("examples/machines/tractor.json", pose);
 
-// Main loop with protocol types
-std::vector<protocol::RobotCommand> commands;
-std::vector<protocol::RobotState> states;
-
-sim->step(dt, commands, states);  // Physics step
+// Simple run loop
+const float dt = 0.016f; // 60 Hz
+for (int i = 0; i < 1000; ++i) { sim.tick(dt); sim.tock(); }
 ```
 
-## Deployment Modes
+Deployment modes
+- LOCAL: Simulator and Agents run in the same process (useful for tests and debugging)
+- IPC / TCP: Run simulator as a server and connect Agents remotely (examples: simulator_server, agent_client)
 
-### Mode 1: Separated (Distributed Client/Server)
+Examples (build system dependent):
+- simulator_server  # runs the physics server (use --ipc or --tcp)
+- agent_client      # connects to simulator server and exercises Agent API
+- simple            # single-process example that demonstrates Simulator + Agent
 
-Run environment server and robot agents as separate processes. Ideal for multi-robot systems and multi-machine deployments.
+Key components
+- simulator::Simulator — physics world, machine creation, tick/tock loop, lidar scans, teleport
+- agent::Agent — local or remote Agent; handles controls, sensors, spawn/despawn
+- types:: — machine/state/serialization types (datapod-based)
+- flywheel/rerun integration — physics + optional visualization stream
 
-**Usage:**
-```bash
-# Terminal 1: Start environment server
-./build/server_env --config examples/machines/tractor.json
+Where to look
+- examples/ — runnable demos (single-process and client/server)
+- include/ & src/ — main implementation (simulator, agent, sensors, controls)
+- CMakeLists.txt / xmake.lua / Makefile — build instructions
 
-# Terminal 2: Start agent
-./build/agent_nav --config examples/machines/tractor.json --pose 0,0,0 --target-x 10 --target-y 5
-```
-
-### Mode 2: Joined (Single Process)
-
-Run environment and agents in the same process. Ideal for testing, debugging, and low-latency scenarios.
-
-**Usage:**
-```bash
-./build/single_process_demo --config examples/machines/tractor.json --target-x 10 --target-y 5
-```
-
-## Key Components
-
-### fs::Simulator
-Physics-centric simulator managing world and robot instances:
-- `init(datum, world_size)` - Initialize world
-- `add_robot(robot_info)` - Add robot to simulation  
-- `step(dt, commands, states)` - Step physics and produce robot states
-- `world()`, `robots()` - Access world and robot instances
-
-### protocol::
-Transport-agnostic data types:
-- `RobotState` - pose, velocity
-- `RobotCommand` - steering, throttle
-- `CollisionEvent` - collision data
-
-### agent::
-- `IRobotAgent` - Generic interface for robot control
-- `NavAgent` - Navigation using navcon
-- `LoggingAgent` - Optional Rerun logging
-
-### ipc::
-- `Adapters` - Convert protocol ↔ ZMQ messages
-- `Server/Client` - ZMQ dispatcher
-
-## Benefits
-
-✅ **Clean Architecture** - Single modular API  
-✅ **Scalable** - Physics separate from navigation  
-✅ **Flexible** - Single-process or distributed  
-✅ **Testable** - Agents independent from physics  
-✅ **Multi-machine** - Agents on different hardware
-
-## Examples
-
-All examples use the `fs::Simulator` API:
-- `server_env`, `agent_nav`, `single_process_demo` - New modular examples
-- `sim`, `mvs`, `zmq_tractor_control` - Existing examples
-
-See [PLAN.md](./PLAN.md) and [ARCHITECTURE_SUMMARY.md](./ARCHITECTURE_SUMMARY.md) for details.
-
+If something in the README or docs still references old libraries, that's likely stale: prefer the code and examples/ as ground truth.

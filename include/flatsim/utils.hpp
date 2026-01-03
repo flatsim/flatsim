@@ -142,7 +142,9 @@ namespace utils {
         pos.y = pose.point.y;
         return flywheel::Transform{pos, rot};
     }
-
+    ///@brief Convert a Flywheel Transform to a Datapod Pose
+    ///@param transform The Flywheel Transform
+    ///@return ds 
     inline datapod::Pose transform_to_pose(const flywheel::Transform &transform) {
         datapod::Pose pose;
         pose.point.x = transform.position.x;
