@@ -40,24 +40,60 @@ Examples (build system dependent):
 - agent_client      # connects to simulator server and exercises Agent API
 - simple            # single-process example that demonstrates Simulator + Agent
 
-Client–server quick start (IPC / TCP)
+Client–server snippets (IPC / TCP)
 
-IPC (same machine):
-```bash
-# Server (defaults to IPC, can force with --ipc)
-FLATSIM_IPC_DIR=./build/ipc ./build/simulator_server --ipc
-# Client (connects via IPC)
-./build/agent_client --ipc
+IPC (same machine) — server:
+
+```cpp
+#include "flatsim/simulator.hpp"
+
+int main() {
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
+    // IPC mode: address string is unused; uses FLATSIM_IPC_DIR (defaults to /tmp)
+    simulator::Simulator sim(simulator::Conn::IPC, "", 500.0f, 500.0f, datum);
+    const float dt = 0.016f;
+    bool running = true;
+    while (running) {
+        sim.tick(dt);
+        sim.tock();
+    }
+}
 ```
 
-TCP (different machines):
-```bash
-# Server (bind to all interfaces)
-./build/simulator_server --tcp --host 0.0.0.0
-# Client (connect to server IP)
-./build/agent_client --tcp --host 192.168.1.10
+IPC — client:
+
+```cpp
+#include "flatsim/agent.hpp"
+#include "flatsim/agent/loader.hpp"
+
+int main() {
+    datapod::Pose pose = utils::make_pose_2d(10.0, 10.0, 0.0);
+    types::Machine m = agent::Loader::load_from_json("examples/machines/tractor.json", pose);
+
+    // Empty address -> IPC transport
+    agent::Agent client("");
+    client.set_machine(m);
+    client.spawn();            // send SPAWN to server
+    client.tick(0.016f, 100);  // tick blocks waiting for state (100 ms timeout)
+    client.despawn();
+}
 ```
-Note: For TCP, ensure the client can reach the server (open firewall/ports). The server prints the advertised host/port on startup.
+
+TCP (different machines) — server snippet:
+
+```cpp
+// Bind to all interfaces (advertised to clients)
+simulator::Simulator sim(simulator::Conn::TCP, "0.0.0.0", 500.0f, 500.0f, datum);
+```
+
+TCP — client snippet:
+
+```cpp
+// Connect to server running at 192.168.1.10
+agent::Agent client("192.168.1.10");
+```
+
+Note: For TCP, ensure clients can reach the server (open firewall/ports). See examples/simulator_server.cpp and examples/agent_client.cpp for complete, working examples.
 
 Key components
 - simulator::Simulator — physics world, machine creation, tick/tock loop, lidar scans, teleport
