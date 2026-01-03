@@ -34,7 +34,6 @@ namespace agent {
             spawn_addr = "tcp://" + address_ + ":5555";
         }
         spawn_socket_->connect(spawn_addr);
-        std::cout << "[Agent] Connected to spawn socket: " << spawn_addr << std::endl;
 
         // Create uplink/downlink sockets (will connect after spawn)
         uplink_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::push);
@@ -54,8 +53,6 @@ namespace agent {
         // Initialize all managers (sensors, controls, network, power, container)
         machine_.init();
         install_sensor_callbacks();
-
-        std::cout << "[Agent] LOCAL mode: Created agent for " << config.name << " (" << config.uuid << ")" << std::endl;
     }
 
     Agent::~Agent() {
@@ -84,7 +81,6 @@ namespace agent {
 
         auto data = datapod::serialize(req);
         spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
-        std::cout << "[Agent] Sent SPAWN for: " << machine_.config().name << std::endl;
 
         zmq::message_t reply;
         spawn_socket_->set(zmq::sockopt::rcvtimeo, 5000);
@@ -92,66 +88,64 @@ namespace agent {
         if (result) {
             std::vector<uint8_t> buffer(static_cast<uint8_t *>(reply.data()),
                                         static_cast<uint8_t *>(reply.data()) + reply.size());
-            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
-            if (resp.success) {
-                // Connect control and state sockets for this machine
-                std::string uuid = machine_.uuid();
-                std::string uplink_addr(resp.zmq.uplink_endpoint.view());
-                std::string downlink_addr(resp.zmq.downlink_endpoint.view());
+            try {
+                auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
+                if (resp.success) {
+                    // Connect control and state sockets for this machine
+                    std::string uuid = machine_.uuid();
+                    std::string uplink_addr(resp.zmq.uplink_endpoint.view());
+                    std::string downlink_addr(resp.zmq.downlink_endpoint.view());
 
-                // Backwards-compatible fallback if talking to an older simulator.
-                if (uplink_addr.empty() || downlink_addr.empty()) {
-                    if (address_.empty()) {
-                        auto dir = ipc_dir();
-                        uplink_addr = ipc_endpoint(dir / ("flatsim_uplink_" + uuid));
-                        downlink_addr = ipc_endpoint(dir / ("flatsim_downlink_" + uuid));
+                    // Backwards-compatible fallback if talking to an older simulator.
+                    if (uplink_addr.empty() || downlink_addr.empty()) {
+                        if (address_.empty()) {
+                            auto dir = ipc_dir();
+                            uplink_addr = ipc_endpoint(dir / ("flatsim_uplink_" + uuid));
+                            downlink_addr = ipc_endpoint(dir / ("flatsim_downlink_" + uuid));
+                        } else {
+                            const std::string host = (address_.starts_with("tcp://") || address_.starts_with("ipc://"))
+                                                         ? "127.0.0.1"
+                                                         : address_;
+                            uplink_addr = "tcp://" + host + ":5600";
+                            downlink_addr = "tcp://" + host + ":5601";
+                        }
+                    }
+
+                    uplink_socket_->connect(uplink_addr);
+                    downlink_socket_->connect(downlink_addr);
+
+                    // Create RecordingStream using info from simulator
+                    std::string rerun_addr(resp.rerun.grpc_address.view());
+                    std::string rec_id(resp.rerun.recording_id.view());
+                    std::string app_id(resp.rerun.application_id.view());
+
+                    rec_ = std::make_shared<rerun::RecordingStream>(app_id, rec_id);
+                    auto conn_result = rec_->connect_grpc(rerun_addr);
+                    if (conn_result.is_ok()) {
                     } else {
-                        const std::string host =
-                            (address_.starts_with("tcp://") || address_.starts_with("ipc://")) ? "127.0.0.1" : address_;
-                        uplink_addr = "tcp://" + host + ":5600";
-                        downlink_addr = "tcp://" + host + ":5601";
+                        std::cerr << "[Agent] Warning: Failed to connect to Rerun Viewer" << std::endl;
                     }
-                }
 
-                uplink_socket_->connect(uplink_addr);
-                downlink_socket_->connect(downlink_addr);
+                    // Update machine with rerun and initialize all managers
+                    machine_ = Machine(rec_, machine_.config());
+                    machine_.init();
+                    install_sensor_callbacks();
 
-                std::cout << "[Agent] Connected uplink: " << uplink_addr << std::endl;
-                std::cout << "[Agent] Connected downlink: " << downlink_addr << std::endl;
-
-                // Create RecordingStream using info from simulator
-                std::string rerun_addr(resp.rerun.grpc_address.view());
-                std::string rec_id(resp.rerun.recording_id.view());
-                std::string app_id(resp.rerun.application_id.view());
-
-                rec_ = std::make_shared<rerun::RecordingStream>(app_id, rec_id);
-                auto conn_result = rec_->connect_grpc(rerun_addr);
-                if (conn_result.is_ok()) {
-                    std::cout << "[Agent] Connected to Rerun Viewer at " << rerun_addr << std::endl;
-                    std::cout << "[Agent] Recording ID: " << rec_id << std::endl;
-                } else {
-                    std::cerr << "[Agent] Warning: Failed to connect to Rerun Viewer" << std::endl;
-                }
-
-                // Update machine with rerun and initialize all managers
-                machine_ = Machine(rec_, machine_.config());
-                machine_.init();
-                install_sensor_callbacks();
-
-                // Update state from response
-                for (const auto &ms : resp.state.machines) {
-                    if (std::string(ms.uuid.view()) == machine_.uuid()) {
-                        machine_.update_state(ms);
-                        break;
+                    // Update state from response
+                    for (const auto &ms : resp.state.machines) {
+                        if (std::string(ms.uuid.view()) == machine_.uuid()) {
+                            machine_.update_state(ms);
+                            break;
+                        }
                     }
-                }
 
-                spawned_ = true;
-                std::cout << "[Agent] Spawn successful" << std::endl;
-                return true;
+                    spawned_ = true;
+                    return true;
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "[Agent] Failed to deserialize spawn response: " << e.what() << std::endl;
             }
         }
-        std::cout << "[Agent] Spawn failed" << std::endl;
         return false;
     }
 
@@ -172,10 +166,14 @@ namespace agent {
         if (result) {
             std::vector<uint8_t> buffer(static_cast<uint8_t *>(reply.data()),
                                         static_cast<uint8_t *>(reply.data()) + reply.size());
-            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
-            if (resp.success) {
-                spawned_ = false;
-                return true;
+            try {
+                auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(buffer);
+                if (resp.success) {
+                    spawned_ = false;
+                    return true;
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "[Agent] Failed to deserialize despawn response: " << e.what() << std::endl;
             }
         }
         return false;

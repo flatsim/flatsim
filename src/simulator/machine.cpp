@@ -24,9 +24,6 @@ namespace simulator {
         // Create chassis which manages all physics
         chassis_ = std::make_unique<Chassis>(world_, rec_, filter_, &config_, &state_);
         chassis_->init(config_);
-
-        std::cout << "[Simulator] Created machine: " << config_.name << " with " << config_.wheels.size() << " wheels"
-                  << std::endl;
     }
 
     void Machine::destroy() {
@@ -40,8 +37,6 @@ namespace simulator {
             chassis_->destroy();
         }
         chassis_.reset();
-
-        std::cout << "[Simulator] Destroyed machine: " << config_.uuid << std::endl;
     }
 
     void Machine::apply_control(const types::WheelControl &control, float dt) {
@@ -56,17 +51,16 @@ namespace simulator {
         // Debug: print controls every 60 calls
         static int ctrl_debug = 0;
         if (ctrl_debug++ % 60 == 0) {
-            std::cout << "[Machine::apply_control] steer=[";
+
             for (size_t i = 0; i < control.steering.size(); ++i) {
-                std::cout << control.steering[i];
+
                 if (i < control.steering.size() - 1) std::cout << ",";
             }
-            std::cout << "] throttle=[";
+
             for (size_t i = 0; i < control.throttle.size(); ++i) {
-                std::cout << control.throttle[i];
+
                 if (i < control.throttle.size() - 1) std::cout << ",";
             }
-            std::cout << "]" << std::endl;
         }
 
         // Apply per-wheel steering and throttle

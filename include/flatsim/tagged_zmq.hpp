@@ -41,7 +41,11 @@ namespace flatsim::wire {
     }
 
     template <typename T> inline T deserialize(std::vector<uint8_t> payload) {
-        return datapod::deserialize<datapod::Mode::NONE, T>(payload);
+        try {
+            return datapod::deserialize<datapod::Mode::NONE, T>(payload);
+        } catch (const std::exception &e) {
+            throw std::runtime_error(std::string("tagged_zmq: failed to deserialize payload: ") + e.what());
+        }
     }
 
 } // namespace flatsim::wire

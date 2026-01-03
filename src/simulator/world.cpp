@@ -13,7 +13,6 @@ namespace simulator {
         // Pass settings_ (which extends flywheel::WorldSettings) directly to flywheel::World
         // This ensures all flywheel defaults are properly inherited
         physics_ = std::make_shared<flywheel::World>(settings_);
-        std::cout << "[World] Created (" << size.x << "x" << size.y << ")" << std::endl;
     }
 
     void World::tick(float dt) { physics_->Step(dt); }

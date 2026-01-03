@@ -321,6 +321,17 @@ namespace types {
                 s.drag = w.drag;
                 return s;
             }
+
+            // Custom members() function for datapod serialization (struct has 11 fields)
+            auto members() {
+                return std::tie(name, bound, color, steering_max, throttle_max, force, friction, max_impulse, brake,
+                                drag);
+            }
+
+            auto members() const {
+                return std::tie(name, bound, color, steering_max, throttle_max, force, friction, max_impulse, brake,
+                                drag);
+            }
         };
 
         struct Section {

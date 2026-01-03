@@ -74,9 +74,6 @@ namespace simulator {
         // Initialize sensor data helper with physics world reference
         sensor_data_.set_world(world_->physics_ptr());
         sensor_data_.set_datum(sim_settings_.datum);
-
-        std::cout << "[Simulator] LOCAL mode initialized (" << sim_settings_.width << "x" << sim_settings_.height << ")"
-                  << std::endl;
     }
 
     // Constructor for IPC/TCP mode with settings struct
@@ -98,10 +95,8 @@ namespace simulator {
             const std::string spawn_ep = "ipc://" + (dir / "flatsim_spawn").string();
             remove_ipc_socket_file(spawn_ep);
             spawn_socket_->bind(spawn_ep);
-            std::cout << "[Simulator] Spawn socket: " << spawn_ep << std::endl;
         } else {
             spawn_socket_->bind("tcp://*:5555");
-            std::cout << "[Simulator] Spawn socket: tcp://*:5555" << std::endl;
         }
         spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
 
@@ -111,9 +106,6 @@ namespace simulator {
         // Initialize sensor data helper with physics world reference
         sensor_data_.set_world(world_->physics_ptr());
         sensor_data_.set_datum(sim_settings_.datum);
-
-        std::cout << "[Simulator] Initialized (" << sim_settings_.width << "x" << sim_settings_.height << ")"
-                  << std::endl;
     }
 
     // Constructor for IPC/TCP mode with explicit parameters
@@ -199,8 +191,6 @@ namespace simulator {
         if (uuid.has_value()) {
             machine_config.uuid = uuid.value();
         }
-
-        std::cout << "[Simulator] Spawning: " << machine_config.name << " (" << machine_config.uuid << ")" << std::endl;
 
         create_machine(machine_config);
 
@@ -334,12 +324,20 @@ namespace simulator {
         std::vector<uint8_t> buffer(static_cast<uint8_t *>(spawn_request.data()),
                                     static_cast<uint8_t *>(spawn_request.data()) + spawn_request.size());
 
-        auto req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(buffer);
+        types::ser::Request req;
         types::ser::Response resp;
 
-        if (false) {
+        try {
+            req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(buffer);
+        } catch (const std::exception &e) {
+            std::cerr << "[Simulator] Failed to deserialize spawn request: " << e.what() << std::endl;
             resp.success = false;
-        } else if (req.type == types::ser::MsgType::SPAWN) {
+            auto data = datapod::serialize(resp);
+            spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
+            return;
+        }
+
+        if (req.type == types::ser::MsgType::SPAWN) {
             auto machine = req.machine.to_machine();
             std::string uuid = machine.uuid;
 
@@ -380,8 +378,6 @@ namespace simulator {
             resp.rerun.application_id = datapod::String(application_id_);
             resp.zmq.uplink_endpoint = datapod::String(uplink_ep);
             resp.zmq.downlink_endpoint = datapod::String(downlink_ep);
-
-            std::cout << "[Simulator] Spawned: " << uuid << std::endl;
         } else if (req.type == types::ser::MsgType::DESPAWN) {
             std::string uuid_str(req.uuid.view());
             if (uplink_sockets_.count(uuid_str)) {
@@ -394,7 +390,6 @@ namespace simulator {
             }
             resp.success = destroy_machine(uuid_str);
             last_heartbeat_.erase(uuid_str);
-            std::cout << "[Simulator] Despawned: " << uuid_str << std::endl;
         } else {
             resp.success = false;
         }
@@ -413,7 +408,6 @@ namespace simulator {
         for (const auto &[uuid, last_hb] : last_heartbeat_) {
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_hb).count();
             if (elapsed > 5) {
-                std::cout << "[Simulator] Heartbeat timeout: " << uuid << " (" << elapsed << "s)" << std::endl;
                 to_remove.push_back(uuid);
             }
         }
@@ -485,7 +479,6 @@ namespace simulator {
             cleanup_stale_connections();
 
             if (tick_num % 60 == 0) {
-                std::cout << "[Simulator] Tick #" << tick_num << " - " << machines_.size() << " machines" << std::endl;
             }
         }
     }

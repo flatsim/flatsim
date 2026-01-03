@@ -29,9 +29,6 @@ namespace agent {
         if (config_.tank.has_value()) {
             container.init(config_.tank.value(), config_.color, config_.name);
         }
-
-        std::cout << "[Machine] Initialized all managers for: " << config_.name << " (" << config_.uuid << ")"
-                  << std::endl;
     }
 
     void Machine::update_state(const types::ser::MachineState &state) {
