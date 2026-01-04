@@ -74,12 +74,15 @@ namespace simulator {
 
         // Rerun visualization
         std::shared_ptr<rerun::RecordingStream> rec_;
+        std::shared_ptr<rerun::RecordingStream> blueprint_rec_; // Blueprint stream (created once, reused)
         std::string rerun_grpc_addr_ = "rerun+http://127.0.0.1:9876/proxy";
         std::string recording_id_ = "flatsim";
         std::string application_id_ = "flatsim";
+        std::string last_joined_agent_uuid_; // Track the last agent that joined for camera tracking
 
         // Private helpers
         void init_rerun();
+        void update_camera_tracking(const std::string &uuid);
 
         // Transport abstraction - handles LOCAL vs IPC/TCP
         void send_state(const std::string &uuid, const types::ser::MachineState &state);

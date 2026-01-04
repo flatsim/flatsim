@@ -9,7 +9,7 @@ local PROJECT_VERSION = "0.0.3"
 --   Local:  {"name", "../path/to/local"}  (optional: uses git if not found)
 --   System: "pkgconfig::libname" or {system = "boost"}
 local LIB_DEPS = {
-    {"echo", "https://github.com/bresilla/echo.git", "0.0.7"},
+    {"echo", "https://github.com/bresilla/echo.git", "0.0.17"},
     {"datapod", "https://github.com/robolibs/datapod.git", "0.0.22"},
     {"concord", "https://github.com/robolibs/concord.git", "0.0.6"},
     {"pigment", "https://github.com/robolibs/pigment.git", "0.0.4"},
@@ -17,7 +17,7 @@ local LIB_DEPS = {
     -- {"zoneout", "https://github.com/robolibs/zoneout.git", "1.4.0"},
     {"farmtrax", "https://github.com/robolibs/farmtrax.git", "0.0.6"},
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.4"},
-    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.7"},
+    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.9"},
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
     {system = "boost_json"},

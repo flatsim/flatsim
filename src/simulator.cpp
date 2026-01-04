@@ -5,11 +5,17 @@
 #include <chrono>
 #include <cstdlib>
 #include <datapod/serialization/serialize.hpp>
+#include <echo/echo.hpp>
 #include <filesystem>
 #include <iostream>
 #include <rerun.hpp>
+#include <rerun/blueprint/archetypes/eye_controls3d.hpp>
 #include <rerun/blueprint/archetypes/map_background.hpp>
+#include <rerun/blueprint/archetypes/view_blueprint.hpp>
 #include <rerun/blueprint/components/map_provider.hpp>
+#include <rerun/blueprint/components/view_class.hpp>
+#include <rerun/blueprint/components/view_origin.hpp>
+#include <rerun/components/entity_path.hpp>
 #include <vector>
 
 namespace simulator {
@@ -53,6 +59,15 @@ namespace simulator {
             (void)rec_->connect_grpc(rerun_grpc_addr_);
         }
 
+        echo::trace("[Simulator] Recording stream connected to ", rerun_grpc_addr_).rgb(0, 255, 0).bold();
+
+        // Create blueprint stream (separate from data stream)
+        if (!blueprint_rec_) {
+            blueprint_rec_ =
+                std::make_shared<rerun::RecordingStream>(application_id_, recording_id_, rerun::StoreKind::Blueprint);
+            (void)blueprint_rec_->connect_grpc(rerun_grpc_addr_);
+        }
+
         auto map_bg = rerun::blueprint::archetypes::MapBackground{}.with_provider(
             rerun::blueprint::components::MapProvider::MapboxDark);
         if (rec_) {
@@ -60,6 +75,19 @@ namespace simulator {
             rec_->log("", rerun::Clear::RECURSIVE);
             rec_->log_with_static("", true, rerun::Clear::RECURSIVE);
         }
+    }
+
+    void Simulator::update_camera_tracking(const std::string &uuid) {
+        if (!rec_ || uuid.empty()) {
+            return;
+        }
+        last_joined_agent_uuid_ = uuid;
+        std::string chassis_path = "/" + uuid + "/chassis";
+        auto eye_controls = rerun::blueprint::archetypes::EyeControls3D().with_tracking_entity(
+            rerun::components::EntityPath(chassis_path));
+
+        rec_->log("eye_controls", std::move(eye_controls));
+        echo::trace("[Simulator] Camera tracking set to chassis: ", chassis_path);
     }
 
     // Constructor for LOCAL mode (no networking)
@@ -201,6 +229,10 @@ namespace simulator {
             [this](const std::string &uuid, const datapod::Pose &pose) { this->teleport_machine(uuid, pose); });
 
         local_agents_.push_back(std::move(agent_ptr));
+
+        // Update camera tracking to follow this newly spawned agent
+        update_camera_tracking(machine_config.uuid);
+
         return *local_agents_.back();
     }
 
@@ -370,6 +402,9 @@ namespace simulator {
             uplink_sockets_[uuid] = std::move(uplink_sock);
             downlink_sockets_[uuid] = std::move(downlink_sock);
             last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+
+            // Update camera tracking to follow this newly spawned agent
+            update_camera_tracking(uuid);
 
             resp.success = true;
             resp.state = get_world_state();

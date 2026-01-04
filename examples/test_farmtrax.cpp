@@ -13,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-#include "echo/banner.hpp"
+#include "echo/widget.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator.hpp"
@@ -287,8 +287,8 @@ int main() {
         lidar_cfg.enabled = true;
         lidar_cfg.min_range = robot_size + 0.5f; // min range > robot size
         lidar_cfg.max_range = 15.0f;             // 15m max range
-        lidar_cfg.fov_deg = 45.0f;               // 45 degree FOV
-        lidar_cfg.resolution_deg = 3.0f;         // 3 degree resolution
+        lidar_cfg.fov_deg = 90.0f;               // 45 degree FOV
+        lidar_cfg.resolution_deg = 2.0f;         // 3 degree resolution
         sim.set_lidar_config(uuid, lidar_cfg);
 
         // Add LIDAR sensor on agent side to receive data from simulator

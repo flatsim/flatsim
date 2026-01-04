@@ -2,8 +2,8 @@
 #include "flatsim/simulator.hpp"
 #include <chrono>
 #include <cmath>
-#include <echo/banner.hpp>
 #include <echo/echo.hpp>
+#include <echo/widget.hpp>
 #include <filesystem>
 #include <iostream>
 #include <thread>

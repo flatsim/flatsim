@@ -13,6 +13,8 @@
 #include <thread>
 #include <vector>
 
+// #include "echo/format.hpp"
+#include "echo/widget.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/sensor/gps_sensor.hpp"
 #include "flatsim/agent/sensor/imu_sensor.hpp"
@@ -25,6 +27,8 @@
 #include "farmtrax/graph.hpp"
 #include "farmtrax/turners/dubins.hpp"
 #include "flatsim/utils.hpp"
+
+typedef echo::format::String Pretty;
 
 // Different colors for each robot
 static const std::vector<pigment::RGB> ROBOT_COLORS = {
@@ -83,10 +87,12 @@ int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
-    std::cout << "=== Field GPS/IMU + NMEA Demo (LOCAL mode) ===\n";
+    echo::banner("FIELD GPS/IMU + NMEA DEMO (LOCAL)", echo::BoxStyle::Double);
+    echo::info("Migrated from examples_old/test_field_gps_nmea.cpp");
+    echo::separator();
 
     const int num_machines = 1; // This migrated demo keeps the original default.
-    std::cout << "Number of machines: " << num_machines << "\n";
+    echo::info("Number of machines: ", num_machines);
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
@@ -106,10 +112,10 @@ int main(int argc, char **argv) {
 
     const auto &part = field.get_parts()[0];
     auto part_area = part.boundary.polygon.area();
-    std::cout << "\nUsing part 0:\n";
-    std::cout << "Field area: " << std::fixed << std::setprecision(1) << part_area << " sq.m (" << (part_area / 10000.0)
-              << " hectares)\n";
-    std::cout << "Headlands: " << part.headlands.size() << ", Swaths: " << part.swaths.size() << "\n";
+    echo::separator("Using part 0");
+    echo::info("Field area: ", std::fixed, std::setprecision(1), part_area, " sq.m (", (part_area / 10000.0),
+               " hectares)");
+    echo::info("Headlands: ", part.headlands.size(), ", Swaths: ", part.swaths.size());
 
     auto fieldPtr = std::make_shared<farmtrax::Part>(field.get_parts()[0]);
     farmtrax::Divy divy(fieldPtr, farmtrax::DivisionType::ALTERNATE, num_machines);
@@ -128,7 +134,7 @@ int main(int argc, char **argv) {
     }
 
     if (path.size() < 2) {
-        std::cerr << "[Error] Generated path is empty/too small\n";
+        echo::error("Generated path is empty/too small");
         return 1;
     }
 
@@ -142,9 +148,9 @@ int main(int argc, char **argv) {
     auto &tractor = sim.spawn_agent("examples/machines/tractor.json",
                                     utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f), uuid, color);
 
-    std::cout << "Robot UUID: " << tractor.uuid() << "\n";
-    std::cout << "GPS SHM path: /dev/shm/flatsim_" << tractor.uuid() << "_GPS\n";
-    std::cout << "IMU SHM path: /dev/shm/flatsim_" << tractor.uuid() << "_IMU\n";
+    echo::info("Robot UUID: ", tractor.uuid());
+    echo::info("GPS SHM path: /dev/shm/flatsim_", tractor.uuid(), "_GPS");
+    echo::info("IMU SHM path: /dev/shm/flatsim_", tractor.uuid(), "_IMU");
 
     // Add sensors (SensorManager auto-enables SHM output once robot uuid is set).
     tractor.machine().sensors.add(std::make_unique<fs::GPSSensor>(10.0, true, 3.0, 0.02));
@@ -174,7 +180,8 @@ int main(int argc, char **argv) {
     tractor.tracker()->set_path(drivekit::PathGoal(path, 2.0f, 2.0f, false));
     tractor.tracker()->smoothen(25.0f);
 
-    std::cout << "\n*** GPS will output continuously - Press Ctrl+C to stop ***\n" << std::endl;
+    echo::separator();
+    echo::box("GPS will output continuously - Press Ctrl+C to stop", echo::BoxStyle::Dashed);
 
     auto start_time = std::chrono::steady_clock::now();
     const float dt = 0.016f;
@@ -195,8 +202,16 @@ int main(int argc, char **argv) {
             if (gps_sensor) {
                 phtg = !phtg;
                 gps_sensor->set_phtg_status(phtg);
-                std::cout << "\n*** PHTG status toggled to: " << (phtg ? "ENABLED" : "DISABLED") << " ***\n"
-                          << std::endl;
+                Pretty phtg_status;
+                if (phtg) {
+                    phtg_status = Pretty(" [ OFF ] ").bg(255, 0, 0).black().bold();
+                } else {
+                    phtg_status = Pretty(" [ ON ] ").bg(0, 255, 0).black().bold();
+                }
+
+                // echo::box("PHTG status toggled to: " + std::string(phtg ? "ENABLED" : "DISABLED"),
+                // echo::BoxStyle::Dashed);
+                echo::info("PHTG status toggled to: ", phtg_status).inplace();
             }
         }
 
@@ -208,17 +223,9 @@ int main(int argc, char **argv) {
         const float dist = std::sqrt(dx * dx + dy * dy);
 
         if (dist < 3.0f && (step_count - last_reset_step) > 100) {
-            std::cout << "\n*** At second-to-last waypoint! Restarting field path... ***\n" << std::endl;
             tractor.tracker()->set_path(drivekit::PathGoal(path, 2.0f, 2.0f, false));
             tractor.tracker()->smoothen(25.0f);
             last_reset_step = step_count;
-        }
-
-        if (step_count % 300 == 0) {
-            std::cout << "\nTime: " << elapsed << "s\n";
-            const auto completed = tractor.tracker()->is_path_completed();
-            std::cout << "  Machine 0: (" << std::fixed << std::setprecision(1) << pos.point.x << ", " << pos.point.y
-                      << ") " << (completed ? "[COMPLETED]" : "[RUNNING]") << "\n";
         }
 
         step_count++;
