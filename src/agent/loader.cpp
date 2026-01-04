@@ -1,25 +1,70 @@
-#include "flatsim/agent/loader.hpp"
+#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/utils.hpp"
-#include <boost/json.hpp>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <sstream>
 
 namespace agent {
 
-    template <typename T> static T get_value(const boost::json::value &v) { return boost::json::value_to<T>(v); }
+    static float deg2rad(float deg) { return deg * (M_PI / 180.0f); }
 
-    template <typename T> static T get_value_or(const boost::json::object &obj, const char *key, T default_val) {
-        if (obj.contains(key)) {
-            return boost::json::value_to<T>(obj.at(key));
+    // RAII wrapper for json_value_s to ensure proper cleanup
+    struct JsonDeleter {
+        void operator()(json_value_s *ptr) const {
+            if (ptr) free(ptr);
         }
-        return default_val;
+    };
+    using JsonPtr = std::unique_ptr<json_value_s, JsonDeleter>;
+
+    // Helper functions implementation
+    json_object_element_s *Loader::find_element(json_object_s *obj, const char *key) {
+        if (!obj) return nullptr;
+        for (auto *elem = obj->start; elem; elem = elem->next) {
+            if (elem->name && strcmp(elem->name->string, key) == 0) {
+                return elem;
+            }
+        }
+        return nullptr;
     }
 
-    static float deg2rad(float deg) { return deg * (M_PI / 180.0f); }
+    std::string Loader::get_string(json_value_s *val) {
+        if (!val || val->type != json_type_string) return "";
+        auto *str = static_cast<json_string_s *>(val->payload);
+        return std::string(str->string, str->string_size);
+    }
+
+    double Loader::get_number(json_value_s *val) {
+        if (!val || val->type != json_type_number) return 0.0;
+        auto *num = static_cast<json_number_s *>(val->payload);
+        return std::stod(std::string(num->number, num->number_size));
+    }
+
+    int Loader::get_int(json_value_s *val) {
+        if (!val || val->type != json_type_number) return 0;
+        auto *num = static_cast<json_number_s *>(val->payload);
+        return std::stoi(std::string(num->number, num->number_size));
+    }
+
+    bool Loader::get_bool(json_value_s *val) {
+        if (!val) return false;
+        return val->type == json_type_true;
+    }
+
+    json_object_s *Loader::get_object(json_value_s *val) {
+        if (!val || val->type != json_type_object) return nullptr;
+        return static_cast<json_object_s *>(val->payload);
+    }
+
+    json_array_s *Loader::get_array(json_value_s *val) {
+        if (!val || val->type != json_type_array) return nullptr;
+        return static_cast<json_array_s *>(val->payload);
+    }
 
     std::string Loader::generate_uuid() {
         static std::random_device rd;
@@ -60,28 +105,65 @@ namespace agent {
             throw std::runtime_error("Cannot open machine file: " + json_path.string());
         }
 
-        std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string json_str = buffer.str();
         file.close();
 
-        boost::json::value jv = boost::json::parse(json_str);
-        boost::json::object const &j = jv.as_object();
+        json_value_s *root = json_parse(json_str.c_str(), json_str.size());
+        if (!root) {
+            throw std::runtime_error("Failed to parse JSON file: " + json_path.string());
+        }
+        JsonPtr jv(root);
+
+        json_object_s *j = get_object(jv.get());
+        if (!j) {
+            throw std::runtime_error("JSON root is not an object");
+        }
 
         types::Machine machine;
 
-        boost::json::object const &info = j.at("info").as_object();
-        machine.type = get_value<std::string>(info.at("type"));
-        machine.name = get_value<std::string>(info.at("name"));
-
-        std::string uuid_str = get_value_or(info, "uuid", std::string(""));
-        machine.uuid = (uuid_str.empty() || uuid_str == "") ? generate_uuid() : uuid_str;
-        machine.rci = get_value<uint32_t>(info.at("rci"));
-
-        boost::json::array const &works_on = info.at("works_on").as_array();
-        for (const auto &work : works_on) {
-            machine.works_on.push_back(get_value<std::string>(work));
+        // Parse info section
+        auto *info_elem = find_element(j, "info");
+        if (!info_elem) {
+            throw std::runtime_error("Missing 'info' field in JSON");
+        }
+        json_object_s *info = get_object(info_elem->value);
+        if (!info) {
+            throw std::runtime_error("'info' field is not an object");
         }
 
-        std::string role_str = get_value_or(info, "role", std::string("MASTER"));
+        auto *type_elem = find_element(info, "type");
+        if (type_elem) {
+            machine.type = get_string(type_elem->value);
+        }
+
+        auto *name_elem = find_element(info, "name");
+        if (name_elem) {
+            machine.name = get_string(name_elem->value);
+        }
+
+        auto *uuid_elem = find_element(info, "uuid");
+        std::string uuid_str = uuid_elem ? get_string(uuid_elem->value) : "";
+        machine.uuid = (uuid_str.empty() || uuid_str == "") ? generate_uuid() : uuid_str;
+
+        auto *rci_elem = find_element(info, "rci");
+        if (rci_elem) {
+            machine.rci = static_cast<uint32_t>(get_int(rci_elem->value));
+        }
+
+        auto *works_on_elem = find_element(info, "works_on");
+        if (works_on_elem) {
+            json_array_s *works_on = get_array(works_on_elem->value);
+            if (works_on) {
+                for (auto *elem = works_on->start; elem; elem = elem->next) {
+                    machine.works_on.push_back(get_string(elem->value));
+                }
+            }
+        }
+
+        auto *role_elem = find_element(info, "role");
+        std::string role_str = role_elem ? get_string(role_elem->value) : "MASTER";
         if (role_str == "SLAVE") {
             machine.role = types::MachineRole::SLAVE;
         } else if (role_str == "FOLLOWER") {
@@ -90,43 +172,100 @@ namespace agent {
             machine.role = types::MachineRole::MASTER;
         }
 
-        boost::json::object const &dims = j.at("dimensions").as_object();
-        float width = get_value<float>(dims.at("width"));
-        float height = get_value<float>(dims.at("height"));
+        // Parse dimensions
+        auto *dims_elem = find_element(j, "dimensions");
+        if (!dims_elem) {
+            throw std::runtime_error("Missing 'dimensions' field in JSON");
+        }
+        json_object_s *dims = get_object(dims_elem->value);
+        if (!dims) {
+            throw std::runtime_error("'dimensions' field is not an object");
+        }
+
+        auto *width_elem = find_element(dims, "width");
+        auto *height_elem = find_element(dims, "height");
+        float width = width_elem ? static_cast<float>(get_number(width_elem->value)) : 0.0f;
+        float height = height_elem ? static_cast<float>(get_number(height_elem->value)) : 0.0f;
         machine.bound.pose = spawn_pose;
         machine.bound.size = datapod::Size{width, height, 0.0f};
 
-        pigment::RGB machine_color = color.value_or(parse_color(j.at("color").as_object()));
-        machine.color = machine_color;
-
-        parse_wheels(machine, j.at("wheels").as_array());
-
-        parse_controls(machine, j.at("controls").as_object());
-
-        if (j.contains("karosseries")) {
-            parse_karosseries(machine, j.at("karosseries").as_array(), machine_color);
+        // Parse color
+        auto *color_elem = find_element(j, "color");
+        if (color_elem) {
+            json_object_s *color_obj = get_object(color_elem->value);
+            pigment::RGB machine_color = color.value_or(parse_color(color_obj));
+            machine.color = machine_color;
+        } else if (color.has_value()) {
+            machine.color = color.value();
         }
 
-        if (j.contains("hitches")) {
-            parse_hitches(machine, j.at("hitches").as_object());
+        // Parse wheels
+        auto *wheels_elem = find_element(j, "wheels");
+        if (wheels_elem) {
+            json_array_s *wheels = get_array(wheels_elem->value);
+            if (wheels) {
+                parse_wheels(machine, wheels);
+            }
         }
 
-        if (j.contains("tank")) {
-            parse_tank(machine, j.at("tank").as_object());
+        // Parse controls
+        auto *controls_elem = find_element(j, "controls");
+        if (controls_elem) {
+            json_object_s *controls = get_object(controls_elem->value);
+            if (controls) {
+                parse_controls(machine, controls);
+            }
         }
 
-        if (j.contains("power")) {
-            parse_power(machine, j.at("power").as_object());
+        // Parse optional sections
+        auto *karosseries_elem = find_element(j, "karosseries");
+        if (karosseries_elem) {
+            json_array_s *karosseries = get_array(karosseries_elem->value);
+            if (karosseries) {
+                parse_karosseries(machine, karosseries, machine.color);
+            }
         }
 
-        if (j.contains("capability")) {
-            parse_capability(machine, j.at("capability").as_object());
+        auto *hitches_elem = find_element(j, "hitches");
+        if (hitches_elem) {
+            json_object_s *hitches = get_object(hitches_elem->value);
+            if (hitches) {
+                parse_hitches(machine, hitches);
+            }
         }
 
-        if (j.contains("turn")) {
-            boost::json::object const &turn = j.at("turn").as_object();
-            if (turn.contains("radius")) {
-                machine.turning_radius = get_value<float>(turn.at("radius"));
+        auto *tank_elem = find_element(j, "tank");
+        if (tank_elem) {
+            json_object_s *tank = get_object(tank_elem->value);
+            if (tank) {
+                parse_tank(machine, tank);
+            }
+        }
+
+        auto *power_elem = find_element(j, "power");
+        if (power_elem) {
+            json_object_s *power = get_object(power_elem->value);
+            if (power) {
+                parse_power(machine, power);
+            }
+        }
+
+        auto *capability_elem = find_element(j, "capability");
+        if (capability_elem) {
+            json_object_s *capability = get_object(capability_elem->value);
+            if (capability) {
+                parse_capability(machine, capability);
+            }
+        }
+
+        auto *turn_elem = find_element(j, "turn");
+        if (turn_elem) {
+            json_object_s *turn = get_object(turn_elem->value);
+            if (turn) {
+                auto *radius_elem = find_element(turn, "radius");
+                if (radius_elem) {
+                    machine.turning_radius = static_cast<float>(get_number(radius_elem->value));
+                }
             }
         }
 
@@ -156,18 +295,34 @@ namespace agent {
                 return false;
             }
 
-            std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            boost::json::value jv = boost::json::parse(json_str);
-            boost::json::object const &j = jv.as_object();
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            std::string json_str = buffer.str();
 
-            if (!j.contains("info") || !j.contains("dimensions") || !j.contains("color") || !j.contains("wheels") ||
-                !j.contains("controls")) {
+            json_value_s *root = json_parse(json_str.c_str(), json_str.size());
+            if (!root) {
+                return false;
+            }
+            JsonPtr jv(root);
+
+            json_object_s *j = get_object(jv.get());
+            if (!j) {
                 return false;
             }
 
-            boost::json::object const &info = j.at("info").as_object();
-            if (!info.contains("type") || !info.contains("name") || !info.contains("rci") ||
-                !info.contains("works_on")) {
+            if (!find_element(j, "info") || !find_element(j, "dimensions") || !find_element(j, "color") ||
+                !find_element(j, "wheels") || !find_element(j, "controls")) {
+                return false;
+            }
+
+            auto *info_elem = find_element(j, "info");
+            json_object_s *info = get_object(info_elem->value);
+            if (!info) {
+                return false;
+            }
+
+            if (!find_element(info, "type") || !find_element(info, "name") || !find_element(info, "rci") ||
+                !find_element(info, "works_on")) {
                 return false;
             }
 
@@ -178,97 +333,219 @@ namespace agent {
         }
     }
 
-    pigment::RGB Loader::parse_color(const boost::json::object &color_json) {
-        return pigment::RGB(get_value<int>(color_json.at("r")), get_value<int>(color_json.at("g")),
-                            get_value<int>(color_json.at("b")));
+    pigment::RGB Loader::parse_color(json_object_s *color_json) {
+        if (!color_json) {
+            return pigment::RGB(0, 0, 0);
+        }
+
+        auto *r_elem = find_element(color_json, "r");
+        auto *g_elem = find_element(color_json, "g");
+        auto *b_elem = find_element(color_json, "b");
+
+        int r = r_elem ? get_int(r_elem->value) : 0;
+        int g = g_elem ? get_int(g_elem->value) : 0;
+        int b = b_elem ? get_int(b_elem->value) : 0;
+
+        return pigment::RGB(r, g, b);
     }
 
-    datapod::Pose Loader::parse_pose(const boost::json::object &pos_json) {
-        float x = get_value<float>(pos_json.at("x"));
-        float y = get_value<float>(pos_json.at("y"));
-        float yaw = get_value_or(pos_json, "yaw", 0.0f);
+    datapod::Pose Loader::parse_pose(json_object_s *pos_json) {
+        if (!pos_json) {
+            return utils::make_pose(0.0, 0.0, 0.0, 0.0);
+        }
+
+        auto *x_elem = find_element(pos_json, "x");
+        auto *y_elem = find_element(pos_json, "y");
+        auto *yaw_elem = find_element(pos_json, "yaw");
+
+        float x = x_elem ? static_cast<float>(get_number(x_elem->value)) : 0.0f;
+        float y = y_elem ? static_cast<float>(get_number(y_elem->value)) : 0.0f;
+        float yaw = yaw_elem ? static_cast<float>(get_number(yaw_elem->value)) : 0.0f;
+
         return utils::make_pose(x, y, 0.0, yaw);
     }
 
-    datapod::Size Loader::parse_size(const boost::json::object &size_json) {
-        float width = get_value<float>(size_json.at("width"));
-        float height = get_value<float>(size_json.at("height"));
-        float depth = get_value_or(size_json, "depth", 0.0f);
+    datapod::Size Loader::parse_size(json_object_s *size_json) {
+        if (!size_json) {
+            return datapod::Size{0.0f, 0.0f, 0.0f};
+        }
+
+        auto *width_elem = find_element(size_json, "width");
+        auto *height_elem = find_element(size_json, "height");
+        auto *depth_elem = find_element(size_json, "depth");
+
+        float width = width_elem ? static_cast<float>(get_number(width_elem->value)) : 0.0f;
+        float height = height_elem ? static_cast<float>(get_number(height_elem->value)) : 0.0f;
+        float depth = depth_elem ? static_cast<float>(get_number(depth_elem->value)) : 0.0f;
+
         return datapod::Size{width, height, depth};
     }
 
-    void Loader::parse_wheels(types::Machine &machine, const boost::json::array &wheels_json) {
+    void Loader::parse_wheels(types::Machine &machine, json_array_s *wheels_json) {
+        if (!wheels_json) {
+            return;
+        }
+
         std::vector<bool> left_side;
 
-        for (const auto &wheel_val : wheels_json) {
-            boost::json::object const &wheel = wheel_val.as_object();
+        for (auto *wheel_elem = wheels_json->start; wheel_elem; wheel_elem = wheel_elem->next) {
+            json_object_s *wheel = get_object(wheel_elem->value);
+            if (!wheel) {
+                continue;
+            }
 
             types::Wheel w;
-            w.name = get_value<std::string>(wheel.at("name"));
-            w.bound.pose = parse_pose(wheel.at("position").as_object());
-            w.bound.size = parse_size(wheel.at("size").as_object());
-            w.color = wheel.contains("color") ? parse_color(wheel.at("color").as_object()) : pigment::RGB(0, 0, 0);
+
+            auto *name_elem = find_element(wheel, "name");
+            if (name_elem) {
+                w.name = get_string(name_elem->value);
+            }
+
+            auto *position_elem = find_element(wheel, "position");
+            if (position_elem) {
+                json_object_s *position = get_object(position_elem->value);
+                w.bound.pose = parse_pose(position);
+            }
+
+            auto *size_elem = find_element(wheel, "size");
+            if (size_elem) {
+                json_object_s *size = get_object(size_elem->value);
+                w.bound.size = parse_size(size);
+            }
+
+            auto *color_elem = find_element(wheel, "color");
+            if (color_elem) {
+                json_object_s *color = get_object(color_elem->value);
+                w.color = parse_color(color);
+            } else {
+                w.color = pigment::RGB(0, 0, 0);
+            }
 
             machine.wheels.push_back(w);
 
-            std::string side = get_value<std::string>(wheel.at("side"));
+            auto *side_elem = find_element(wheel, "side");
+            std::string side = side_elem ? get_string(side_elem->value) : "";
             left_side.push_back(side == "left");
         }
 
         machine.controls.left_side = left_side;
     }
 
-    void Loader::parse_controls(types::Machine &machine, const boost::json::object &controls_json) {
-        boost::json::object const &steering = controls_json.at("steering").as_object();
-        boost::json::object const &throttle = controls_json.at("throttle").as_object();
+    void Loader::parse_controls(types::Machine &machine, json_object_s *controls_json) {
+        if (!controls_json) {
+            return;
+        }
 
-        boost::json::array const &max_angles = steering.at("max_angles").as_array();
-        for (size_t i = 0; i < max_angles.size(); ++i) {
-            float angle_rad = deg2rad(get_value<float>(max_angles[i]));
-            machine.controls.steerings_max.push_back(angle_rad);
-            // Also set steering_max on corresponding wheel for constraint calculation
-            if (i < machine.wheels.size()) {
-                machine.wheels[i].steering_max = angle_rad;
+        auto *steering_elem = find_element(controls_json, "steering");
+        auto *throttle_elem = find_element(controls_json, "throttle");
+
+        if (steering_elem) {
+            json_object_s *steering = get_object(steering_elem->value);
+            if (steering) {
+                auto *max_angles_elem = find_element(steering, "max_angles");
+                if (max_angles_elem) {
+                    json_array_s *max_angles = get_array(max_angles_elem->value);
+                    if (max_angles) {
+                        size_t i = 0;
+                        for (auto *elem = max_angles->start; elem; elem = elem->next, ++i) {
+                            float angle_rad = deg2rad(static_cast<float>(get_number(elem->value)));
+                            machine.controls.steerings_max.push_back(angle_rad);
+                            if (i < machine.wheels.size()) {
+                                machine.wheels[i].steering_max = angle_rad;
+                            }
+                        }
+                    }
+                }
+
+                auto *differential_elem = find_element(steering, "differential");
+                if (differential_elem) {
+                    json_array_s *differential = get_array(differential_elem->value);
+                    if (differential) {
+                        for (auto *elem = differential->start; elem; elem = elem->next) {
+                            machine.controls.steerings_diff.push_back(
+                                deg2rad(static_cast<float>(get_number(elem->value))));
+                        }
+                    }
+                }
             }
         }
 
-        boost::json::array const &differential = steering.at("differential").as_array();
-        for (const auto &diff : differential) {
-            machine.controls.steerings_diff.push_back(deg2rad(get_value<float>(diff)));
-        }
+        if (throttle_elem) {
+            json_object_s *throttle = get_object(throttle_elem->value);
+            if (throttle) {
+                auto *max_values_elem = find_element(throttle, "max_values");
+                if (max_values_elem) {
+                    json_array_s *max_values = get_array(max_values_elem->value);
+                    if (max_values) {
+                        size_t i = 0;
+                        for (auto *elem = max_values->start; elem; elem = elem->next, ++i) {
+                            float throttle_val = static_cast<float>(get_number(elem->value));
+                            machine.controls.throttles_max.push_back(throttle_val);
+                            if (i < machine.wheels.size()) {
+                                machine.wheels[i].throttle_max = throttle_val;
+                            }
+                        }
+                    }
+                }
 
-        boost::json::array const &max_values = throttle.at("max_values").as_array();
-        for (size_t i = 0; i < max_values.size(); ++i) {
-            float throttle_val = get_value<float>(max_values[i]);
-            machine.controls.throttles_max.push_back(throttle_val);
-            // Also set throttle_max on corresponding wheel
-            if (i < machine.wheels.size()) {
-                machine.wheels[i].throttle_max = throttle_val;
+                auto *throttle_diff_elem = find_element(throttle, "differential");
+                if (throttle_diff_elem) {
+                    json_array_s *throttle_diff = get_array(throttle_diff_elem->value);
+                    if (throttle_diff) {
+                        for (auto *elem = throttle_diff->start; elem; elem = elem->next) {
+                            machine.controls.throttles_diff.push_back(static_cast<float>(get_number(elem->value)));
+                        }
+                    }
+                } else {
+                    machine.controls.throttles_diff.resize(machine.controls.throttles_max.size(), 0.0f);
+                }
             }
-        }
-
-        if (throttle.contains("differential")) {
-            boost::json::array const &throttle_diff = throttle.at("differential").as_array();
-            for (const auto &diff : throttle_diff) {
-                machine.controls.throttles_diff.push_back(get_value<float>(diff));
-            }
-        } else {
-            machine.controls.throttles_diff.resize(machine.controls.throttles_max.size(), 0.0f);
         }
     }
 
-    void Loader::parse_karosseries(types::Machine &machine, const boost::json::array &karos_json,
-                                   pigment::RGB default_color) {
-        for (const auto &karo_val : karos_json) {
-            boost::json::object const &karo = karo_val.as_object();
-            types::Karosserie kaross;
-            kaross.name = get_value<std::string>(karo.at("name"));
-            kaross.bound.pose = parse_pose(karo.at("position").as_object());
-            kaross.bound.size = parse_size(karo.at("size").as_object());
-            kaross.color = karo.contains("color") ? parse_color(karo.at("color").as_object()) : default_color;
-            kaross.has_physics = get_value_or(karo, "has_physics", true);
+    void Loader::parse_karosseries(types::Machine &machine, json_array_s *karos_json, pigment::RGB default_color) {
+        if (!karos_json) {
+            return;
+        }
 
-            int sections_count = get_value_or(karo, "sections", 0);
+        for (auto *karo_elem = karos_json->start; karo_elem; karo_elem = karo_elem->next) {
+            json_object_s *karo = get_object(karo_elem->value);
+            if (!karo) {
+                continue;
+            }
+
+            types::Karosserie kaross;
+
+            auto *name_elem = find_element(karo, "name");
+            if (name_elem) {
+                kaross.name = get_string(name_elem->value);
+            }
+
+            auto *position_elem = find_element(karo, "position");
+            if (position_elem) {
+                json_object_s *position = get_object(position_elem->value);
+                kaross.bound.pose = parse_pose(position);
+            }
+
+            auto *size_elem = find_element(karo, "size");
+            if (size_elem) {
+                json_object_s *size = get_object(size_elem->value);
+                kaross.bound.size = parse_size(size);
+            }
+
+            auto *color_elem = find_element(karo, "color");
+            if (color_elem) {
+                json_object_s *color = get_object(color_elem->value);
+                kaross.color = parse_color(color);
+            } else {
+                kaross.color = default_color;
+            }
+
+            auto *has_physics_elem = find_element(karo, "has_physics");
+            kaross.has_physics = has_physics_elem ? get_bool(has_physics_elem->value) : true;
+
+            auto *sections_elem = find_element(karo, "sections");
+            int sections_count = sections_elem ? get_int(sections_elem->value) : 0;
             for (int i = 0; i < sections_count; i++) {
                 types::Section section;
                 section.name = "section_" + std::to_string(i);
@@ -282,69 +559,146 @@ namespace agent {
         }
     }
 
-    void Loader::parse_hitches(types::Machine &machine, const boost::json::object &hitches_json) {
-        for (auto const &item : hitches_json) {
-            std::string name = std::string(item.key());
-            boost::json::object const &hitch = item.value().as_object();
+    void Loader::parse_hitches(types::Machine &machine, json_object_s *hitches_json) {
+        if (!hitches_json) {
+            return;
+        }
+
+        for (auto *elem = hitches_json->start; elem; elem = elem->next) {
+            std::string name(elem->name->string, elem->name->string_size);
+            json_object_s *hitch = get_object(elem->value);
+            if (!hitch) {
+                continue;
+            }
 
             types::Hitch hitch_info;
             hitch_info.name = name;
-            hitch_info.bound.pose = parse_pose(hitch.at("position").as_object());
-            hitch_info.bound.size = parse_size(hitch.at("size").as_object());
+
+            auto *position_elem = find_element(hitch, "position");
+            if (position_elem) {
+                json_object_s *position = get_object(position_elem->value);
+                hitch_info.bound.pose = parse_pose(position);
+            }
+
+            auto *size_elem = find_element(hitch, "size");
+            if (size_elem) {
+                json_object_s *size = get_object(size_elem->value);
+                hitch_info.bound.size = parse_size(size);
+            }
+
             hitch_info.color = pigment::RGB(0, 0, 0);
-            hitch_info.is_master = get_value_or(hitch, "is_master", true);
+
+            auto *is_master_elem = find_element(hitch, "is_master");
+            hitch_info.is_master = is_master_elem ? get_bool(is_master_elem->value) : true;
 
             machine.hitches[name] = hitch_info;
         }
     }
 
-    void Loader::parse_tank(types::Machine &machine, const boost::json::object &tank_json) {
+    void Loader::parse_tank(types::Machine &machine, json_object_s *tank_json) {
+        if (!tank_json) {
+            return;
+        }
+
         types::Tank tank;
-        tank.name = get_value<std::string>(tank_json.at("name"));
-        if (tank_json.contains("type")) {
-            std::string type_str = get_value<std::string>(tank_json.at("type"));
+
+        auto *name_elem = find_element(tank_json, "name");
+        if (name_elem) {
+            tank.name = get_string(name_elem->value);
+        }
+
+        auto *type_elem = find_element(tank_json, "type");
+        if (type_elem) {
+            std::string type_str = get_string(type_elem->value);
             tank.type = (type_str == "WASTE") ? types::ContainerType::WASTE : types::ContainerType::HARVEST;
         }
-        tank.capacity = get_value<float>(tank_json.at("capacity"));
-        tank.bound.pose = parse_pose(tank_json.at("position").as_object());
-        tank.bound.size = parse_size(tank_json.at("size").as_object());
+
+        auto *capacity_elem = find_element(tank_json, "capacity");
+        if (capacity_elem) {
+            tank.capacity = static_cast<float>(get_number(capacity_elem->value));
+        }
+
+        auto *position_elem = find_element(tank_json, "position");
+        if (position_elem) {
+            json_object_s *position = get_object(position_elem->value);
+            tank.bound.pose = parse_pose(position);
+        }
+
+        auto *size_elem = find_element(tank_json, "size");
+        if (size_elem) {
+            json_object_s *size = get_object(size_elem->value);
+            tank.bound.size = parse_size(size);
+        }
 
         machine.tank = tank;
     }
 
-    void Loader::parse_power(types::Machine &machine, const boost::json::object &power_json) {
+    void Loader::parse_power(types::Machine &machine, json_object_s *power_json) {
+        if (!power_json) {
+            return;
+        }
+
         types::Power power;
-        power.name = get_value<std::string>(power_json.at("name"));
 
-        std::string type_str = get_value<std::string>(power_json.at("type"));
-        power.type = (type_str == "BATTERY") ? types::PowerType::BATTERY : types::PowerType::FUEL;
+        auto *name_elem = find_element(power_json, "name");
+        if (name_elem) {
+            power.name = get_string(name_elem->value);
+        }
 
-        power.capacity = get_value<float>(power_json.at("capacity"));
-        power.consumption_rate = get_value<float>(power_json.at("consumption_rate"));
-        power.charge_rate = get_value_or(power_json, "charge_rate", 0.0f);
+        auto *type_elem = find_element(power_json, "type");
+        if (type_elem) {
+            std::string type_str = get_string(type_elem->value);
+            power.type = (type_str == "BATTERY") ? types::PowerType::BATTERY : types::PowerType::FUEL;
+        }
+
+        auto *capacity_elem = find_element(power_json, "capacity");
+        if (capacity_elem) {
+            power.capacity = static_cast<float>(get_number(capacity_elem->value));
+        }
+
+        auto *consumption_rate_elem = find_element(power_json, "consumption_rate");
+        if (consumption_rate_elem) {
+            power.consumption_rate = static_cast<float>(get_number(consumption_rate_elem->value));
+        }
+
+        auto *charge_rate_elem = find_element(power_json, "charge_rate");
+        power.charge_rate = charge_rate_elem ? static_cast<float>(get_number(charge_rate_elem->value)) : 0.0f;
 
         machine.power_source = power;
     }
 
-    void Loader::parse_capability(types::Machine &machine, const boost::json::object &capability_json) {
-        if (capability_json.contains("work_on")) {
-            boost::json::array const &work_on = capability_json.at("work_on").as_array();
-            for (const auto &work : work_on) {
-                machine.capability.work_on.push_back(get_value<std::string>(work));
+    void Loader::parse_capability(types::Machine &machine, json_object_s *capability_json) {
+        if (!capability_json) {
+            return;
+        }
+
+        auto *work_on_elem = find_element(capability_json, "work_on");
+        if (work_on_elem) {
+            json_array_s *work_on = get_array(work_on_elem->value);
+            if (work_on) {
+                for (auto *elem = work_on->start; elem; elem = elem->next) {
+                    machine.capability.work_on.push_back(get_string(elem->value));
+                }
             }
         }
 
-        if (capability_json.contains("connect_to")) {
-            boost::json::array const &connect_to = capability_json.at("connect_to").as_array();
-            for (const auto &connect : connect_to) {
-                machine.capability.connect_to.push_back(get_value<std::string>(connect));
+        auto *connect_to_elem = find_element(capability_json, "connect_to");
+        if (connect_to_elem) {
+            json_array_s *connect_to = get_array(connect_to_elem->value);
+            if (connect_to) {
+                for (auto *elem = connect_to->start; elem; elem = elem->next) {
+                    machine.capability.connect_to.push_back(get_string(elem->value));
+                }
             }
         }
 
-        if (capability_json.contains("unload_to")) {
-            boost::json::array const &unload_to = capability_json.at("unload_to").as_array();
-            for (const auto &unload : unload_to) {
-                machine.capability.unload_to.push_back(get_value<std::string>(unload));
+        auto *unload_to_elem = find_element(capability_json, "unload_to");
+        if (unload_to_elem) {
+            json_array_s *unload_to = get_array(unload_to_elem->value);
+            if (unload_to) {
+                for (auto *elem = unload_to->start; elem; elem = elem->next) {
+                    machine.capability.unload_to.push_back(get_string(elem->value));
+                }
             }
         }
     }

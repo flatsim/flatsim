@@ -1,4 +1,4 @@
-#include "flatsim/agent/loader.hpp"
+#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
