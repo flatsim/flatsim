@@ -1,7 +1,7 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include "flywheel/flywheel.h"
+#include "flywheel/flywheel.hpp"
 #include <algorithm>
 #include <cmath>
 #include <datapod/datapod.hpp>

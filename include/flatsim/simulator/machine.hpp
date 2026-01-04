@@ -8,7 +8,7 @@
 #include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine/chassis.hpp"
 #include "flatsim/types.hpp"
-#include "flywheel/world.h"
+#include "flywheel/flywheel.hpp"
 #include <rerun.hpp>
 
 namespace simulator {

@@ -2,8 +2,7 @@
 
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
-#include "flywheel/collision_filter.h"
-#include "flywheel/world.h"
+#include "flywheel/flywheel.hpp"
 #include <rerun.hpp>
 
 namespace simulator {

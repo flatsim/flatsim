@@ -1,8 +1,7 @@
 #pragma once
 
 #include "flatsim/types.hpp"
-#include "flywheel/collision_filter.h"
-#include "flywheel/world.h"
+#include "flywheel/flywheel.hpp"
 #include <memory>
 
 namespace simulator {

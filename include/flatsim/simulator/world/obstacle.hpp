@@ -3,9 +3,7 @@
 #include <cmath>
 
 #include "flatsim/types.hpp"
-#include "flywheel/common.h"
-#include "flywheel/rigidbody.h"
-#include "flywheel/world.h"
+#include "flywheel/flywheel.hpp"
 
 namespace simulator {
 

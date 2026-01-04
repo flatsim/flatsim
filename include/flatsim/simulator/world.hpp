@@ -6,7 +6,7 @@
 
 #include "flatsim/simulator/world/obstacle.hpp"
 #include "flatsim/types.hpp"
-#include "flywheel/world.h"
+#include "flywheel/flywheel.hpp"
 
 namespace simulator {
 

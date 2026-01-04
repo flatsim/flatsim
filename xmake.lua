@@ -17,7 +17,7 @@ local LIB_DEPS = {
     -- {"zoneout", "https://github.com/robolibs/zoneout.git", "1.4.0"},
     {"farmtrax", "https://github.com/robolibs/farmtrax.git", "0.0.6"},
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.4"},
-    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.9"},
+    {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.10"},
     "pkgconfig::libzmq",
     "pkgconfig::cppzmq",
     {system = "boost_json"},
@@ -180,9 +180,9 @@ end
 target(PROJECT_NAME)
     set_kind("static")
     add_files("src/**.cpp")
-    add_headerfiles("include/(" .. PROJECT_NAME .. "/**.hpp)")
+    add_headerfiles("include/**.hpp)")
     add_includedirs("include", {public = true})
-    add_installfiles("include/(" .. PROJECT_NAME .. "/**.hpp)")
+    add_installfiles("include/**.hpp)")
 
     for _, dep in ipairs(LIB_DEP_NAMES) do add_packages(dep) end
 
