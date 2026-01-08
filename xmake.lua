@@ -19,8 +19,6 @@ local LIB_DEPS = {
     {"farmtrax", "https://github.com/robolibs/farmtrax.git", "0.0.7"},
     {"drivekit", "https://github.com/robolibs/drivekit.git", "0.0.4"},
     {"flywheel", "https://github.com/flatsim/flywheel.git", "0.0.10"},
-    "pkgconfig::libzmq",
-    "pkgconfig::cppzmq",
     {system = "rerun_sdk"},
 }
 
