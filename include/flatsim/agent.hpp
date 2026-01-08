@@ -4,9 +4,9 @@
 #include <functional>
 #include <memory>
 #include <rerun.hpp>
-#include <zmq.hpp>
 
 #include "flatsim/agent/machine.hpp"
+#include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
 namespace agent {
@@ -19,12 +19,16 @@ namespace agent {
         // Connection mode
         bool local_mode_ = false;
 
-        // ZMQ sockets (only used in networked mode)
-        zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> spawn_socket_;    // REQ - for spawn/despawn
-        std::unique_ptr<zmq::socket_t> uplink_socket_;   // PUSH - agent -> simulator (control/heartbeat/config)
-        std::unique_ptr<zmq::socket_t> downlink_socket_; // SUB - simulator -> agent (state/sensors)
+        // Netpipe (only used in networked mode)
+        std::unique_ptr<flatsim::RpcClient> rpc_client_;   // RPC client for spawn/despawn
+        std::unique_ptr<netpipe::TcpStream> uplink_tcp_;   // TCP uplink
+        std::unique_ptr<netpipe::TcpStream> downlink_tcp_; // TCP downlink
+        std::unique_ptr<netpipe::IpcStream> uplink_ipc_;   // IPC uplink
+        std::unique_ptr<netpipe::IpcStream> downlink_ipc_; // IPC downlink
+        std::unique_ptr<netpipe::ShmStream> uplink_shm_;   // SHM uplink
+        std::unique_ptr<netpipe::ShmStream> downlink_shm_; // SHM downlink
         std::string address_;
+        flatsim::Endpoint::Type transport_type_ = flatsim::Endpoint::Type::IPC;
 
         // Core component - Machine contains all managers (sensors, controls, network, etc.)
         Machine machine_;
