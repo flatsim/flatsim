@@ -32,10 +32,8 @@ namespace agent {
             transport_type_ = flatsim::Endpoint::Type::TCP;
         }
 
-        // Create RPC client for spawn/despawn
-        rpc_client_ = std::make_unique<flatsim::RpcClient>();
-
-        // Note: uplink/downlink streams will be created after spawn
+        // NEW: Single RpcPeer will be created after spawn
+        // Note: peer_ will be initialized in spawn()
     }
 
     // Constructor for local mode (owned by Simulator)
@@ -57,13 +55,9 @@ namespace agent {
             if (spawned_) {
                 despawn();
             }
-            if (rpc_client_) rpc_client_->close();
-            if (uplink_tcp_) uplink_tcp_->close();
-            if (downlink_tcp_) downlink_tcp_->close();
-            if (uplink_ipc_) uplink_ipc_->close();
-            if (downlink_ipc_) downlink_ipc_->close();
-            if (uplink_shm_) uplink_shm_->close();
-            if (downlink_shm_) downlink_shm_->close();
+            if (peer_) {
+                peer_->close();
+            }
         }
     }
 
@@ -79,22 +73,28 @@ namespace agent {
             return false;
         }
 
-        // Connect RPC client to spawn server
-        flatsim::Endpoint spawn_endpoint;
+        // Create peer endpoint
+        flatsim::Endpoint peer_endpoint;
         if (transport_type_ == flatsim::Endpoint::Type::IPC) {
             auto dir = ipc_dir();
-            spawn_endpoint = flatsim::Endpoint::ipc((dir / "flatsim_spawn").string());
+            peer_endpoint = flatsim::Endpoint::ipc((dir / "flatsim_peer").string());
         } else if (transport_type_ == flatsim::Endpoint::Type::TCP) {
             std::string host = address_.empty() ? "127.0.0.1" : address_;
-            spawn_endpoint = flatsim::Endpoint::tcp(host, 5555);
+            peer_endpoint = flatsim::Endpoint::tcp(host, 5555);
         } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-            spawn_endpoint = flatsim::Endpoint::shm("flatsim_spawn", 1024 * 1024);
+            peer_endpoint = flatsim::Endpoint::shm("flatsim_peer", 1024 * 1024);
         }
 
-        if (!rpc_client_->connect(spawn_endpoint)) {
-            std::cerr << "[Agent] Failed to connect to spawn server at " << spawn_endpoint.to_string() << std::endl;
+        // Create and connect peer
+        peer_ = std::make_unique<flatsim::RpcPeer>();
+        if (!peer_->connect(peer_endpoint, 100, true)) {
+            std::cerr << "[Agent] Failed to connect to simulator at " << peer_endpoint.to_string() << std::endl;
+            std::cerr << "[Agent] Error: " << peer_->last_error() << std::endl;
             return false;
         }
+
+        // Register handlers for incoming calls from Simulator
+        register_peer_handlers();
 
         // Prepare spawn request
         types::ser::Request req;
@@ -102,10 +102,11 @@ namespace agent {
         req.machine = types::ser::Machine::from_machine(machine_.config());
 
         auto req_data = datapod::serialize(req);
-        auto resp_data = rpc_client_->call(flatsim::RpcMethod::SPAWN, req_data, 5000);
+        auto resp_data = peer_->call(flatsim::RpcMethod::SPAWN, req_data, 5000);
 
         if (resp_data.empty()) {
             std::cerr << "[Agent] Spawn RPC call failed or timed out" << std::endl;
+            std::cerr << "[Agent] Error: " << peer_->last_error() << std::endl;
             return false;
         }
 
@@ -114,75 +115,6 @@ namespace agent {
             if (!resp.success) {
                 std::cerr << "[Agent] Spawn request rejected by simulator" << std::endl;
                 return false;
-            }
-
-            // Get endpoint info from response
-            std::string uuid = machine_.uuid();
-            std::string uplink_addr(resp.zmq.uplink_endpoint.view());
-            std::string downlink_addr(resp.zmq.downlink_endpoint.view());
-
-            // Parse endpoints and create streams
-            if (transport_type_ == flatsim::Endpoint::Type::TCP) {
-                // Parse TCP endpoints: "tcp://host:port"
-                auto parse_tcp = [](const std::string &addr) -> std::pair<std::string, uint16_t> {
-                    size_t colon_pos = addr.rfind(':');
-                    if (colon_pos != std::string::npos) {
-                        std::string host = addr.substr(6, colon_pos - 6); // Skip "tcp://"
-                        uint16_t port = std::stoi(addr.substr(colon_pos + 1));
-                        return {host, port};
-                    }
-                    return {"127.0.0.1", 5600};
-                };
-
-                auto [up_host, up_port] = parse_tcp(uplink_addr);
-                auto [down_host, down_port] = parse_tcp(downlink_addr);
-
-                uplink_tcp_ = std::make_unique<netpipe::TcpStream>();
-                downlink_tcp_ = std::make_unique<netpipe::TcpStream>();
-
-                auto up_res = uplink_tcp_->connect(netpipe::TcpEndpoint{dp::String(up_host.c_str()), up_port});
-                auto down_res = downlink_tcp_->connect(netpipe::TcpEndpoint{dp::String(down_host.c_str()), down_port});
-
-                if (up_res.is_err() || down_res.is_err()) {
-                    std::cerr << "[Agent] Failed to connect uplink/downlink streams" << std::endl;
-                    return false;
-                }
-            } else if (transport_type_ == flatsim::Endpoint::Type::IPC) {
-                // Parse IPC endpoints: "ipc:///path"
-                auto parse_ipc = [](const std::string &addr) -> std::string {
-                    return addr.substr(6); // Skip "ipc://"
-                };
-
-                uplink_ipc_ = std::make_unique<netpipe::IpcStream>();
-                downlink_ipc_ = std::make_unique<netpipe::IpcStream>();
-
-                auto up_res =
-                    uplink_ipc_->connect_ipc(netpipe::IpcEndpoint{dp::String(parse_ipc(uplink_addr).c_str())});
-                auto down_res =
-                    downlink_ipc_->connect_ipc(netpipe::IpcEndpoint{dp::String(parse_ipc(downlink_addr).c_str())});
-
-                if (up_res.is_err() || down_res.is_err()) {
-                    std::cerr << "[Agent] Failed to connect uplink/downlink IPC streams" << std::endl;
-                    return false;
-                }
-            } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-                // Parse SHM endpoints: "shm://name"
-                auto parse_shm = [](const std::string &addr) -> std::string {
-                    return addr.substr(6); // Skip "shm://"
-                };
-
-                uplink_shm_ = std::make_unique<netpipe::ShmStream>();
-                downlink_shm_ = std::make_unique<netpipe::ShmStream>();
-
-                auto up_res = uplink_shm_->connect_shm(
-                    netpipe::ShmEndpoint{dp::String(parse_shm(uplink_addr).c_str()), 1024 * 1024});
-                auto down_res = downlink_shm_->connect_shm(
-                    netpipe::ShmEndpoint{dp::String(parse_shm(downlink_addr).c_str()), 1024 * 1024});
-
-                if (up_res.is_err() || down_res.is_err()) {
-                    std::cerr << "[Agent] Failed to connect uplink/downlink SHM streams" << std::endl;
-                    return false;
-                }
             }
 
             // Create RecordingStream using info from simulator
@@ -218,6 +150,57 @@ namespace agent {
         }
     }
 
+    void Agent::register_peer_handlers() {
+        if (!peer_) {
+            return;
+        }
+
+        // Register STATE handler (receives state updates from simulator)
+        peer_->register_method(flatsim::RpcMethod::STATE, [this](const std::vector<uint8_t> &req) {
+            try {
+                auto state = datapod::deserialize<datapod::Mode::NONE, types::ser::MachineState>(req);
+                if (std::string(state.uuid.view()) == machine_.uuid()) {
+                    machine_.update_state(state);
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "[Agent] Failed to deserialize STATE: " << e.what() << std::endl;
+            }
+            // Return ACK
+            std::vector<uint8_t> ack{1};
+            return ack;
+        });
+
+        // Register SENSORS handler (receives sensor data from simulator)
+        peer_->register_method(flatsim::RpcMethod::SENSORS, [this](const std::vector<uint8_t> &req) {
+            try {
+                auto sensors = datapod::deserialize<datapod::Mode::NONE, types::ser::SensorState>(req);
+                if (std::string(sensors.uuid.view()) == machine_.uuid()) {
+                    sensor_data_ = sensors.to_sensor_data();
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "[Agent] Failed to deserialize SENSORS: " << e.what() << std::endl;
+            }
+            // Return ACK
+            std::vector<uint8_t> ack{1};
+            return ack;
+        });
+
+        // Register TELEPORT handler (receives teleport commands from simulator)
+        peer_->register_method(flatsim::RpcMethod::TELEPORT, [this](const std::vector<uint8_t> &req) {
+            try {
+                auto pose = datapod::deserialize<datapod::Mode::NONE, datapod::Pose>(req);
+                // Update machine pose directly
+                // TODO: Implement proper teleport handling
+                std::cerr << "[Agent] Received TELEPORT command" << std::endl;
+            } catch (const std::exception &e) {
+                std::cerr << "[Agent] Failed to deserialize TELEPORT: " << e.what() << std::endl;
+            }
+            // Return ACK
+            std::vector<uint8_t> ack{1};
+            return ack;
+        });
+    }
+
     bool Agent::despawn() {
         if (!spawned_ || local_mode_) {
             return false;
@@ -228,7 +211,7 @@ namespace agent {
         req.uuid = datapod::String(machine_.uuid());
 
         auto req_data = datapod::serialize(req);
-        auto resp_data = rpc_client_->call(flatsim::RpcMethod::DESPAWN, req_data, 5000);
+        auto resp_data = peer_->call(flatsim::RpcMethod::DESPAWN, req_data, 5000);
 
         if (resp_data.empty()) {
             std::cerr << "[Agent] Despawn RPC call failed or timed out" << std::endl;
@@ -272,83 +255,22 @@ namespace agent {
             return;
         }
 
-        // NETWORKED MODE: netpipe communication with simulator
+        // NETWORKED MODE: RpcPeer bidirectional communication
 
-        // Get the appropriate stream based on transport type
-        netpipe::Stream *uplink = nullptr;
-        netpipe::Stream *downlink = nullptr;
-
-        if (transport_type_ == flatsim::Endpoint::Type::TCP) {
-            uplink = uplink_tcp_.get();
-            downlink = downlink_tcp_.get();
-        } else if (transport_type_ == flatsim::Endpoint::Type::IPC) {
-            uplink = uplink_ipc_.get();
-            downlink = downlink_ipc_.get();
-        } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-            uplink = uplink_shm_.get();
-            downlink = downlink_shm_.get();
-        }
-
-        if (!uplink || !downlink) {
-            std::cerr << "[Agent] Uplink/downlink streams not initialized" << std::endl;
-            return;
-        }
-
-        // Send heartbeat to simulator (non-blocking, fire-and-forget)
+        // Send heartbeat to simulator (every 30 ticks)
         static int tick_count = 0;
         tick_count++;
-        if (tick_count % 30 == 0) { // Send heartbeat every 30 ticks (~0.5s at 60Hz)
+        if (tick_count % 30 == 0) {
             types::ser::Request hb_req;
             hb_req.type = types::ser::MsgType::HEARTBEAT;
             hb_req.uuid = datapod::String(machine_.uuid());
 
-            auto hb_data = flatsim::wire::pack(flatsim::wire::Kind::HEARTBEAT, hb_req);
-            netpipe::Message hb_msg(hb_data.begin(), hb_data.end());
-            uplink->send(hb_msg); // Ignore errors
-        }
-
-        // BLOCKING: Wait for STATE update from simulator FIRST (may receive SENSORS first)
-        const auto start = std::chrono::steady_clock::now();
-        bool got_state = false;
-        while (!got_state) {
-            const auto elapsed_ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
-            const int remaining_ms = timeout_ms - static_cast<int>(elapsed_ms);
-            if (remaining_ms <= 0) {
-                break;
-            }
-
-            downlink->set_recv_timeout(static_cast<uint32_t>(remaining_ms));
-            auto res = downlink->recv();
-            if (res.is_err()) {
-                break;
-            }
-
-            std::vector<uint8_t> bytes(res.value().begin(), res.value().end());
-            const auto tagged = flatsim::wire::unpack(std::move(bytes));
-
-            switch (tagged.kind) {
-            case flatsim::wire::Kind::STATE: {
-                auto ms = flatsim::wire::deserialize<types::ser::MachineState>(tagged.payload);
-                if (std::string(ms.uuid.view()) == machine_.uuid()) {
-                    machine_.update_state(ms);
-                    got_state = true;
-                }
-                break;
-            }
-            case flatsim::wire::Kind::SENSORS: {
-                auto ss = flatsim::wire::deserialize<types::ser::SensorState>(tagged.payload);
-                if (std::string(ss.uuid.view()) == machine_.uuid()) {
-                    sensor_data_ = ss.to_sensor_data();
-                }
-                break;
-            }
-            default:
-                break;
-            }
+            auto hb_data = datapod::serialize(hb_req);
+            peer_->call(flatsim::RpcMethod::HEARTBEAT, hb_data, 500); // Short timeout for heartbeat
         }
 
         // Call machine tick to process state update and run all managers
+        // Note: State updates are received via registered STATE handler (asynchronous)
         if (sensor_data_.has_gps || sensor_data_.has_imu || sensor_data_.has_lidar) {
             machine_.tick(dt, sensor_data_);
         } else {
@@ -358,9 +280,10 @@ namespace agent {
         // Get current control from machine's control manager and send to simulator
         auto wheel_ctrl = machine_.controls.get_wheel_control();
         auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
-        auto ctrl_data = flatsim::wire::pack(flatsim::wire::Kind::CONTROL, ctrl_ser);
-        netpipe::Message ctrl_msg(ctrl_data.begin(), ctrl_data.end());
-        uplink->send(ctrl_msg); // Ignore errors
+        auto ctrl_data = datapod::serialize(ctrl_ser);
+
+        // Send control command to simulator
+        peer_->call(flatsim::RpcMethod::CONTROL, ctrl_data, timeout_ms);
     }
 
     void Agent::tock() {
@@ -402,9 +325,9 @@ namespace agent {
                 teleport_callback_(machine_.uuid(), pose);
             }
         } else {
-            // IPC/TCP mode: TODO - send teleport request to simulator
-            // For now, just log a warning
-            std::cerr << "[Agent] teleport() not yet supported in IPC/TCP mode" << std::endl;
+            // Networked mode: send teleport request via RPC
+            auto pose_data = datapod::serialize(pose);
+            peer_->call(flatsim::RpcMethod::TELEPORT, pose_data, 1000);
         }
     }
 
@@ -415,17 +338,7 @@ namespace agent {
                 return;
             }
 
-            // Get uplink stream
-            netpipe::Stream *uplink = nullptr;
-            if (transport_type_ == flatsim::Endpoint::Type::TCP) {
-                uplink = uplink_tcp_.get();
-            } else if (transport_type_ == flatsim::Endpoint::Type::IPC) {
-                uplink = uplink_ipc_.get();
-            } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-                uplink = uplink_shm_.get();
-            }
-
-            if (!uplink || !spawned_) {
+            if (!peer_ || !spawned_) {
                 return;
             }
 
@@ -442,30 +355,16 @@ namespace agent {
             cfg.resolution_deg = lidar->get_resolution_deg();
 
             auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
-            auto bytes = flatsim::wire::pack(flatsim::wire::Kind::LIDAR_CFG, msg);
-            netpipe::Message np_msg(bytes.begin(), bytes.end());
-            uplink->send(np_msg); // Ignore errors
+            auto bytes = datapod::serialize(msg);
+            peer_->call(flatsim::RpcMethod::LIDAR_CFG, bytes, 1000);
         });
 
         // Send config for existing sensors
-        if (local_mode_ || !spawned_) {
+        if (local_mode_ || !spawned_ || !peer_) {
             return;
         }
 
-        netpipe::Stream *uplink = nullptr;
-        if (transport_type_ == flatsim::Endpoint::Type::TCP) {
-            uplink = uplink_tcp_.get();
-        } else if (transport_type_ == flatsim::Endpoint::Type::IPC) {
-            uplink = uplink_ipc_.get();
-        } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-            uplink = uplink_shm_.get();
-        }
-
-        if (!uplink) {
-            return;
-        }
-
-        machine_.sensors.for_each([this, uplink](fs::Sensor &sensor) {
+        machine_.sensors.for_each([this](fs::Sensor &sensor) {
             auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
             if (!lidar) {
                 return;
@@ -479,9 +378,8 @@ namespace agent {
             cfg.resolution_deg = lidar->get_resolution_deg();
 
             auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
-            auto bytes = flatsim::wire::pack(flatsim::wire::Kind::LIDAR_CFG, msg);
-            netpipe::Message np_msg(bytes.begin(), bytes.end());
-            uplink->send(np_msg); // Ignore errors
+            auto bytes = datapod::serialize(msg);
+            peer_->call(flatsim::RpcMethod::LIDAR_CFG, bytes, 1000);
         });
     }
 

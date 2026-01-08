@@ -20,13 +20,8 @@ namespace agent {
         bool local_mode_ = false;
 
         // Netpipe (only used in networked mode)
-        std::unique_ptr<flatsim::RpcClient> rpc_client_;   // RPC client for spawn/despawn
-        std::unique_ptr<netpipe::TcpStream> uplink_tcp_;   // TCP uplink
-        std::unique_ptr<netpipe::TcpStream> downlink_tcp_; // TCP downlink
-        std::unique_ptr<netpipe::IpcStream> uplink_ipc_;   // IPC uplink
-        std::unique_ptr<netpipe::IpcStream> downlink_ipc_; // IPC downlink
-        std::unique_ptr<netpipe::ShmStream> uplink_shm_;   // SHM uplink
-        std::unique_ptr<netpipe::ShmStream> downlink_shm_; // SHM downlink
+        // Single bidirectional RPC channel
+        std::unique_ptr<flatsim::RpcPeer> peer_;
         std::string address_;
         flatsim::Endpoint::Type transport_type_ = flatsim::Endpoint::Type::IPC;
 
@@ -140,9 +135,7 @@ namespace agent {
 
       private:
         // Transport abstraction - handles LOCAL vs IPC/TCP internally
-        bool recv_state(int timeout_ms);
-        void send_control(const types::WheelControl &ctrl);
-        void send_heartbeat();
+        void register_peer_handlers(); // NEW: Register RPC handlers for bidirectional communication
         void install_sensor_callbacks();
     };
 

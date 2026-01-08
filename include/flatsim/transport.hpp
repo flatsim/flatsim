@@ -358,9 +358,17 @@ namespace flatsim {
 
     // RPC method IDs
     enum class RpcMethod : uint32_t {
+        // Agent → Simulator
         SPAWN = 1,
         DESPAWN = 2,
         HEARTBEAT = 3,
+        CONTROL = 4,
+        LIDAR_CFG = 5,
+
+        // Simulator → Agent
+        STATE = 10,
+        SENSORS = 11,
+        TELEPORT = 12,
     };
 
     // RPC client - calls remote methods
@@ -554,6 +562,224 @@ namespace flatsim {
             if (ipc_stream_) ipc_stream_->close();
             if (shm_stream_) shm_stream_->close();
         }
+    };
+
+    // ============================================================================
+    // RpcPeer - Bidirectional RPC using RemotePeer (single channel)
+    // ============================================================================
+
+    // Handler type for RPC methods
+    using RpcHandler = std::function<std::vector<uint8_t>(const std::vector<uint8_t> &)>;
+
+    // RpcPeer - wraps netpipe::RemotePeer for bidirectional communication
+    class RpcPeer {
+      private:
+        std::unique_ptr<netpipe::TcpStream> tcp_stream_;
+        std::unique_ptr<netpipe::IpcStream> ipc_stream_;
+        std::unique_ptr<netpipe::ShmStream> shm_stream_;
+        std::unique_ptr<netpipe::RemotePeer> peer_;
+        Endpoint::Type type_;
+        std::string last_error_;
+
+      public:
+        RpcPeer() = default;
+
+        // Connect to remote peer (client side)
+        bool connect(const Endpoint &endpoint, size_t max_concurrent = 100, bool enable_metrics = true) {
+            type_ = endpoint.type;
+
+            switch (endpoint.type) {
+            case Endpoint::Type::TCP: {
+                tcp_stream_ = std::make_unique<netpipe::TcpStream>();
+                netpipe::TcpEndpoint ep{dp::String(endpoint.host.c_str()), endpoint.port};
+                auto res = tcp_stream_->connect(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                peer_ = std::make_unique<netpipe::RemotePeer>(*tcp_stream_, max_concurrent, enable_metrics);
+                return true;
+            }
+            case Endpoint::Type::IPC: {
+                ipc_stream_ = std::make_unique<netpipe::IpcStream>();
+                netpipe::IpcEndpoint ep{dp::String(endpoint.host.c_str())};
+                auto res = ipc_stream_->connect_ipc(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                peer_ = std::make_unique<netpipe::RemotePeer>(*ipc_stream_, max_concurrent, enable_metrics);
+                return true;
+            }
+            case Endpoint::Type::SHM: {
+                shm_stream_ = std::make_unique<netpipe::ShmStream>();
+                netpipe::ShmEndpoint ep{dp::String(endpoint.host.c_str()), endpoint.shm_size};
+                auto res = shm_stream_->connect_shm(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                peer_ = std::make_unique<netpipe::RemotePeer>(*shm_stream_, max_concurrent, enable_metrics);
+                return true;
+            }
+            }
+            return false;
+        }
+
+        // Listen for incoming connection (server side)
+        bool listen(const Endpoint &endpoint, size_t max_concurrent = 100, bool enable_metrics = true) {
+            type_ = endpoint.type;
+
+            switch (endpoint.type) {
+            case Endpoint::Type::TCP: {
+                tcp_stream_ = std::make_unique<netpipe::TcpStream>();
+                netpipe::TcpEndpoint ep{dp::String(endpoint.host.c_str()), endpoint.port};
+                auto res = tcp_stream_->listen(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                return true;
+            }
+            case Endpoint::Type::IPC: {
+                ipc_stream_ = std::make_unique<netpipe::IpcStream>();
+                netpipe::IpcEndpoint ep{dp::String(endpoint.host.c_str())};
+                auto res = ipc_stream_->listen_ipc(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                return true;
+            }
+            case Endpoint::Type::SHM: {
+                shm_stream_ = std::make_unique<netpipe::ShmStream>();
+                netpipe::ShmEndpoint ep{dp::String(endpoint.host.c_str()), endpoint.shm_size};
+                auto res = shm_stream_->listen_shm(ep);
+                if (res.is_err()) {
+                    last_error_ = std::string(res.error().message.c_str());
+                    return false;
+                }
+                return true;
+            }
+            }
+            return false;
+        }
+
+        // Accept incoming connection (returns new RpcPeer for client)
+        std::unique_ptr<RpcPeer> accept(size_t max_concurrent = 100, bool enable_metrics = true) {
+            if (!tcp_stream_ && !ipc_stream_) {
+                last_error_ = "SHM does not support accept()";
+                return nullptr;
+            }
+
+            netpipe::Stream *listen_stream = tcp_stream_ ? static_cast<netpipe::Stream *>(tcp_stream_.get())
+                                                         : static_cast<netpipe::Stream *>(ipc_stream_.get());
+
+            auto res = listen_stream->accept();
+            if (res.is_err()) {
+                last_error_ = std::string(res.error().message.c_str());
+                return nullptr;
+            }
+
+            auto client_peer = std::make_unique<RpcPeer>();
+            client_peer->type_ = type_;
+
+            // Move accepted stream to client peer
+            if (tcp_stream_) {
+                auto *tcp = dynamic_cast<netpipe::TcpStream *>(res.value().get());
+                if (tcp) {
+                    client_peer->tcp_stream_ = std::unique_ptr<netpipe::TcpStream>(tcp);
+                    res.value().release();
+                    client_peer->peer_ = std::make_unique<netpipe::RemotePeer>(*client_peer->tcp_stream_,
+                                                                               max_concurrent, enable_metrics);
+                }
+            } else if (ipc_stream_) {
+                auto *ipc = dynamic_cast<netpipe::IpcStream *>(res.value().get());
+                if (ipc) {
+                    client_peer->ipc_stream_ = std::unique_ptr<netpipe::IpcStream>(ipc);
+                    res.value().release();
+                    client_peer->peer_ = std::make_unique<netpipe::RemotePeer>(*client_peer->ipc_stream_,
+                                                                               max_concurrent, enable_metrics);
+                }
+            }
+
+            return client_peer;
+        }
+
+        // Register a handler for incoming RPC calls
+        bool register_method(RpcMethod method, RpcHandler handler) {
+            if (!peer_) {
+                last_error_ = "Peer not initialized";
+                return false;
+            }
+
+            // Wrap handler to convert between std::vector and netpipe::Message
+            auto wrapped_handler = [handler](const netpipe::Message &req) -> dp::Res<netpipe::Message> {
+                std::vector<uint8_t> request(req.begin(), req.end());
+                auto response = handler(request);
+                netpipe::Message resp(response.begin(), response.end());
+                return dp::result::ok(std::move(resp));
+            };
+
+            auto res = peer_->register_method(static_cast<uint32_t>(method), wrapped_handler);
+            return res.is_ok();
+        }
+
+        // Call a remote method (blocks until response or timeout)
+        std::vector<uint8_t> call(RpcMethod method, const std::vector<uint8_t> &request, uint32_t timeout_ms = 5000) {
+            if (!peer_) {
+                last_error_ = "Peer not initialized";
+                return {};
+            }
+
+            netpipe::Message req(request.begin(), request.end());
+            auto res = peer_->call(static_cast<uint32_t>(method), req, timeout_ms);
+            if (res.is_err()) {
+                last_error_ = std::string(res.error().message.c_str());
+                return {};
+            }
+            return std::vector<uint8_t>(res.value().begin(), res.value().end());
+        }
+
+        // Get number of pending outgoing requests
+        size_t pending_count() const { return peer_ ? peer_->pending_count() : 0; }
+
+        // Get number of registered methods
+        size_t method_count() const { return peer_ ? peer_->method_count() : 0; }
+
+        // Check if metrics are enabled
+        bool metrics_enabled() const { return peer_ ? peer_->metrics_enabled() : false; }
+
+        // Get client metrics (outgoing calls)
+        const netpipe::remote::RemoteMetrics *get_client_metrics() const {
+            return peer_ ? &peer_->get_client_metrics() : nullptr;
+        }
+
+        // Get server metrics (incoming requests)
+        const netpipe::remote::RemoteMetrics *get_server_metrics() const {
+            return peer_ ? &peer_->get_server_metrics() : nullptr;
+        }
+
+        // Reset metrics
+        void reset_metrics() {
+            if (peer_) {
+                peer_->reset_metrics();
+            }
+        }
+
+        // Close connection
+        void close() {
+            peer_.reset();
+            if (tcp_stream_) tcp_stream_->close();
+            if (ipc_stream_) ipc_stream_->close();
+            if (shm_stream_) shm_stream_->close();
+        }
+
+        // Get last error message
+        std::string last_error() const { return last_error_; }
+
+        // Check if peer is initialized
+        bool is_connected() const { return peer_ != nullptr; }
     };
 
 } // namespace flatsim

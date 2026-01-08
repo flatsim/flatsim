@@ -47,15 +47,10 @@ namespace simulator {
         Conn conn_;
 
         // Netpipe (only used in IPC/TCP/SHM modes)
-        std::unique_ptr<flatsim::RpcServer> spawn_server_;                        // RPC server for spawn/despawn
-        std::map<std::string, std::unique_ptr<netpipe::TcpStream>> uplink_tcp_;   // TCP uplink per-robot
-        std::map<std::string, std::unique_ptr<netpipe::TcpStream>> downlink_tcp_; // TCP downlink per-robot
-        std::map<std::string, std::unique_ptr<netpipe::IpcStream>> uplink_ipc_;   // IPC uplink per-robot
-        std::map<std::string, std::unique_ptr<netpipe::IpcStream>> downlink_ipc_; // IPC downlink per-robot
-        std::map<std::string, std::unique_ptr<netpipe::ShmStream>> uplink_shm_;   // SHM uplink per-robot
-        std::map<std::string, std::unique_ptr<netpipe::ShmStream>> downlink_shm_; // SHM downlink per-robot
+        // Single bidirectional RPC channel per agent
+        std::unique_ptr<flatsim::RpcPeer> listen_peer_;                  // Listening peer for accepting connections
+        std::map<std::string, std::unique_ptr<flatsim::RpcPeer>> peers_; // Per-agent bidirectional peers
         std::string address_;
-        int next_tcp_port_ = 5600;
 
         // Physics world with obstacle management
         std::unique_ptr<World> world_;
@@ -91,15 +86,13 @@ namespace simulator {
         // Transport abstraction - handles LOCAL vs IPC/TCP
         void send_state(const std::string &uuid, const types::ser::MachineState &state);
         void send_sensor_state(const std::string &uuid, const types::ser::SensorState &state);
-        std::optional<types::WheelControl> recv_control(const std::string &uuid, int timeout_ms);
 
         // IPC/TCP/SHM only - spawn/despawn and connection management
         void process_spawn_requests();
         void cleanup_stale_connections();
 
-        // RPC handlers
-        std::vector<uint8_t> handle_spawn_request(const std::vector<uint8_t> &request);
-        std::vector<uint8_t> handle_despawn_request(const std::vector<uint8_t> &request);
+        // RPC handlers for peer
+        void register_peer_handlers(flatsim::RpcPeer *peer, const std::string &uuid);
 
       public:
         // Constructor for LOCAL mode (no networking)
