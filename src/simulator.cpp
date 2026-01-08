@@ -2,12 +2,14 @@
 #include "flatsim/agent.hpp"
 #include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/tagged_zmq.hpp"
+#include "flatsim/transport.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <datapod/serialization/serialize.hpp>
 #include <echo/echo.hpp>
 #include <filesystem>
 #include <iostream>
+#include <netpipe/netpipe.hpp>
 #include <rerun.hpp>
 #include <rerun/blueprint/archetypes/eye_controls3d.hpp>
 #include <rerun/blueprint/archetypes/map_background.hpp>
@@ -92,7 +94,7 @@ namespace simulator {
 
     // Constructor for LOCAL mode (no networking)
     Simulator::Simulator(float width, float height, datapod::Geo datum, std::shared_ptr<rerun::RecordingStream> rec)
-        : conn_(Conn::LOCAL), ctx_(1), sim_settings_(width, height, datum), rec_(rec) {
+        : conn_(Conn::LOCAL), sim_settings_(width, height, datum), rec_(rec) {
 
         init_rerun();
 
@@ -104,10 +106,10 @@ namespace simulator {
         sensor_data_.set_datum(sim_settings_.datum);
     }
 
-    // Constructor for IPC/TCP mode with settings struct
+    // Constructor for IPC/TCP/SHM mode with settings struct
     Simulator::Simulator(Conn conn, const std::string &address, const SimulatorSettings &settings,
                          std::shared_ptr<rerun::RecordingStream> rec)
-        : conn_(conn), ctx_(1), address_(address), sim_settings_(settings), rec_(rec) {
+        : conn_(conn), address_(address), sim_settings_(settings), rec_(rec) {
 
         if (conn_ == Conn::LOCAL) {
             throw std::runtime_error("Use the LOCAL mode constructor without address parameter");
@@ -115,18 +117,27 @@ namespace simulator {
 
         init_rerun();
 
-        // Setup ZMQ sockets
-        spawn_socket_ = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::rep);
+        // Setup netpipe RPC server for spawn/despawn
+        spawn_server_ = std::make_unique<flatsim::RpcServer>();
 
+        flatsim::Endpoint spawn_endpoint;
         if (conn_ == Conn::IPC) {
             auto dir = ipc_dir();
-            const std::string spawn_ep = "ipc://" + (dir / "flatsim_spawn").string();
-            remove_ipc_socket_file(spawn_ep);
-            spawn_socket_->bind(spawn_ep);
-        } else {
-            spawn_socket_->bind("tcp://*:5555");
+            const std::string spawn_path = (dir / "flatsim_spawn").string();
+            spawn_endpoint = flatsim::Endpoint::ipc(spawn_path);
+        } else if (conn_ == Conn::TCP) {
+            spawn_endpoint = flatsim::Endpoint::tcp(address_.empty() ? "0.0.0.0" : address_, 5555);
+        } else if (conn_ == Conn::SHM) {
+            spawn_endpoint = flatsim::Endpoint::shm("flatsim_spawn", 1024 * 1024); // 1MB buffer
         }
-        spawn_socket_->set(zmq::sockopt::rcvtimeo, 0);
+
+        if (!spawn_server_->listen(spawn_endpoint)) {
+            throw std::runtime_error("Failed to start spawn server on " + spawn_endpoint.to_string());
+        }
+
+        // Register RPC handlers
+        // Note: RPC handlers will be called in serve() which needs to run in a separate thread
+        // For now, we'll keep the polling model in process_spawn_requests()
 
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
@@ -144,14 +155,13 @@ namespace simulator {
     Simulator::~Simulator() {
         local_agents_.clear();
 
-        if (spawn_socket_) spawn_socket_->close();
-        for (auto &[uuid, sock] : uplink_sockets_) {
-            sock->close();
-        }
-        for (auto &[uuid, sock] : downlink_sockets_) {
-            sock->close();
-        }
-        ctx_.close();
+        if (spawn_server_) spawn_server_->close();
+        for (auto &[uuid, sock] : uplink_tcp_) sock->close();
+        for (auto &[uuid, sock] : downlink_tcp_) sock->close();
+        for (auto &[uuid, sock] : uplink_ipc_) sock->close();
+        for (auto &[uuid, sock] : downlink_ipc_) sock->close();
+        for (auto &[uuid, sock] : uplink_shm_) sock->close();
+        for (auto &[uuid, sock] : downlink_shm_) sock->close();
     }
 
     // ============================================================================
@@ -264,15 +274,24 @@ namespace simulator {
                 agent->update_from_physics(state);
             }
         } else {
-            // Send via ZMQ downlink (tagged)
-            auto it = downlink_sockets_.find(uuid);
-            if (it != downlink_sockets_.end() && it->second) {
-                try {
-                    auto mutable_state = state; // datapod::serialize needs non-const
-                    auto data = flatsim::wire::pack(flatsim::wire::Kind::STATE, mutable_state);
-                    it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
-                } catch (const zmq::error_t &) {
-                }
+            // Send via netpipe downlink (tagged)
+            netpipe::Stream *stream = nullptr;
+            if (conn_ == Conn::TCP) {
+                auto it = downlink_tcp_.find(uuid);
+                if (it != downlink_tcp_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::IPC) {
+                auto it = downlink_ipc_.find(uuid);
+                if (it != downlink_ipc_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::SHM) {
+                auto it = downlink_shm_.find(uuid);
+                if (it != downlink_shm_.end()) stream = it->second.get();
+            }
+
+            if (stream) {
+                auto mutable_state = state; // datapod::serialize needs non-const
+                auto data = flatsim::wire::pack(flatsim::wire::Kind::STATE, mutable_state);
+                netpipe::Message msg(data.begin(), data.end());
+                stream->send(msg); // Ignore errors
             }
         }
     }
@@ -286,59 +305,65 @@ namespace simulator {
             }
             return std::nullopt;
         } else {
-            // Receive via ZMQ uplink (tagged)
-            auto it = uplink_sockets_.find(uuid);
-            if (it == uplink_sockets_.end() || !it->second) {
+            // Receive via netpipe uplink (tagged)
+            netpipe::Stream *stream = nullptr;
+            if (conn_ == Conn::TCP) {
+                auto it = uplink_tcp_.find(uuid);
+                if (it != uplink_tcp_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::IPC) {
+                auto it = uplink_ipc_.find(uuid);
+                if (it != uplink_ipc_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::SHM) {
+                auto it = uplink_shm_.find(uuid);
+                if (it != uplink_shm_.end()) stream = it->second.get();
+            }
+
+            if (!stream) {
                 return std::nullopt;
             }
 
-            try {
-                const auto start = std::chrono::steady_clock::now();
-                while (true) {
-                    const auto elapsed_ms =
-                        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
-                            .count();
-                    const int remaining_ms = timeout_ms - static_cast<int>(elapsed_ms);
-                    if (remaining_ms <= 0) {
-                        return std::nullopt;
-                    }
-
-                    it->second->set(zmq::sockopt::rcvtimeo, remaining_ms);
-                    zmq::message_t msg;
-                    auto result = it->second->recv(msg, zmq::recv_flags::none);
-                    if (!result) {
-                        return std::nullopt;
-                    }
-
-                    std::vector<uint8_t> bytes(static_cast<uint8_t *>(msg.data()),
-                                               static_cast<uint8_t *>(msg.data()) + msg.size());
-                    const auto tagged = flatsim::wire::unpack(std::move(bytes));
-
-                    switch (tagged.kind) {
-                    case flatsim::wire::Kind::CONTROL: {
-                        auto ctrl_ser = flatsim::wire::deserialize<types::ser::WheelControl>(tagged.payload);
-                        last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-                        return ctrl_ser.to_control();
-                    }
-                    case flatsim::wire::Kind::HEARTBEAT: {
-                        auto hb = flatsim::wire::deserialize<types::ser::Request>(tagged.payload);
-                        if (hb.type == types::ser::MsgType::HEARTBEAT) {
-                            last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-                        }
-                        break;
-                    }
-                    case flatsim::wire::Kind::LIDAR_CFG: {
-                        auto cfg_msg = flatsim::wire::deserialize<types::ser::LidarConfigMsg>(tagged.payload);
-                        const std::string msg_uuid(cfg_msg.uuid.view());
-                        set_lidar_config(msg_uuid.empty() ? uuid : msg_uuid, cfg_msg.to_config());
-                        last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-                        break;
-                    }
-                    default:
-                        break;
-                    }
+            const auto start = std::chrono::steady_clock::now();
+            while (true) {
+                const auto elapsed_ms =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                        .count();
+                const int remaining_ms = timeout_ms - static_cast<int>(elapsed_ms);
+                if (remaining_ms <= 0) {
+                    return std::nullopt;
                 }
-            } catch (const zmq::error_t &) {
+
+                stream->set_recv_timeout(static_cast<uint32_t>(remaining_ms));
+                auto res = stream->recv();
+                if (res.is_err()) {
+                    return std::nullopt;
+                }
+
+                std::vector<uint8_t> bytes(res.value().begin(), res.value().end());
+                const auto tagged = flatsim::wire::unpack(std::move(bytes));
+
+                switch (tagged.kind) {
+                case flatsim::wire::Kind::CONTROL: {
+                    auto ctrl_ser = flatsim::wire::deserialize<types::ser::WheelControl>(tagged.payload);
+                    last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                    return ctrl_ser.to_control();
+                }
+                case flatsim::wire::Kind::HEARTBEAT: {
+                    auto hb = flatsim::wire::deserialize<types::ser::Request>(tagged.payload);
+                    if (hb.type == types::ser::MsgType::HEARTBEAT) {
+                        last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                    }
+                    break;
+                }
+                case flatsim::wire::Kind::LIDAR_CFG: {
+                    auto cfg_msg = flatsim::wire::deserialize<types::ser::LidarConfigMsg>(tagged.payload);
+                    const std::string msg_uuid(cfg_msg.uuid.view());
+                    set_lidar_config(msg_uuid.empty() ? uuid : msg_uuid, cfg_msg.to_config());
+                    last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                    break;
+                }
+                default:
+                    break;
+                }
             }
             return std::nullopt;
         }
@@ -349,88 +374,12 @@ namespace simulator {
     // ============================================================================
 
     void Simulator::process_spawn_requests() {
-        zmq::message_t spawn_request;
-        auto spawn_result = spawn_socket_->recv(spawn_request, zmq::recv_flags::dontwait);
-        if (!spawn_result) return;
+        // TODO: Implement netpipe RPC-based spawn/despawn
+        // For now, this is only needed for IPC/TCP/SHM modes
+        // LOCAL mode uses spawn_agent() directly
 
-        std::vector<uint8_t> buffer(static_cast<uint8_t *>(spawn_request.data()),
-                                    static_cast<uint8_t *>(spawn_request.data()) + spawn_request.size());
-
-        types::ser::Request req;
-        types::ser::Response resp;
-
-        try {
-            req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(buffer);
-        } catch (const std::exception &e) {
-            std::cerr << "[Simulator] Failed to deserialize spawn request: " << e.what() << std::endl;
-            resp.success = false;
-            auto data = datapod::serialize(resp);
-            spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
-            return;
-        }
-
-        if (req.type == types::ser::MsgType::SPAWN) {
-            auto machine = req.machine.to_machine();
-            std::string uuid = machine.uuid;
-
-            create_machine(machine);
-
-            // Create dedicated sockets
-            auto uplink_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pull);
-            auto downlink_sock = std::make_unique<zmq::socket_t>(ctx_, zmq::socket_type::pub);
-            std::string uplink_ep, downlink_ep;
-
-            if (conn_ == Conn::IPC) {
-                auto dir = ipc_dir();
-                uplink_ep = "ipc://" + (dir / ("flatsim_uplink_" + uuid)).string();
-                downlink_ep = "ipc://" + (dir / ("flatsim_downlink_" + uuid)).string();
-                remove_ipc_socket_file(uplink_ep);
-                remove_ipc_socket_file(downlink_ep);
-                uplink_sock->bind(uplink_ep);
-                downlink_sock->bind(downlink_ep);
-            } else {
-                int base_port = next_tcp_port_;
-                next_tcp_port_ += 10;
-                uplink_sock->bind("tcp://*:" + std::to_string(base_port));
-                downlink_sock->bind("tcp://*:" + std::to_string(base_port + 1));
-                const auto host = advertised_host_or_localhost(address_);
-                uplink_ep = "tcp://" + host + ":" + std::to_string(base_port);
-                downlink_ep = "tcp://" + host + ":" + std::to_string(base_port + 1);
-            }
-
-            uplink_sock->set(zmq::sockopt::rcvtimeo, 0);
-            uplink_sockets_[uuid] = std::move(uplink_sock);
-            downlink_sockets_[uuid] = std::move(downlink_sock);
-            last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-
-            // Update camera tracking to follow this newly spawned agent
-            update_camera_tracking(uuid);
-
-            resp.success = true;
-            resp.state = get_world_state();
-            resp.rerun.grpc_address = datapod::String(rerun_grpc_addr_);
-            resp.rerun.recording_id = datapod::String(recording_id_);
-            resp.rerun.application_id = datapod::String(application_id_);
-            resp.zmq.uplink_endpoint = datapod::String(uplink_ep);
-            resp.zmq.downlink_endpoint = datapod::String(downlink_ep);
-        } else if (req.type == types::ser::MsgType::DESPAWN) {
-            std::string uuid_str(req.uuid.view());
-            if (uplink_sockets_.count(uuid_str)) {
-                uplink_sockets_[uuid_str]->close();
-                uplink_sockets_.erase(uuid_str);
-            }
-            if (downlink_sockets_.count(uuid_str)) {
-                downlink_sockets_[uuid_str]->close();
-                downlink_sockets_.erase(uuid_str);
-            }
-            resp.success = destroy_machine(uuid_str);
-            last_heartbeat_.erase(uuid_str);
-        } else {
-            resp.success = false;
-        }
-
-        auto data = datapod::serialize(resp);
-        spawn_socket_->send(zmq::buffer(data), zmq::send_flags::none);
+        // The new approach will use RPC handlers registered in the constructor
+        // and served in a background thread, rather than polling here
     }
 
     void Simulator::cleanup_stale_connections() {
@@ -448,13 +397,34 @@ namespace simulator {
         }
 
         for (const auto &uuid : to_remove) {
-            if (uplink_sockets_.count(uuid)) {
-                uplink_sockets_[uuid]->close();
-                uplink_sockets_.erase(uuid);
-            }
-            if (downlink_sockets_.count(uuid)) {
-                downlink_sockets_[uuid]->close();
-                downlink_sockets_.erase(uuid);
+            // Close streams based on connection type
+            if (conn_ == Conn::TCP) {
+                if (uplink_tcp_.count(uuid)) {
+                    uplink_tcp_[uuid]->close();
+                    uplink_tcp_.erase(uuid);
+                }
+                if (downlink_tcp_.count(uuid)) {
+                    downlink_tcp_[uuid]->close();
+                    downlink_tcp_.erase(uuid);
+                }
+            } else if (conn_ == Conn::IPC) {
+                if (uplink_ipc_.count(uuid)) {
+                    uplink_ipc_[uuid]->close();
+                    uplink_ipc_.erase(uuid);
+                }
+                if (downlink_ipc_.count(uuid)) {
+                    downlink_ipc_[uuid]->close();
+                    downlink_ipc_.erase(uuid);
+                }
+            } else if (conn_ == Conn::SHM) {
+                if (uplink_shm_.count(uuid)) {
+                    uplink_shm_[uuid]->close();
+                    uplink_shm_.erase(uuid);
+                }
+                if (downlink_shm_.count(uuid)) {
+                    downlink_shm_[uuid]->close();
+                    downlink_shm_.erase(uuid);
+                }
             }
             last_heartbeat_.erase(uuid);
             destroy_machine(uuid);
@@ -538,15 +508,24 @@ namespace simulator {
                 agent->update_from_sensors(state);
             }
         } else {
-            // Send via ZMQ downlink (tagged)
-            auto it = downlink_sockets_.find(uuid);
-            if (it != downlink_sockets_.end() && it->second) {
-                try {
-                    auto mutable_state = state; // datapod::serialize needs non-const
-                    auto data = flatsim::wire::pack(flatsim::wire::Kind::SENSORS, mutable_state);
-                    it->second->send(zmq::buffer(data), zmq::send_flags::dontwait);
-                } catch (const zmq::error_t &) {
-                }
+            // Send via netpipe downlink (tagged)
+            netpipe::Stream *stream = nullptr;
+            if (conn_ == Conn::TCP) {
+                auto it = downlink_tcp_.find(uuid);
+                if (it != downlink_tcp_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::IPC) {
+                auto it = downlink_ipc_.find(uuid);
+                if (it != downlink_ipc_.end()) stream = it->second.get();
+            } else if (conn_ == Conn::SHM) {
+                auto it = downlink_shm_.find(uuid);
+                if (it != downlink_shm_.end()) stream = it->second.get();
+            }
+
+            if (stream) {
+                auto mutable_state = state; // datapod::serialize needs non-const
+                auto data = flatsim::wire::pack(flatsim::wire::Kind::SENSORS, mutable_state);
+                netpipe::Message msg(data.begin(), data.end());
+                stream->send(msg); // Ignore errors
             }
         }
     }

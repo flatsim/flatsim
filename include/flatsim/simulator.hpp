@@ -10,11 +10,11 @@
 #include <rerun.hpp>
 #include <thread>
 #include <vector>
-#include <zmq.hpp>
 
 #include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine.hpp"
 #include "flatsim/simulator/world.hpp"
+#include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
 // Forward declaration for Agent (avoid circular include)
@@ -27,7 +27,8 @@ namespace simulator {
     enum class Conn {
         LOCAL, // No networking - agents owned by simulator, single process
         IPC,   // Inter-process communication via Unix sockets
-        TCP    // Network communication via TCP
+        TCP,   // Network communication via TCP
+        SHM    // Shared memory (zero-copy)
     };
 
     // Simple settings for Simulator constructor (not to be confused with simulator::WorldSettings)
@@ -45,11 +46,14 @@ namespace simulator {
         // Connection mode
         Conn conn_;
 
-        // ZMQ (only used in IPC/TCP modes)
-        zmq::context_t ctx_;
-        std::unique_ptr<zmq::socket_t> spawn_socket_;                            // REP - for spawn/despawn requests
-        std::map<std::string, std::unique_ptr<zmq::socket_t>> uplink_sockets_;   // PULL per-robot (agent -> sim)
-        std::map<std::string, std::unique_ptr<zmq::socket_t>> downlink_sockets_; // PUB per-robot (sim -> agent)
+        // Netpipe (only used in IPC/TCP/SHM modes)
+        std::unique_ptr<flatsim::RpcServer> spawn_server_;                        // RPC server for spawn/despawn
+        std::map<std::string, std::unique_ptr<netpipe::TcpStream>> uplink_tcp_;   // TCP uplink per-robot
+        std::map<std::string, std::unique_ptr<netpipe::TcpStream>> downlink_tcp_; // TCP downlink per-robot
+        std::map<std::string, std::unique_ptr<netpipe::IpcStream>> uplink_ipc_;   // IPC uplink per-robot
+        std::map<std::string, std::unique_ptr<netpipe::IpcStream>> downlink_ipc_; // IPC downlink per-robot
+        std::map<std::string, std::unique_ptr<netpipe::ShmStream>> uplink_shm_;   // SHM uplink per-robot
+        std::map<std::string, std::unique_ptr<netpipe::ShmStream>> downlink_shm_; // SHM downlink per-robot
         std::string address_;
         int next_tcp_port_ = 5600;
 
