@@ -135,9 +135,22 @@ namespace simulator {
             throw std::runtime_error("Failed to start spawn server on " + spawn_endpoint.to_string());
         }
 
-        // Register RPC handlers
-        // Note: RPC handlers will be called in serve() which needs to run in a separate thread
-        // For now, we'll keep the polling model in process_spawn_requests()
+        // Register RPC handlers for spawn/despawn
+        spawn_server_->register_method(flatsim::RpcMethod::SPAWN, [this](const std::vector<uint8_t> &request) {
+            return this->handle_spawn_request(request);
+        });
+
+        spawn_server_->register_method(flatsim::RpcMethod::DESPAWN, [this](const std::vector<uint8_t> &request) {
+            return this->handle_despawn_request(request);
+        });
+
+        spawn_server_->register_method(flatsim::RpcMethod::HEARTBEAT, [this](const std::vector<uint8_t> &request) {
+            // Heartbeat - just return success
+            types::ser::Response resp;
+            resp.success = true;
+            auto data = datapod::serialize(resp);
+            return std::vector<uint8_t>(data.begin(), data.end());
+        });
 
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
@@ -370,16 +383,191 @@ namespace simulator {
     }
 
     // ============================================================================
-    // IPC/TCP Connection Management
+    // IPC/TCP/SHM Connection Management
     // ============================================================================
 
-    void Simulator::process_spawn_requests() {
-        // TODO: Implement netpipe RPC-based spawn/despawn
-        // For now, this is only needed for IPC/TCP/SHM modes
-        // LOCAL mode uses spawn_agent() directly
+    std::vector<uint8_t> Simulator::handle_spawn_request(const std::vector<uint8_t> &request) {
+        types::ser::Response resp;
+        resp.success = false;
 
-        // The new approach will use RPC handlers registered in the constructor
-        // and served in a background thread, rather than polling here
+        try {
+            auto req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(request);
+
+            if (req.type != types::ser::MsgType::SPAWN) {
+                return std::vector<uint8_t>(); // Empty response for wrong type
+            }
+
+            auto machine = req.machine.to_machine();
+            std::string uuid = machine.uuid;
+
+            create_machine(machine);
+
+            // Create dedicated streams for this agent
+            std::string uplink_ep, downlink_ep;
+
+            if (conn_ == Conn::TCP) {
+                int base_port = next_tcp_port_;
+                next_tcp_port_ += 10;
+
+                auto uplink = std::make_unique<netpipe::TcpStream>();
+                auto downlink = std::make_unique<netpipe::TcpStream>();
+
+                netpipe::TcpEndpoint up_ep{dp::String("0.0.0.0"), static_cast<uint16_t>(base_port)};
+                netpipe::TcpEndpoint down_ep{dp::String("0.0.0.0"), static_cast<uint16_t>(base_port + 1)};
+
+                auto up_res = uplink->listen(up_ep);
+                auto down_res = downlink->listen(down_ep);
+
+                if (up_res.is_err() || down_res.is_err()) {
+                    echo::error("[Simulator] Failed to create TCP streams for ", uuid);
+                    destroy_machine(uuid);
+                    auto data = datapod::serialize(resp);
+                    return std::vector<uint8_t>(data.begin(), data.end());
+                }
+
+                const auto host = advertised_host_or_localhost(address_);
+                uplink_ep = "tcp://" + host + ":" + std::to_string(base_port);
+                downlink_ep = "tcp://" + host + ":" + std::to_string(base_port + 1);
+
+                uplink_tcp_[uuid] = std::move(uplink);
+                downlink_tcp_[uuid] = std::move(downlink);
+
+            } else if (conn_ == Conn::IPC) {
+                auto dir = ipc_dir();
+                uplink_ep = "ipc://" + (dir / ("flatsim_uplink_" + uuid)).string();
+                downlink_ep = "ipc://" + (dir / ("flatsim_downlink_" + uuid)).string();
+
+                remove_ipc_socket_file(uplink_ep);
+                remove_ipc_socket_file(downlink_ep);
+
+                auto uplink = std::make_unique<netpipe::IpcStream>();
+                auto downlink = std::make_unique<netpipe::IpcStream>();
+
+                auto up_res = uplink->listen_ipc(netpipe::IpcEndpoint{dp::String(uplink_ep.substr(6).c_str())});
+                auto down_res = downlink->listen_ipc(netpipe::IpcEndpoint{dp::String(downlink_ep.substr(6).c_str())});
+
+                if (up_res.is_err() || down_res.is_err()) {
+                    echo::error("[Simulator] Failed to create IPC streams for ", uuid);
+                    destroy_machine(uuid);
+                    auto data = datapod::serialize(resp);
+                    return std::vector<uint8_t>(data.begin(), data.end());
+                }
+
+                uplink_ipc_[uuid] = std::move(uplink);
+                downlink_ipc_[uuid] = std::move(downlink);
+
+            } else if (conn_ == Conn::SHM) {
+                uplink_ep = "shm://flatsim_uplink_" + uuid;
+                downlink_ep = "shm://flatsim_downlink_" + uuid;
+
+                auto uplink = std::make_unique<netpipe::ShmStream>();
+                auto downlink = std::make_unique<netpipe::ShmStream>();
+
+                auto up_res = uplink->listen_shm(
+                    netpipe::ShmEndpoint{dp::String(("flatsim_uplink_" + uuid).c_str()), 1024 * 1024});
+                auto down_res = downlink->listen_shm(
+                    netpipe::ShmEndpoint{dp::String(("flatsim_downlink_" + uuid).c_str()), 1024 * 1024});
+
+                if (up_res.is_err() || down_res.is_err()) {
+                    echo::error("[Simulator] Failed to create SHM streams for ", uuid);
+                    destroy_machine(uuid);
+                    auto data = datapod::serialize(resp);
+                    return std::vector<uint8_t>(data.begin(), data.end());
+                }
+
+                uplink_shm_[uuid] = std::move(uplink);
+                downlink_shm_[uuid] = std::move(downlink);
+            }
+
+            last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+            update_camera_tracking(uuid);
+
+            resp.success = true;
+            resp.state = get_world_state();
+            resp.rerun.grpc_address = datapod::String(rerun_grpc_addr_);
+            resp.rerun.recording_id = datapod::String(recording_id_);
+            resp.rerun.application_id = datapod::String(application_id_);
+            resp.zmq.uplink_endpoint = datapod::String(uplink_ep);
+            resp.zmq.downlink_endpoint = datapod::String(downlink_ep);
+
+        } catch (const std::exception &e) {
+            echo::error("[Simulator] Failed to handle spawn request: ", e.what());
+        }
+
+        auto data = datapod::serialize(resp);
+        return std::vector<uint8_t>(data.begin(), data.end());
+    }
+
+    std::vector<uint8_t> Simulator::handle_despawn_request(const std::vector<uint8_t> &request) {
+        types::ser::Response resp;
+        resp.success = false;
+
+        try {
+            auto req = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(request);
+
+            if (req.type != types::ser::MsgType::DESPAWN) {
+                return std::vector<uint8_t>(); // Empty response for wrong type
+            }
+
+            std::string uuid_str(req.uuid.view());
+
+            // Close and remove streams
+            if (conn_ == Conn::TCP) {
+                if (uplink_tcp_.count(uuid_str)) {
+                    uplink_tcp_[uuid_str]->close();
+                    uplink_tcp_.erase(uuid_str);
+                }
+                if (downlink_tcp_.count(uuid_str)) {
+                    downlink_tcp_[uuid_str]->close();
+                    downlink_tcp_.erase(uuid_str);
+                }
+            } else if (conn_ == Conn::IPC) {
+                if (uplink_ipc_.count(uuid_str)) {
+                    uplink_ipc_[uuid_str]->close();
+                    uplink_ipc_.erase(uuid_str);
+                }
+                if (downlink_ipc_.count(uuid_str)) {
+                    downlink_ipc_[uuid_str]->close();
+                    downlink_ipc_.erase(uuid_str);
+                }
+            } else if (conn_ == Conn::SHM) {
+                if (uplink_shm_.count(uuid_str)) {
+                    uplink_shm_[uuid_str]->close();
+                    uplink_shm_.erase(uuid_str);
+                }
+                if (downlink_shm_.count(uuid_str)) {
+                    downlink_shm_[uuid_str]->close();
+                    downlink_shm_.erase(uuid_str);
+                }
+            }
+
+            resp.success = destroy_machine(uuid_str);
+            last_heartbeat_.erase(uuid_str);
+
+        } catch (const std::exception &e) {
+            echo::error("[Simulator] Failed to handle despawn request: ", e.what());
+        }
+
+        auto data = datapod::serialize(resp);
+        return std::vector<uint8_t>(data.begin(), data.end());
+    }
+
+    void Simulator::process_spawn_requests() {
+        // Accept new connections from spawn server
+        // This needs to be called periodically to accept new agent connections
+        if (!spawn_server_) {
+            return;
+        }
+
+        auto client_server = spawn_server_->accept();
+        if (client_server) {
+            // Spawn a thread to handle this client's RPC requests
+            // For now, we'll just serve synchronously in the main thread
+            // TODO: Move to background thread for production
+            std::thread([server = std::move(client_server)]() mutable {
+                server->serve(); // Blocks until client disconnects
+            }).detach();
+        }
     }
 
     void Simulator::cleanup_stale_connections() {

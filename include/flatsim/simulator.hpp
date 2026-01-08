@@ -93,9 +93,13 @@ namespace simulator {
         void send_sensor_state(const std::string &uuid, const types::ser::SensorState &state);
         std::optional<types::WheelControl> recv_control(const std::string &uuid, int timeout_ms);
 
-        // IPC/TCP only - spawn/despawn and connection management
+        // IPC/TCP/SHM only - spawn/despawn and connection management
         void process_spawn_requests();
         void cleanup_stale_connections();
+
+        // RPC handlers
+        std::vector<uint8_t> handle_spawn_request(const std::vector<uint8_t> &request);
+        std::vector<uint8_t> handle_despawn_request(const std::vector<uint8_t> &request);
 
       public:
         // Constructor for LOCAL mode (no networking)
