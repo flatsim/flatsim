@@ -3,6 +3,8 @@
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
+#include <memory>
+#include <wirebit/wirebit.hpp>
 
 namespace fs {
     /**
@@ -75,6 +77,15 @@ namespace fs {
 
         // Flag indicating simulator data is available (skip self-computation)
         bool simulator_data_available_ = false;
+
+        // Datum (reference point for ENU to WGS84 conversion)
+        double datum_lat_ = 0.0;
+        double datum_lon_ = 0.0;
+        double datum_alt_ = 0.0;
+        bool datum_set_ = false;
+
+        // Wirebit PTY for serial output (NMEA)
+        std::unique_ptr<wirebit::PtyLink> pty_;
 
         /**
          * @brief Write NMEA string to shared memory
@@ -183,6 +194,27 @@ namespace fs {
          * @brief Set PHTG status
          */
         void set_phtg_status(bool enable);
+
+        /**
+         * @brief Enable serial output via PTY device
+         * @param uuid Robot UUID for symlink path (optional)
+         * @return PTY path (symlink if uuid provided, else raw /dev/pts/X)
+         */
+        std::string enable_serial_output(const std::string &uuid = "");
+
+        /**
+         * @brief Get PTY path for serial output
+         * @return PTY slave path or empty string if not enabled
+         */
+        std::string get_serial_path() const;
+
+        /**
+         * @brief Set datum (reference point) for ENU to WGS84 conversion
+         * @param lat Latitude in degrees
+         * @param lon Longitude in degrees
+         * @param alt Altitude in meters
+         */
+        void set_datum(double lat, double lon, double alt = 0.0);
 
       private:
         /**

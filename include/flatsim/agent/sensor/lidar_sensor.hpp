@@ -3,7 +3,9 @@
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
+#include <memory>
 #include <vector>
+#include <wirebit/wirebit.hpp>
 
 namespace fs {
     /**
@@ -81,6 +83,9 @@ namespace fs {
         // Flag indicating simulator data is available
         bool simulator_data_available_ = false;
 
+        // Wirebit PTY for serial output (binary)
+        std::unique_ptr<wirebit::PtyLink> pty_;
+
       public:
         /**
          * @brief Construct a new LIDAR Sensor
@@ -138,6 +143,19 @@ namespace fs {
         float get_resolution_deg() const { return horizontal_resolution * 180.0f / M_PI; }
         float get_min_range() const { return min_range; }
         float get_max_range() const { return max_range; }
+
+        /**
+         * @brief Enable serial output via PTY device
+         * @param uuid Robot UUID for symlink path (optional)
+         * @return PTY path (symlink if uuid provided, else raw /dev/pts/X)
+         */
+        std::string enable_serial_output(const std::string &uuid = "");
+
+        /**
+         * @brief Get PTY path for serial output
+         * @return PTY slave path or empty string if not enabled
+         */
+        std::string get_serial_path() const;
 
       private:
         /**

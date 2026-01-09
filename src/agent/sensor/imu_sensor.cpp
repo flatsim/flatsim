@@ -1,7 +1,10 @@
 #include "flatsim/agent/sensor/imu_sensor.hpp"
 #include "flatsim/utils.hpp"
 #include <cmath>
+#include <cstdio>
+#include <echo/echo.hpp>
 #include <random>
+#include <unistd.h>
 
 namespace fs {
 
@@ -82,6 +85,17 @@ namespace fs {
             // Write to shared memory if enabled
             if (shm_enabled) {
                 write_to_shm();
+            }
+
+            // Write JSON to PTY serial output
+            if (pty_) {
+                char buf[256];
+                int len = snprintf(buf, sizeof(buf),
+                                   R"({"ax":%.4f,"ay":%.4f,"az":%.4f,"gx":%.4f,"gy":%.4f,"gz":%.4f,"yaw":%.4f})"
+                                   "\n",
+                                   current_data.accel_x, current_data.accel_y, current_data.accel_z,
+                                   current_data.gyro_x, current_data.gyro_y, current_data.gyro_z, current_data.yaw);
+                ::write(pty_->master_fd(), buf, len);
             }
 
             // Schedule next update
@@ -447,5 +461,37 @@ namespace fs {
         metadata += "  memcpy(&imu, shm_data_ptr, sizeof(imu));\n";
         return metadata;
     }
+
+    std::string IMUSensor::enable_serial_output(const std::string &uuid) {
+        auto res = wirebit::PtyLink::create();
+        if (res.is_err()) {
+            echo::error("[IMUSensor] Failed to create PTY: ", res.error().message.c_str()).red();
+            return "";
+        }
+        pty_ = std::make_unique<wirebit::PtyLink>(std::move(res.value()));
+
+        std::string path = std::string(pty_->slave_path().c_str());
+
+        // Create symlink if UUID provided
+        if (!uuid.empty()) {
+            std::string symlink_path = "/tmp/flatsim/" + uuid + "/imu";
+            std::string dir = "/tmp/flatsim/" + uuid;
+
+            std::system(("mkdir -p " + dir).c_str());
+            ::unlink(symlink_path.c_str());
+
+            if (::symlink(path.c_str(), symlink_path.c_str()) == 0) {
+                echo::trace("[IMUSensor] Serial: ", symlink_path, " -> ", path).green();
+                path = symlink_path;
+            } else {
+                echo::trace("[IMUSensor] Serial: ", path).green();
+            }
+        } else {
+            echo::trace("[IMUSensor] Serial: ", path).green();
+        }
+        return path;
+    }
+
+    std::string IMUSensor::get_serial_path() const { return pty_ ? std::string(pty_->slave_path().c_str()) : ""; }
 
 } // namespace fs

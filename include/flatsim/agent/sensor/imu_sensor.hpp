@@ -3,6 +3,8 @@
 #include "flatsim/agent/sensor/sensor.hpp"
 #include "flatsim/types.hpp"
 #include <chrono>
+#include <memory>
+#include <wirebit/wirebit.hpp>
 
 namespace fs {
     /**
@@ -104,6 +106,9 @@ namespace fs {
         // Flag indicating simulator data is available (skip self-computation)
         bool simulator_data_available_ = false;
 
+        // Wirebit PTY for serial output (JSON)
+        std::unique_ptr<wirebit::PtyLink> pty_;
+
       public:
         /**
          * @brief Construct a new IMU Sensor
@@ -181,6 +186,19 @@ namespace fs {
          * @brief Reset sensor biases and calibration
          */
         void reset_calibration();
+
+        /**
+         * @brief Enable serial output via PTY device
+         * @param uuid Robot UUID for symlink path (optional)
+         * @return PTY path (symlink if uuid provided, else raw /dev/pts/X)
+         */
+        std::string enable_serial_output(const std::string &uuid = "");
+
+        /**
+         * @brief Get PTY path for serial output
+         * @return PTY slave path or empty string if not enabled
+         */
+        std::string get_serial_path() const;
 
       private:
         /**

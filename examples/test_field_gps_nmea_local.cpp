@@ -189,6 +189,8 @@ int main(int argc, char **argv) {
     int last_reset_step = -1000;
     bool phtg = false;
 
+    tractor.machine().sensors.get<fs::GPSSensor>()->enable_serial_output(tractor.uuid());
+
     while (true) {
         auto elapsed =
             std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();

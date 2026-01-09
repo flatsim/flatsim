@@ -1,6 +1,9 @@
 #include "flatsim/agent/sensor/gps_sensor.hpp"
 #include <cmath>
+#include <concord/frame/convert.hpp>
+#include <echo/echo.hpp>
 #include <random>
+#include <unistd.h>
 
 namespace fs {
 
@@ -47,6 +50,11 @@ namespace fs {
         // Write all sentences at once to shared memory
         if (shm_enabled && !current_nmea_sentence.empty()) {
             write_to_shm();
+        }
+
+        // Write to PTY serial output
+        if (pty_ && !current_nmea_sentence.empty()) {
+            ::write(pty_->master_fd(), current_nmea_sentence.c_str(), current_nmea_sentence.size());
         }
     }
 
@@ -357,29 +365,23 @@ namespace fs {
     }
 
     void GPSSensor::convert_enu_to_wgs84(const datapod::Pose &robot_pose) {
-        // This is a simplified conversion - in a real system, you would need
-        // proper geodetic transformations using the datum information
+        // Use datum if set, otherwise default to 0,0
+        datapod::Geo origin{datum_lat_, datum_lon_, datum_alt_};
 
-        // For simulation purposes, assume a local origin and convert ENU to approximate WGS84
-        // This should ideally use the world datum that's already available in the system
+        // Create ENU point with origin
+        concord::frame::ENU enu{robot_pose.point.x, robot_pose.point.y, robot_pose.point.z, origin};
 
-        // Extract ENU coordinates
+        // Convert to WGS84 using concord
+        concord::earth::WGS wgs = concord::frame::to_wgs(enu);
+
+        current_data.latitude = wgs.latitude;
+        current_data.longitude = wgs.longitude;
+        current_data.altitude = wgs.altitude;
+
+        // Estimate velocity from position changes (simplified)
         double east = robot_pose.point.x;
         double north = robot_pose.point.y;
         double up = robot_pose.point.z;
-
-        // Simple conversion (this should use proper geodetic transformations)
-        // Assuming a local origin around latitude 45°N for example
-        const double origin_lat = 45.0;  // degrees
-        const double origin_lon = -93.0; // degrees
-        const double origin_alt = 300.0; // meters
-
-        // Convert ENU to lat/lon (simplified)
-        current_data.latitude = origin_lat + (north / 111000.0); // ~111km per degree
-        current_data.longitude = origin_lon + (east / (111000.0 * std::cos(origin_lat * M_PI / 180.0)));
-        current_data.altitude = origin_alt + up;
-
-        // Estimate velocity from position changes (simplified)
         static datapod::Pose last_pose = robot_pose;
         static double last_time = last_update_time;
 
@@ -394,6 +396,49 @@ namespace fs {
 
         last_pose = robot_pose;
         last_time = last_update_time;
+    }
+
+    std::string GPSSensor::enable_serial_output(const std::string &uuid) {
+        auto res = wirebit::PtyLink::create();
+        if (res.is_err()) {
+            echo::error("[GPSSensor] Failed to create PTY: ", res.error().message.c_str()).red();
+            return "";
+        }
+        pty_ = std::make_unique<wirebit::PtyLink>(std::move(res.value()));
+
+        std::string path = std::string(pty_->slave_path().c_str());
+
+        // Create symlink if UUID provided
+        if (!uuid.empty()) {
+            std::string symlink_path = "/tmp/flatsim/" + uuid + "/gps";
+            std::string dir = "/tmp/flatsim/" + uuid;
+
+            // Create directory
+            std::system(("mkdir -p " + dir).c_str());
+
+            // Remove old symlink if exists
+            ::unlink(symlink_path.c_str());
+
+            // Create symlink
+            if (::symlink(path.c_str(), symlink_path.c_str()) == 0) {
+                echo::trace("[GPSSensor] Serial: ", symlink_path, " -> ", path).green();
+                path = symlink_path;
+            } else {
+                echo::trace("[GPSSensor] Serial: ", path).green();
+            }
+        } else {
+            echo::trace("[GPSSensor] Serial: ", path).green();
+        }
+        return path;
+    }
+
+    std::string GPSSensor::get_serial_path() const { return pty_ ? std::string(pty_->slave_path().c_str()) : ""; }
+
+    void GPSSensor::set_datum(double lat, double lon, double alt) {
+        datum_lat_ = lat;
+        datum_lon_ = lon;
+        datum_alt_ = alt;
+        datum_set_ = true;
     }
 
 } // namespace fs

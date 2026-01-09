@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <echo/echo.hpp>
+#include <unistd.h>
 
 namespace fs {
 
@@ -31,6 +33,25 @@ namespace fs {
             // Write to SHM if enabled
             if (shm_enabled && data_valid) {
                 write_to_shm();
+            }
+
+            // Write binary to PTY serial output
+            if (pty_ && data_valid && !current_data.ranges.empty()) {
+                uint32_t num_points = static_cast<uint32_t>(current_data.ranges.size());
+                size_t ranges_size = num_points * sizeof(float);
+                size_t angles_size = num_points * sizeof(float);
+                size_t total_size = sizeof(uint32_t) + ranges_size + angles_size;
+
+                std::vector<uint8_t> buf(total_size);
+                uint8_t *ptr = buf.data();
+
+                std::memcpy(ptr, &num_points, sizeof(uint32_t));
+                ptr += sizeof(uint32_t);
+                std::memcpy(ptr, current_data.ranges.data(), ranges_size);
+                ptr += ranges_size;
+                std::memcpy(ptr, current_data.angles.data(), angles_size);
+
+                ::write(pty_->master_fd(), buf.data(), total_size);
             }
 
             // Schedule next update
@@ -168,5 +189,34 @@ namespace fs {
         metadata += "Total size: 4 + (num_ranges * 9) bytes\n";
         return metadata;
     }
+
+    std::string LIDARSensor::enable_serial_output(const std::string &uuid) {
+        auto res = wirebit::PtyLink::create();
+        if (res.is_err()) {
+            echo::error("[LIDARSensor] Failed to create PTY: ", res.error().message.c_str()).red();
+            return "";
+        }
+        pty_ = std::make_unique<wirebit::PtyLink>(std::move(res.value()));
+
+        std::string path = std::string(pty_->slave_path().c_str());
+
+        // Create symlink if UUID provided
+        if (!uuid.empty()) {
+            std::string symlink_path = "/tmp/flatsim/" + uuid + "/lidar";
+            std::string dir = "/tmp/flatsim/" + uuid;
+
+            std::system(("mkdir -p " + dir).c_str());
+            ::unlink(symlink_path.c_str());
+
+            if (::symlink(path.c_str(), symlink_path.c_str()) == 0) {
+                path = symlink_path;
+            }
+        }
+
+        echo::trace("[LIDARSensor] Serial output: ", path.c_str()).green();
+        return path;
+    }
+
+    std::string LIDARSensor::get_serial_path() const { return pty_ ? std::string(pty_->slave_path().c_str()) : ""; }
 
 } // namespace fs
