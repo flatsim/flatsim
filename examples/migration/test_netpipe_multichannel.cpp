@@ -116,7 +116,7 @@ void run_simulator() {
     std::cout << "Agent connected!\n";
 
     // Create RemoteRouter on the single channel
-    netpipe::RemoteRouter router(*client_stream);
+    netpipe::Remote<netpipe::Unidirect> router(*client_stream);
 
     // Track spawned agents
     std::string spawned_uuid;
@@ -240,7 +240,7 @@ void run_agent() {
     std::cout << "Connected to simulator!\n";
 
     // Create RemoteRouter on the single channel
-    netpipe::RemoteRouter router(stream);
+    netpipe::Remote<netpipe::Unidirect> router(stream);
 
     // SPAWN
     std::cout << "\n--- Testing SPAWN ---\n";

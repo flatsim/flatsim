@@ -120,7 +120,7 @@ void run_simulator() {
     std::cout << "Agent connected!\n";
 
     // Create RemotePeer for bidirectional communication
-    netpipe::RemotePeer peer(*client_stream, 100, true); // max 100 concurrent, metrics enabled
+    netpipe::Remote<netpipe::Bidirect> peer(*client_stream, 100, true); // max 100 concurrent, metrics enabled
 
     // Track spawned agents
     std::string spawned_uuid;
@@ -264,7 +264,7 @@ void run_agent() {
     std::cout << "Connected to simulator!\n";
 
     // Create RemotePeer for bidirectional communication
-    netpipe::RemotePeer peer(stream, 100, true); // max 100 concurrent, metrics enabled
+    netpipe::Remote<netpipe::Bidirect> peer(stream, 100, true); // max 100 concurrent, metrics enabled
 
     std::atomic<int> state_updates_received{0};
 

@@ -353,7 +353,7 @@ namespace flatsim {
     }
 
     // ============================================================================
-    // RPC Layer - RemoteRouter wrapper for spawn/despawn/heartbeat
+    // RPC Layer - Remote<Unidirect> wrapper for spawn/despawn/heartbeat
     // ============================================================================
 
     // RPC method IDs
@@ -377,7 +377,7 @@ namespace flatsim {
         std::unique_ptr<netpipe::TcpStream> tcp_stream_; // Owned stream for TCP
         std::unique_ptr<netpipe::IpcStream> ipc_stream_; // Owned stream for IPC
         std::unique_ptr<netpipe::ShmStream> shm_stream_; // Owned stream for SHM
-        std::unique_ptr<netpipe::RemoteRouter> router_;
+        std::unique_ptr<netpipe::Remote<netpipe::Unidirect>> router_;
 
       public:
         RpcClient() = default;
@@ -393,7 +393,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*tcp_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*tcp_stream_);
                 return true;
             }
             case Endpoint::Type::IPC: {
@@ -403,7 +403,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*ipc_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*ipc_stream_);
                 return true;
             }
             case Endpoint::Type::SHM: {
@@ -413,7 +413,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*shm_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*shm_stream_);
                 return true;
             }
             }
@@ -447,7 +447,7 @@ namespace flatsim {
         std::unique_ptr<netpipe::TcpStream> tcp_stream_; // Owned stream for TCP
         std::unique_ptr<netpipe::IpcStream> ipc_stream_; // Owned stream for IPC
         std::unique_ptr<netpipe::ShmStream> shm_stream_; // Owned stream for SHM
-        std::unique_ptr<netpipe::RemoteRouter> router_;
+        std::unique_ptr<netpipe::Remote<netpipe::Unidirect>> router_;
 
       public:
         RpcServer() = default;
@@ -462,7 +462,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*tcp_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*tcp_stream_);
                 return true;
             }
             case Endpoint::Type::IPC: {
@@ -472,7 +472,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*ipc_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*ipc_stream_);
                 return true;
             }
             case Endpoint::Type::SHM: {
@@ -482,7 +482,7 @@ namespace flatsim {
                 if (res.is_err()) {
                     return false;
                 }
-                router_ = std::make_unique<netpipe::RemoteRouter>(*shm_stream_);
+                router_ = std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*shm_stream_);
                 return true;
             }
             }
@@ -511,14 +511,16 @@ namespace flatsim {
                 if (tcp) {
                     client_server->tcp_stream_ = std::unique_ptr<netpipe::TcpStream>(tcp);
                     res.value().release();
-                    client_server->router_ = std::make_unique<netpipe::RemoteRouter>(*client_server->tcp_stream_);
+                    client_server->router_ =
+                        std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*client_server->tcp_stream_);
                 }
             } else if (ipc_stream_) {
                 auto *ipc = dynamic_cast<netpipe::IpcStream *>(res.value().get());
                 if (ipc) {
                     client_server->ipc_stream_ = std::unique_ptr<netpipe::IpcStream>(ipc);
                     res.value().release();
-                    client_server->router_ = std::make_unique<netpipe::RemoteRouter>(*client_server->ipc_stream_);
+                    client_server->router_ =
+                        std::make_unique<netpipe::Remote<netpipe::Unidirect>>(*client_server->ipc_stream_);
                 }
             }
 
@@ -565,19 +567,19 @@ namespace flatsim {
     };
 
     // ============================================================================
-    // RpcPeer - Bidirectional RPC using RemotePeer (single channel)
+    // RpcPeer - Bidirectional RPC using Remote<Bidirect> (single channel)
     // ============================================================================
 
     // Handler type for RPC methods
     using RpcHandler = std::function<std::vector<uint8_t>(const std::vector<uint8_t> &)>;
 
-    // RpcPeer - wraps netpipe::RemotePeer for bidirectional communication
+    // RpcPeer - wraps netpipe::Remote<Bidirect> for bidirectional communication
     class RpcPeer {
       private:
         std::unique_ptr<netpipe::TcpStream> tcp_stream_;
         std::unique_ptr<netpipe::IpcStream> ipc_stream_;
         std::unique_ptr<netpipe::ShmStream> shm_stream_;
-        std::unique_ptr<netpipe::RemotePeer> peer_;
+        std::unique_ptr<netpipe::Remote<netpipe::Bidirect>> peer_;
         Endpoint::Type type_;
         std::string last_error_;
 
@@ -597,7 +599,8 @@ namespace flatsim {
                     last_error_ = std::string(res.error().message.c_str());
                     return false;
                 }
-                peer_ = std::make_unique<netpipe::RemotePeer>(*tcp_stream_, max_concurrent, enable_metrics);
+                peer_ =
+                    std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*tcp_stream_, max_concurrent, enable_metrics);
                 return true;
             }
             case Endpoint::Type::IPC: {
@@ -608,7 +611,8 @@ namespace flatsim {
                     last_error_ = std::string(res.error().message.c_str());
                     return false;
                 }
-                peer_ = std::make_unique<netpipe::RemotePeer>(*ipc_stream_, max_concurrent, enable_metrics);
+                peer_ =
+                    std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*ipc_stream_, max_concurrent, enable_metrics);
                 return true;
             }
             case Endpoint::Type::SHM: {
@@ -619,7 +623,8 @@ namespace flatsim {
                     last_error_ = std::string(res.error().message.c_str());
                     return false;
                 }
-                peer_ = std::make_unique<netpipe::RemotePeer>(*shm_stream_, max_concurrent, enable_metrics);
+                peer_ =
+                    std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*shm_stream_, max_concurrent, enable_metrics);
                 return true;
             }
             }
@@ -690,16 +695,16 @@ namespace flatsim {
                 if (tcp) {
                     client_peer->tcp_stream_ = std::unique_ptr<netpipe::TcpStream>(tcp);
                     res.value().release();
-                    client_peer->peer_ = std::make_unique<netpipe::RemotePeer>(*client_peer->tcp_stream_,
-                                                                               max_concurrent, enable_metrics);
+                    client_peer->peer_ = std::make_unique<netpipe::Remote<netpipe::Bidirect>>(
+                        *client_peer->tcp_stream_, max_concurrent, enable_metrics);
                 }
             } else if (ipc_stream_) {
                 auto *ipc = dynamic_cast<netpipe::IpcStream *>(res.value().get());
                 if (ipc) {
                     client_peer->ipc_stream_ = std::unique_ptr<netpipe::IpcStream>(ipc);
                     res.value().release();
-                    client_peer->peer_ = std::make_unique<netpipe::RemotePeer>(*client_peer->ipc_stream_,
-                                                                               max_concurrent, enable_metrics);
+                    client_peer->peer_ = std::make_unique<netpipe::Remote<netpipe::Bidirect>>(
+                        *client_peer->ipc_stream_, max_concurrent, enable_metrics);
                 }
             }
 
