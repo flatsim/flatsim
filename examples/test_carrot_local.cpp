@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
     std::cout << "=== Carrot Algorithm Path Following Test (LOCAL mode) ===" << std::endl;
 
-    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
     if (!std::filesystem::exists(machine_file)) {
         std::cerr << "[Error] Missing machine file: " << machine_file << std::endl;
         return 1;

@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    auto &husky = sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(0.0, 0.0, 0.0));
+    auto &husky = sim.spawn_agent("examples/machines/urdf/husky.urdf", utils::make_pose_2d(0.0, 0.0, 0.0));
 
     // We drive the tracker manually so we can control RobotState.turn_first (Agent wrapper doesn't expose it yet).
     husky.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);

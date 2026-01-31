@@ -216,13 +216,13 @@ namespace simulator {
     // Local Agent Management
     // ============================================================================
 
-    agent::Agent &Simulator::spawn_agent(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
+    agent::Agent &Simulator::spawn_agent(const std::filesystem::path &machine_path, datapod::Pose spawn_pose,
                                          std::optional<std::string> uuid, std::optional<pigment::RGB> color) {
         if (conn_ != Conn::LOCAL) {
             throw std::runtime_error("spawn_agent() only available in LOCAL mode");
         }
 
-        auto machine_config = agent::Loader::load_from_json(json_path, spawn_pose, color);
+        auto machine_config = agent::Loader::load_from_urdf(machine_path, spawn_pose, color);
 
         // Override UUID if provided
         if (uuid.has_value()) {

@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
     const std::string uuid = "field_gps_tractor_0";
     const auto color = ROBOT_COLORS[0];
 
-    auto &tractor = sim.spawn_agent("examples/machines/tractor.json",
+    auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf",
                                     utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f), uuid, color);
 
     echo::info("Robot UUID: ", tractor.uuid());

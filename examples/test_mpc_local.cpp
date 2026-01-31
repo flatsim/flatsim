@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     std::cout << "=== MPC Path Following Test (LOCAL mode) ===" << std::endl;
 
     // Find machine file
-    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
 
     // GPS datum (reference point for local <-> WGS84 conversion)
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};

@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
     if (!std::filesystem::exists(machine_file)) {
         std::error_code ec;
         std::filesystem::path probe = std::filesystem::absolute(argv[0], ec).parent_path();
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     datapod::Pose spawn_pose = utils::make_pose_2d(10.0, 10.0, 0.0);
 
     // Load machine configuration
-    types::Machine machine_config = agent::Loader::load_from_json(machine_file, spawn_pose);
+    types::Machine machine_config = agent::Loader::load_from_urdf(machine_file, spawn_pose);
     machine_config.uuid = "agent_001";
     std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
 

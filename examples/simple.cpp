@@ -28,7 +28,7 @@ int main() {
 
     try {
         datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, 0.0);
-        auto machine = agent::Loader::load_from_json("examples/machines/tractor.json", spawn_pose);
+        auto machine = agent::Loader::load_from_urdf("examples/machines/urdf/tractor.urdf", spawn_pose);
 
         std::cout << "[Loader] Loaded: " << machine.name << std::endl;
 

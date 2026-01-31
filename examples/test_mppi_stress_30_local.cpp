@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
         const std::string uuid = "tractor_" + std::to_string(i);
         auto &tractor =
-            sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(sx, sy, yaw), uuid, color);
+            sim.spawn_agent("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(sx, sy, yaw), uuid, color);
         tractors.push_back(&tractor);
     }
 

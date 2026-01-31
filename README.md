@@ -11,7 +11,7 @@ Key libraries used (current):
 - rerun — optional visualization / recording stream
 - pigment — simple RGB helpers used by examples & loaders
 - ZeroMQ (libzmq / cppzmq) — IPC/TCP transport between Agent and Simulator
-- boost::json — config / machine loader
+- agent47/robomod — URDF machine loader
 
 Note: previous versions and older docs mention kokkos, muli, concord, zoneout and other dependencies. The codebase has moved — those are no longer primary dependencies.
 
@@ -22,9 +22,9 @@ Quick example (single-process / LOCAL mode):
 datapod::Geo datum{51.989, 5.658, 53.8};
 simulator::Simulator sim(500.0f, 500.0f, datum);
 
-// Spawn a robot from JSON file
+// Spawn a robot from URDF file
 datapod::Pose pose{datapod::Point{5.0f, 0.0f, 0.0f}, datapod::Quaternion::from_euler({0,0,0})};
-auto &robot = sim.spawn_agent("examples/machines/tractor.json", pose);
+auto &robot = sim.spawn_agent("examples/machines/urdf/tractor.urdf", pose);
 
 // Simple run loop
 const float dt = 0.016f; // 60 Hz
@@ -68,7 +68,7 @@ IPC — client:
 
 int main() {
     datapod::Pose pose = utils::make_pose_2d(10.0, 10.0, 0.0);
-    types::Machine m = agent::Loader::load_from_json("examples/machines/tractor.json", pose);
+    types::Machine m = agent::Loader::load_from_urdf("examples/machines/urdf/tractor.urdf", pose);
 
     // Empty address -> IPC transport
     agent::Agent client("");

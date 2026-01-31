@@ -106,7 +106,7 @@ namespace fs {
         // Flag indicating simulator data is available (skip self-computation)
         bool simulator_data_available_ = false;
 
-        // Wirebit PTY for serial output (JSON)
+        // Wirebit PTY for serial output
         std::unique_ptr<wirebit::PtyLink> pty_;
 
       public:

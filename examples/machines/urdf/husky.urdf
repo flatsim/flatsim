@@ -1,0 +1,152 @@
+<?xml version="1.0"?>
+<robot name="husky">
+  <flatsim>
+    <color rgba="128 0 255 255"/>
+    <turning radius="0.0"/>
+  </flatsim>
+
+  <!-- Base footprint: virtual link at ground level -->
+  <link name="base_footprint"/>
+
+  <!-- Base link: robot origin at center of wheel axis -->
+  <link name="base_link"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.125" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Main body (karosseries/body) -->
+  <link name="body_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.67 0.99 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.67 0.99 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="body_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="body_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="body" karosserie_sections="0" karosserie_has_physics="true"/>
+  </joint>
+
+  <!-- Wheels: differential drive (no steering joints) -->
+  <link name="front_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_right_wheel_link"/>
+    <origin xyz="0.335 0.3 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.05" throttle_diff="1" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <link name="front_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_left_wheel_link"/>
+    <origin xyz="-0.335 0.3 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.05" throttle_diff="-1" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <link name="rear_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_link"/>
+    <origin xyz="0.335 -0.3 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.05" throttle_diff="1" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <link name="rear_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.15"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_link"/>
+    <origin xyz="-0.335 -0.3 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.05" throttle_diff="-1" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <!-- Power: represent battery geometry and store parameters as tags -->
+  <link name="battery_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.2 0.15"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.2 0.15"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="battery_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="battery_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <flatsim power_name="battery" power_type="BATTERY" power_capacity="100" power_consumption_rate="0.05" power_charge_rate="0"/>
+  </joint>
+
+</robot>

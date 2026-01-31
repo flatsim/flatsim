@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
     // Spawn tractor with a stable UUID for SHM paths
     constexpr float kSpawnYaw = -static_cast<float>(std::numbers::pi / 2.0);
-    auto &tractor = sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(0.0, 0.0, kSpawnYaw),
+    auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(0.0, 0.0, kSpawnYaw),
                                     std::string("test_sensors_joy"));
 
     std::cout << "Tractor loaded: " << tractor.name() << " (UUID: " << tractor.uuid() << ")" << std::endl;

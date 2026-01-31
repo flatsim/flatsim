@@ -87,7 +87,7 @@ namespace fs {
                 write_to_shm();
             }
 
-            // Write JSON to PTY serial output
+            // Write to PTY serial output
             if (pty_) {
                 char buf[256];
                 int len = snprintf(buf, sizeof(buf),

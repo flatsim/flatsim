@@ -44,7 +44,7 @@ namespace types {
         datapod::Box bound;
     };
 
-    // Backwards-compatible name (legacy JSON key is still "tank")
+    // Backwards-compatible alias
     using Tank = Container;
 
     struct Power {

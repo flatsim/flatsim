@@ -8,63 +8,14 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <regex>
 #include <sstream>
+
+#include <agent47/model/urdf.hpp>
 
 namespace agent {
 
     static float deg2rad(float deg) { return deg * (M_PI / 180.0f); }
-
-    // RAII wrapper for json_value_s to ensure proper cleanup
-    struct JsonDeleter {
-        void operator()(json_value_s *ptr) const {
-            if (ptr) free(ptr);
-        }
-    };
-    using JsonPtr = std::unique_ptr<json_value_s, JsonDeleter>;
-
-    // Helper functions implementation
-    json_object_element_s *Loader::find_element(json_object_s *obj, const char *key) {
-        if (!obj) return nullptr;
-        for (auto *elem = obj->start; elem; elem = elem->next) {
-            if (elem->name && strcmp(elem->name->string, key) == 0) {
-                return elem;
-            }
-        }
-        return nullptr;
-    }
-
-    std::string Loader::get_string(json_value_s *val) {
-        if (!val || val->type != json_type_string) return "";
-        auto *str = static_cast<json_string_s *>(val->payload);
-        return std::string(str->string, str->string_size);
-    }
-
-    double Loader::get_number(json_value_s *val) {
-        if (!val || val->type != json_type_number) return 0.0;
-        auto *num = static_cast<json_number_s *>(val->payload);
-        return std::stod(std::string(num->number, num->number_size));
-    }
-
-    int Loader::get_int(json_value_s *val) {
-        if (!val || val->type != json_type_number) return 0;
-        auto *num = static_cast<json_number_s *>(val->payload);
-        return std::stoi(std::string(num->number, num->number_size));
-    }
-
-    bool Loader::get_bool(json_value_s *val) {
-        if (!val) return false;
-        return val->type == json_type_true;
-    }
-
-    json_object_s *Loader::get_object(json_value_s *val) {
-        if (!val || val->type != json_type_object) return nullptr;
-        return static_cast<json_object_s *>(val->payload);
-    }
-
-    json_array_s *Loader::get_array(json_value_s *val) {
-        if (!val || val->type != json_type_array) return nullptr;
-        return static_cast<json_array_s *>(val->payload);
-    }
 
     std::string Loader::generate_uuid() {
         static std::random_device rd;
@@ -97,181 +48,6 @@ namespace agent {
         return ss.str();
     }
 
-    types::Machine Loader::load_from_json(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
-                                          std::optional<pigment::RGB> color) {
-
-        std::ifstream file(json_path);
-        if (!file.is_open()) {
-            throw std::runtime_error("Cannot open machine file: " + json_path.string());
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        std::string json_str = buffer.str();
-        file.close();
-
-        json_value_s *root = json_parse(json_str.c_str(), json_str.size());
-        if (!root) {
-            throw std::runtime_error("Failed to parse JSON file: " + json_path.string());
-        }
-        JsonPtr jv(root);
-
-        json_object_s *j = get_object(jv.get());
-        if (!j) {
-            throw std::runtime_error("JSON root is not an object");
-        }
-
-        types::Machine machine;
-
-        // Parse info section
-        auto *info_elem = find_element(j, "info");
-        if (!info_elem) {
-            throw std::runtime_error("Missing 'info' field in JSON");
-        }
-        json_object_s *info = get_object(info_elem->value);
-        if (!info) {
-            throw std::runtime_error("'info' field is not an object");
-        }
-
-        auto *type_elem = find_element(info, "type");
-        if (type_elem) {
-            machine.type = get_string(type_elem->value);
-        }
-
-        auto *name_elem = find_element(info, "name");
-        if (name_elem) {
-            machine.name = get_string(name_elem->value);
-        }
-
-        auto *uuid_elem = find_element(info, "uuid");
-        std::string uuid_str = uuid_elem ? get_string(uuid_elem->value) : "";
-        machine.uuid = (uuid_str.empty() || uuid_str == "") ? generate_uuid() : uuid_str;
-
-        auto *rci_elem = find_element(info, "rci");
-        if (rci_elem) {
-            machine.rci = static_cast<uint32_t>(get_int(rci_elem->value));
-        }
-
-        auto *works_on_elem = find_element(info, "works_on");
-        if (works_on_elem) {
-            json_array_s *works_on = get_array(works_on_elem->value);
-            if (works_on) {
-                for (auto *elem = works_on->start; elem; elem = elem->next) {
-                    machine.works_on.push_back(get_string(elem->value));
-                }
-            }
-        }
-
-        auto *role_elem = find_element(info, "role");
-        std::string role_str = role_elem ? get_string(role_elem->value) : "MASTER";
-        if (role_str == "SLAVE") {
-            machine.role = types::MachineRole::SLAVE;
-        } else if (role_str == "FOLLOWER") {
-            machine.role = types::MachineRole::FOLLOWER;
-        } else {
-            machine.role = types::MachineRole::MASTER;
-        }
-
-        // Parse dimensions
-        auto *dims_elem = find_element(j, "dimensions");
-        if (!dims_elem) {
-            throw std::runtime_error("Missing 'dimensions' field in JSON");
-        }
-        json_object_s *dims = get_object(dims_elem->value);
-        if (!dims) {
-            throw std::runtime_error("'dimensions' field is not an object");
-        }
-
-        auto *width_elem = find_element(dims, "width");
-        auto *height_elem = find_element(dims, "height");
-        float width = width_elem ? static_cast<float>(get_number(width_elem->value)) : 0.0f;
-        float height = height_elem ? static_cast<float>(get_number(height_elem->value)) : 0.0f;
-        machine.bound.pose = spawn_pose;
-        machine.bound.size = datapod::Size{width, height, 0.0f};
-
-        // Parse color
-        auto *color_elem = find_element(j, "color");
-        if (color_elem) {
-            json_object_s *color_obj = get_object(color_elem->value);
-            pigment::RGB machine_color = color.value_or(parse_color(color_obj));
-            machine.color = machine_color;
-        } else if (color.has_value()) {
-            machine.color = color.value();
-        }
-
-        // Parse wheels
-        auto *wheels_elem = find_element(j, "wheels");
-        if (wheels_elem) {
-            json_array_s *wheels = get_array(wheels_elem->value);
-            if (wheels) {
-                parse_wheels(machine, wheels);
-            }
-        }
-
-        // Parse controls
-        auto *controls_elem = find_element(j, "controls");
-        if (controls_elem) {
-            json_object_s *controls = get_object(controls_elem->value);
-            if (controls) {
-                parse_controls(machine, controls);
-            }
-        }
-
-        // Parse optional sections
-        auto *karosseries_elem = find_element(j, "karosseries");
-        if (karosseries_elem) {
-            json_array_s *karosseries = get_array(karosseries_elem->value);
-            if (karosseries) {
-                parse_karosseries(machine, karosseries, machine.color);
-            }
-        }
-
-        auto *hitches_elem = find_element(j, "hitches");
-        if (hitches_elem) {
-            json_object_s *hitches = get_object(hitches_elem->value);
-            if (hitches) {
-                parse_hitches(machine, hitches);
-            }
-        }
-
-        auto *tank_elem = find_element(j, "tank");
-        if (tank_elem) {
-            json_object_s *tank = get_object(tank_elem->value);
-            if (tank) {
-                parse_tank(machine, tank);
-            }
-        }
-
-        auto *power_elem = find_element(j, "power");
-        if (power_elem) {
-            json_object_s *power = get_object(power_elem->value);
-            if (power) {
-                parse_power(machine, power);
-            }
-        }
-
-        auto *capability_elem = find_element(j, "capability");
-        if (capability_elem) {
-            json_object_s *capability = get_object(capability_elem->value);
-            if (capability) {
-                parse_capability(machine, capability);
-            }
-        }
-
-        auto *turn_elem = find_element(j, "turn");
-        if (turn_elem) {
-            json_object_s *turn = get_object(turn_elem->value);
-            if (turn) {
-                auto *radius_elem = find_element(turn, "radius");
-                if (radius_elem) {
-                    machine.turning_radius = static_cast<float>(get_number(radius_elem->value));
-                }
-            }
-        }
-
-        return machine;
-    }
-
     std::vector<std::filesystem::path> Loader::find_machine_files(const std::filesystem::path &directory) {
         std::vector<std::filesystem::path> machine_files;
 
@@ -280,427 +56,591 @@ namespace agent {
         }
 
         for (const auto &entry : std::filesystem::directory_iterator(directory)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".json") {
-                machine_files.push_back(entry.path());
+            if (entry.is_regular_file()) {
+                auto ext = entry.path().extension();
+                if (ext == ".urdf") {
+                    machine_files.push_back(entry.path());
+                }
             }
         }
 
         return machine_files;
     }
 
-    bool Loader::validate_json(const std::filesystem::path &json_path) {
-        try {
-            std::ifstream file(json_path);
-            if (!file.is_open()) {
-                return false;
-            }
+    // ========================================================================
+    // URDF Loading Implementation
+    // ========================================================================
 
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            std::string json_str = buffer.str();
-
-            json_value_s *root = json_parse(json_str.c_str(), json_str.size());
-            if (!root) {
-                return false;
-            }
-            JsonPtr jv(root);
-
-            json_object_s *j = get_object(jv.get());
-            if (!j) {
-                return false;
-            }
-
-            if (!find_element(j, "info") || !find_element(j, "dimensions") || !find_element(j, "color") ||
-                !find_element(j, "wheels") || !find_element(j, "controls")) {
-                return false;
-            }
-
-            auto *info_elem = find_element(j, "info");
-            json_object_s *info = get_object(info_elem->value);
-            if (!info) {
-                return false;
-            }
-
-            if (!find_element(info, "type") || !find_element(info, "name") || !find_element(info, "rci") ||
-                !find_element(info, "works_on")) {
-                return false;
-            }
-
-            return true;
-        } catch (const std::exception &e) {
-            std::cerr << "JSON validation failed for " << json_path.string() << ": " << e.what() << std::endl;
-            return false;
+    // Helper to extract attribute value from raw XML string like: <flatsim attr="value" .../>
+    static std::string extract_attr(const std::string &xml, const std::string &attr_name) {
+        std::string search = attr_name + "=\"";
+        auto pos = xml.find(search);
+        if (pos == std::string::npos) {
+            return "";
         }
+        pos += search.length();
+        auto end = xml.find('"', pos);
+        if (end == std::string::npos) {
+            return "";
+        }
+        return xml.substr(pos, end - pos);
     }
 
-    pigment::RGB Loader::parse_color(json_object_s *color_json) {
-        if (!color_json) {
-            return pigment::RGB(0, 0, 0);
-        }
-
-        auto *r_elem = find_element(color_json, "r");
-        auto *g_elem = find_element(color_json, "g");
-        auto *b_elem = find_element(color_json, "b");
-
-        int r = r_elem ? get_int(r_elem->value) : 0;
-        int g = g_elem ? get_int(g_elem->value) : 0;
-        int b = b_elem ? get_int(b_elem->value) : 0;
-
-        return pigment::RGB(r, g, b);
+    // Helper to check if an attribute exists in raw XML
+    static bool has_attr(const std::string &xml, const std::string &attr_name) {
+        return xml.find(attr_name + "=\"") != std::string::npos;
     }
 
-    datapod::Pose Loader::parse_pose(json_object_s *pos_json) {
-        if (!pos_json) {
-            return utils::make_pose(0.0, 0.0, 0.0, 0.0);
-        }
+    // Parse robot-level <flatsim> extension: <flatsim><color rgba="..."/><turning radius="..."/></flatsim>
+    struct RobotFlatsimExt {
+        pigment::RGB color{128, 128, 128};
+        float turning_radius = 1.0f;
+        bool has_color = false;
+    };
 
-        auto *x_elem = find_element(pos_json, "x");
-        auto *y_elem = find_element(pos_json, "y");
-        auto *yaw_elem = find_element(pos_json, "yaw");
-
-        float x = x_elem ? static_cast<float>(get_number(x_elem->value)) : 0.0f;
-        float y = y_elem ? static_cast<float>(get_number(y_elem->value)) : 0.0f;
-        float yaw = yaw_elem ? static_cast<float>(get_number(yaw_elem->value)) : 0.0f;
-
-        return utils::make_pose(x, y, 0.0, yaw);
-    }
-
-    datapod::Size Loader::parse_size(json_object_s *size_json) {
-        if (!size_json) {
-            return datapod::Size{0.0f, 0.0f, 0.0f};
-        }
-
-        auto *width_elem = find_element(size_json, "width");
-        auto *height_elem = find_element(size_json, "height");
-        auto *depth_elem = find_element(size_json, "depth");
-
-        float width = width_elem ? static_cast<float>(get_number(width_elem->value)) : 0.0f;
-        float height = height_elem ? static_cast<float>(get_number(height_elem->value)) : 0.0f;
-        float depth = depth_elem ? static_cast<float>(get_number(depth_elem->value)) : 0.0f;
-
-        return datapod::Size{width, height, depth};
-    }
-
-    void Loader::parse_wheels(types::Machine &machine, json_array_s *wheels_json) {
-        if (!wheels_json) {
-            return;
-        }
-
-        std::vector<bool> left_side;
-
-        for (auto *wheel_elem = wheels_json->start; wheel_elem; wheel_elem = wheel_elem->next) {
-            json_object_s *wheel = get_object(wheel_elem->value);
-            if (!wheel) {
+    static RobotFlatsimExt parse_robot_flatsim_ext(const dp::Vector<dp::String> &robot_exts) {
+        RobotFlatsimExt ext;
+        for (const auto &xml_str : robot_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
                 continue;
             }
-
-            types::Wheel w;
-
-            auto *name_elem = find_element(wheel, "name");
-            if (name_elem) {
-                w.name = get_string(name_elem->value);
+            // Parse <color rgba="r g b a"/>
+            auto color_pos = xml.find("<color");
+            if (color_pos != std::string::npos) {
+                std::string rgba = extract_attr(xml.substr(color_pos), "rgba");
+                if (!rgba.empty()) {
+                    float r, g, b, a;
+                    if (sscanf(rgba.c_str(), "%f %f %f %f", &r, &g, &b, &a) >= 3) {
+                        ext.color = pigment::RGB(static_cast<int>(r), static_cast<int>(g), static_cast<int>(b));
+                        ext.has_color = true;
+                    }
+                }
             }
-
-            auto *position_elem = find_element(wheel, "position");
-            if (position_elem) {
-                json_object_s *position = get_object(position_elem->value);
-                w.bound.pose = parse_pose(position);
+            // Parse <turning radius="..."/>
+            auto turn_pos = xml.find("<turning");
+            if (turn_pos != std::string::npos) {
+                std::string radius_str = extract_attr(xml.substr(turn_pos), "radius");
+                if (!radius_str.empty()) {
+                    ext.turning_radius = std::stof(radius_str);
+                }
             }
-
-            auto *size_elem = find_element(wheel, "size");
-            if (size_elem) {
-                json_object_s *size = get_object(size_elem->value);
-                w.bound.size = parse_size(size);
-            }
-
-            auto *color_elem = find_element(wheel, "color");
-            if (color_elem) {
-                json_object_s *color = get_object(color_elem->value);
-                w.color = parse_color(color);
-            } else {
-                w.color = pigment::RGB(0, 0, 0);
-            }
-
-            machine.wheels.push_back(w);
-
-            auto *side_elem = find_element(wheel, "side");
-            std::string side = side_elem ? get_string(side_elem->value) : "";
-            left_side.push_back(side == "left");
         }
-
-        machine.controls.left_side = left_side;
+        return ext;
     }
 
-    void Loader::parse_controls(types::Machine &machine, json_object_s *controls_json) {
-        if (!controls_json) {
-            return;
-        }
+    // Wheel extension: <flatsim side="left|right" throttle_max="..." throttle_diff="..." steering_max="..."
+    // steering_diff="..."/>
+    struct WheelFlatsimExt {
+        std::string side; // "left" or "right"
+        float throttle_max = 1.0f;
+        float throttle_diff = 0.0f;
+        std::optional<float> steering_max; // degrees, can be negative for opposite direction
+        float steering_diff = 0.0f;
+    };
 
-        auto *steering_elem = find_element(controls_json, "steering");
-        auto *throttle_elem = find_element(controls_json, "throttle");
-
-        if (steering_elem) {
-            json_object_s *steering = get_object(steering_elem->value);
-            if (steering) {
-                auto *max_angles_elem = find_element(steering, "max_angles");
-                if (max_angles_elem) {
-                    json_array_s *max_angles = get_array(max_angles_elem->value);
-                    if (max_angles) {
-                        size_t i = 0;
-                        for (auto *elem = max_angles->start; elem; elem = elem->next, ++i) {
-                            float angle_rad = deg2rad(static_cast<float>(get_number(elem->value)));
-                            machine.controls.steerings_max.push_back(angle_rad);
-                            if (i < machine.wheels.size()) {
-                                machine.wheels[i].steering_max = angle_rad;
-                            }
-                        }
-                    }
-                }
-
-                auto *differential_elem = find_element(steering, "differential");
-                if (differential_elem) {
-                    json_array_s *differential = get_array(differential_elem->value);
-                    if (differential) {
-                        for (auto *elem = differential->start; elem; elem = elem->next) {
-                            machine.controls.steerings_diff.push_back(
-                                deg2rad(static_cast<float>(get_number(elem->value))));
-                        }
-                    }
-                }
-            }
-        }
-
-        if (throttle_elem) {
-            json_object_s *throttle = get_object(throttle_elem->value);
-            if (throttle) {
-                auto *max_values_elem = find_element(throttle, "max_values");
-                if (max_values_elem) {
-                    json_array_s *max_values = get_array(max_values_elem->value);
-                    if (max_values) {
-                        size_t i = 0;
-                        for (auto *elem = max_values->start; elem; elem = elem->next, ++i) {
-                            float throttle_val = static_cast<float>(get_number(elem->value));
-                            machine.controls.throttles_max.push_back(throttle_val);
-                            if (i < machine.wheels.size()) {
-                                machine.wheels[i].throttle_max = throttle_val;
-                            }
-                        }
-                    }
-                }
-
-                auto *throttle_diff_elem = find_element(throttle, "differential");
-                if (throttle_diff_elem) {
-                    json_array_s *throttle_diff = get_array(throttle_diff_elem->value);
-                    if (throttle_diff) {
-                        for (auto *elem = throttle_diff->start; elem; elem = elem->next) {
-                            machine.controls.throttles_diff.push_back(static_cast<float>(get_number(elem->value)));
-                        }
-                    }
-                } else {
-                    machine.controls.throttles_diff.resize(machine.controls.throttles_max.size(), 0.0f);
-                }
-            }
-        }
-    }
-
-    void Loader::parse_karosseries(types::Machine &machine, json_array_s *karos_json, pigment::RGB default_color) {
-        if (!karos_json) {
-            return;
-        }
-
-        for (auto *karo_elem = karos_json->start; karo_elem; karo_elem = karo_elem->next) {
-            json_object_s *karo = get_object(karo_elem->value);
-            if (!karo) {
+    static std::optional<WheelFlatsimExt> parse_wheel_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
                 continue;
             }
-
-            types::Karosserie kaross;
-
-            auto *name_elem = find_element(karo, "name");
-            if (name_elem) {
-                kaross.name = get_string(name_elem->value);
-            }
-
-            auto *position_elem = find_element(karo, "position");
-            if (position_elem) {
-                json_object_s *position = get_object(position_elem->value);
-                kaross.bound.pose = parse_pose(position);
-            }
-
-            auto *size_elem = find_element(karo, "size");
-            if (size_elem) {
-                json_object_s *size = get_object(size_elem->value);
-                kaross.bound.size = parse_size(size);
-            }
-
-            auto *color_elem = find_element(karo, "color");
-            if (color_elem) {
-                json_object_s *color = get_object(color_elem->value);
-                kaross.color = parse_color(color);
-            } else {
-                kaross.color = default_color;
-            }
-
-            auto *has_physics_elem = find_element(karo, "has_physics");
-            kaross.has_physics = has_physics_elem ? get_bool(has_physics_elem->value) : true;
-
-            auto *sections_elem = find_element(karo, "sections");
-            int sections_count = sections_elem ? get_int(sections_elem->value) : 0;
-            for (int i = 0; i < sections_count; i++) {
-                types::Section section;
-                section.name = "section_" + std::to_string(i);
-                section.bound.pose = utils::make_pose(0.0, 0.0, 0.0, 0.0);
-                section.bound.size = kaross.bound.size;
-                section.color = kaross.color;
-                kaross.sections.push_back(section);
-            }
-
-            machine.karosseries.push_back(kaross);
-        }
-    }
-
-    void Loader::parse_hitches(types::Machine &machine, json_object_s *hitches_json) {
-        if (!hitches_json) {
-            return;
-        }
-
-        for (auto *elem = hitches_json->start; elem; elem = elem->next) {
-            std::string name(elem->name->string, elem->name->string_size);
-            json_object_s *hitch = get_object(elem->value);
-            if (!hitch) {
+            if (!has_attr(xml, "side")) {
                 continue;
             }
-
-            types::Hitch hitch_info;
-            hitch_info.name = name;
-
-            auto *position_elem = find_element(hitch, "position");
-            if (position_elem) {
-                json_object_s *position = get_object(position_elem->value);
-                hitch_info.bound.pose = parse_pose(position);
+            WheelFlatsimExt ext;
+            ext.side = extract_attr(xml, "side");
+            std::string throttle_max = extract_attr(xml, "throttle_max");
+            if (!throttle_max.empty()) {
+                ext.throttle_max = std::stof(throttle_max);
             }
-
-            auto *size_elem = find_element(hitch, "size");
-            if (size_elem) {
-                json_object_s *size = get_object(size_elem->value);
-                hitch_info.bound.size = parse_size(size);
+            std::string throttle_diff = extract_attr(xml, "throttle_diff");
+            if (!throttle_diff.empty()) {
+                ext.throttle_diff = std::stof(throttle_diff);
             }
-
-            hitch_info.color = pigment::RGB(0, 0, 0);
-
-            auto *is_master_elem = find_element(hitch, "is_master");
-            hitch_info.is_master = is_master_elem ? get_bool(is_master_elem->value) : true;
-
-            machine.hitches[name] = hitch_info;
+            std::string steering_max = extract_attr(xml, "steering_max");
+            if (!steering_max.empty()) {
+                ext.steering_max = std::stof(steering_max);
+            }
+            std::string steering_diff = extract_attr(xml, "steering_diff");
+            if (!steering_diff.empty()) {
+                ext.steering_diff = std::stof(steering_diff);
+            }
+            return ext;
         }
+        return std::nullopt;
     }
 
-    void Loader::parse_tank(types::Machine &machine, json_object_s *tank_json) {
-        if (!tank_json) {
-            return;
+    // Steering extension: <flatsim steering_diff="..." steering_max="..."/> (on revolute joint, no "side" attr)
+    // steering_max is in degrees and can be negative to indicate opposite steering direction
+    struct SteeringFlatsimExt {
+        float steering_diff = 0.0f;
+        std::optional<float> steering_max; // degrees, negative = opposite direction
+    };
+
+    static std::optional<SteeringFlatsimExt> parse_steering_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
+                continue;
+            }
+            // Steering joints have steering_diff but NOT side
+            if (has_attr(xml, "side")) {
+                continue;
+            }
+            if (!has_attr(xml, "steering_diff") && !has_attr(xml, "steering_max")) {
+                continue;
+            }
+            SteeringFlatsimExt ext;
+            std::string steering_diff = extract_attr(xml, "steering_diff");
+            if (!steering_diff.empty()) {
+                ext.steering_diff = std::stof(steering_diff);
+            }
+            std::string steering_max = extract_attr(xml, "steering_max");
+            if (!steering_max.empty()) {
+                ext.steering_max = std::stof(steering_max);
+            }
+            return ext;
         }
-
-        types::Tank tank;
-
-        auto *name_elem = find_element(tank_json, "name");
-        if (name_elem) {
-            tank.name = get_string(name_elem->value);
-        }
-
-        auto *type_elem = find_element(tank_json, "type");
-        if (type_elem) {
-            std::string type_str = get_string(type_elem->value);
-            tank.type = (type_str == "WASTE") ? types::ContainerType::WASTE : types::ContainerType::HARVEST;
-        }
-
-        auto *capacity_elem = find_element(tank_json, "capacity");
-        if (capacity_elem) {
-            tank.capacity = static_cast<float>(get_number(capacity_elem->value));
-        }
-
-        auto *position_elem = find_element(tank_json, "position");
-        if (position_elem) {
-            json_object_s *position = get_object(position_elem->value);
-            tank.bound.pose = parse_pose(position);
-        }
-
-        auto *size_elem = find_element(tank_json, "size");
-        if (size_elem) {
-            json_object_s *size = get_object(size_elem->value);
-            tank.bound.size = parse_size(size);
-        }
-
-        machine.tank = tank;
+        return std::nullopt;
     }
 
-    void Loader::parse_power(types::Machine &machine, json_object_s *power_json) {
-        if (!power_json) {
-            return;
+    // Karosserie extension: <flatsim karosserie_name="..." karosserie_sections="..." karosserie_has_physics="..."/>
+    struct KarosserieFlatsimExt {
+        std::string name;
+        int sections = 0;
+        bool has_physics = true;
+    };
+
+    static std::optional<KarosserieFlatsimExt> parse_karosserie_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
+                continue;
+            }
+            if (!has_attr(xml, "karosserie_name")) {
+                continue;
+            }
+            KarosserieFlatsimExt ext;
+            ext.name = extract_attr(xml, "karosserie_name");
+            std::string sections = extract_attr(xml, "karosserie_sections");
+            if (!sections.empty()) {
+                ext.sections = std::stoi(sections);
+            }
+            std::string has_physics = extract_attr(xml, "karosserie_has_physics");
+            if (!has_physics.empty()) {
+                ext.has_physics = (has_physics == "true" || has_physics == "1");
+            }
+            return ext;
         }
-
-        types::Power power;
-
-        auto *name_elem = find_element(power_json, "name");
-        if (name_elem) {
-            power.name = get_string(name_elem->value);
-        }
-
-        auto *type_elem = find_element(power_json, "type");
-        if (type_elem) {
-            std::string type_str = get_string(type_elem->value);
-            power.type = (type_str == "BATTERY") ? types::PowerType::BATTERY : types::PowerType::FUEL;
-        }
-
-        auto *capacity_elem = find_element(power_json, "capacity");
-        if (capacity_elem) {
-            power.capacity = static_cast<float>(get_number(capacity_elem->value));
-        }
-
-        auto *consumption_rate_elem = find_element(power_json, "consumption_rate");
-        if (consumption_rate_elem) {
-            power.consumption_rate = static_cast<float>(get_number(consumption_rate_elem->value));
-        }
-
-        auto *charge_rate_elem = find_element(power_json, "charge_rate");
-        power.charge_rate = charge_rate_elem ? static_cast<float>(get_number(charge_rate_elem->value)) : 0.0f;
-
-        machine.power_source = power;
+        return std::nullopt;
     }
 
-    void Loader::parse_capability(types::Machine &machine, json_object_s *capability_json) {
-        if (!capability_json) {
-            return;
+    // Hitch extension: <flatsim hitch_name="..." hitch_is_master="..."/>
+    struct HitchFlatsimExt {
+        std::string name;
+        bool is_master = true;
+    };
+
+    static std::optional<HitchFlatsimExt> parse_hitch_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
+                continue;
+            }
+            if (!has_attr(xml, "hitch_name")) {
+                continue;
+            }
+            HitchFlatsimExt ext;
+            ext.name = extract_attr(xml, "hitch_name");
+            std::string is_master = extract_attr(xml, "hitch_is_master");
+            if (!is_master.empty()) {
+                ext.is_master = (is_master == "true" || is_master == "1");
+            }
+            return ext;
+        }
+        return std::nullopt;
+    }
+
+    // Tank extension: <flatsim tank_name="..." tank_type="..." tank_capacity="..."/>
+    struct TankFlatsimExt {
+        std::string name;
+        std::string type = "HARVEST";
+        float capacity = 1000.0f;
+    };
+
+    static std::optional<TankFlatsimExt> parse_tank_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
+                continue;
+            }
+            if (!has_attr(xml, "tank_name")) {
+                continue;
+            }
+            TankFlatsimExt ext;
+            ext.name = extract_attr(xml, "tank_name");
+            std::string type = extract_attr(xml, "tank_type");
+            if (!type.empty()) {
+                ext.type = type;
+            }
+            std::string capacity = extract_attr(xml, "tank_capacity");
+            if (!capacity.empty()) {
+                ext.capacity = std::stof(capacity);
+            }
+            return ext;
+        }
+        return std::nullopt;
+    }
+
+    // Power extension: <flatsim power_name="..." power_type="..." power_capacity="..." power_consumption_rate="..."
+    // power_charge_rate="..."/>
+    struct PowerFlatsimExt {
+        std::string name;
+        std::string type = "FUEL";
+        float capacity = 100.0f;
+        float consumption_rate = 0.01f;
+        float charge_rate = 0.0f;
+    };
+
+    static std::optional<PowerFlatsimExt> parse_power_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
+        for (const auto &xml_str : joint_exts) {
+            std::string xml(xml_str.c_str());
+            if (xml.find("<flatsim") == std::string::npos) {
+                continue;
+            }
+            if (!has_attr(xml, "power_name")) {
+                continue;
+            }
+            PowerFlatsimExt ext;
+            ext.name = extract_attr(xml, "power_name");
+            std::string type = extract_attr(xml, "power_type");
+            if (!type.empty()) {
+                ext.type = type;
+            }
+            std::string capacity = extract_attr(xml, "power_capacity");
+            if (!capacity.empty()) {
+                ext.capacity = std::stof(capacity);
+            }
+            std::string consumption_rate = extract_attr(xml, "power_consumption_rate");
+            if (!consumption_rate.empty()) {
+                ext.consumption_rate = std::stof(consumption_rate);
+            }
+            std::string charge_rate = extract_attr(xml, "power_charge_rate");
+            if (!charge_rate.empty()) {
+                ext.charge_rate = std::stof(charge_rate);
+            }
+            return ext;
+        }
+        return std::nullopt;
+    }
+
+    // Extract geometry size from link's visual/collision
+    static datapod::Size get_geometry_size(const datapod::robot::Link &link) {
+        // Prefer collision, fall back to visual
+        if (!link.collisions.empty()) {
+            const auto &geom = link.collisions[0].geom;
+            if (geom.is_box()) {
+                return geom.as_box()->size;
+            }
+            if (geom.is_cylinder()) {
+                // For wheel: height = radius*2, width = length
+                auto *cyl = geom.as_cylinder();
+                return datapod::Size{cyl->length, cyl->radius * 2.0, cyl->radius * 2.0};
+            }
+        }
+        if (!link.visuals.empty()) {
+            const auto &geom = link.visuals[0].geom;
+            if (geom.is_box()) {
+                return geom.as_box()->size;
+            }
+            if (geom.is_cylinder()) {
+                auto *cyl = geom.as_cylinder();
+                return datapod::Size{cyl->length, cyl->radius * 2.0, cyl->radius * 2.0};
+            }
+        }
+        return datapod::Size{0.1, 0.1, 0.1};
+    }
+
+    types::Machine Loader::load_from_urdf(const std::filesystem::path &urdf_path, datapod::Pose spawn_pose,
+                                          std::optional<pigment::RGB> color) {
+        // Read URDF file
+        std::ifstream file(urdf_path);
+        if (!file.is_open()) {
+            throw std::runtime_error("Cannot open URDF file: " + urdf_path.string());
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string xml_str = buffer.str();
+        file.close();
+
+        // Parse URDF using robomod
+        auto result = robomod::from_urdf_string(dp::String(xml_str.c_str()));
+        if (result.is_err()) {
+            throw std::runtime_error("Failed to parse URDF: " + urdf_path.string());
+        }
+        robomod::Urdf urdf = result.value();
+
+        types::Machine machine;
+
+        // Extract robot name from filename
+        machine.name = urdf_path.stem().string();
+        machine.uuid = generate_uuid();
+        machine.type = machine.name;
+        machine.rci = 0;
+
+        // Parse robot-level extensions (color, turning radius)
+        RobotFlatsimExt robot_ext = parse_robot_flatsim_ext(urdf.ext.robot);
+        machine.color = color.value_or(robot_ext.color);
+        machine.turning_radius = robot_ext.turning_radius;
+
+        // Build link name -> index map
+        std::unordered_map<std::string, size_t> link_map;
+        for (size_t i = 0; i < urdf.model.links.size(); ++i) {
+            link_map[std::string(urdf.model.links[i].name.c_str())] = i;
         }
 
-        auto *work_on_elem = find_element(capability_json, "work_on");
-        if (work_on_elem) {
-            json_array_s *work_on = get_array(work_on_elem->value);
-            if (work_on) {
-                for (auto *elem = work_on->start; elem; elem = elem->next) {
-                    machine.capability.work_on.push_back(get_string(elem->value));
+        // Build joint name -> index map and child_link -> joint map
+        std::unordered_map<std::string, size_t> joint_map;
+        std::unordered_map<std::string, size_t> child_to_joint;
+        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
+            const auto &joint = urdf.model.joints[i];
+            joint_map[std::string(joint.name.c_str())] = i;
+            // Find child link name
+            if (joint.child < urdf.model.links.size()) {
+                std::string child_name(urdf.model.links[joint.child].name.c_str());
+                child_to_joint[child_name] = i;
+            }
+        }
+
+        // Track steering joints for wheel processing
+        // Map: steer_link_name -> {steering_max, steering_diff, steer_joint_origin}
+        struct SteeringInfo {
+            float steering_max = 0.0f;
+            float steering_diff = 0.0f;
+            datapod::Pose origin;
+        };
+        std::unordered_map<std::string, SteeringInfo> steering_map;
+
+        // Compute machine bounding box
+        float min_x = std::numeric_limits<float>::max();
+        float max_x = std::numeric_limits<float>::lowest();
+        float min_y = std::numeric_limits<float>::max();
+        float max_y = std::numeric_limits<float>::lowest();
+
+        // First pass: collect steering joints (revolute with steering_diff but no side)
+        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
+            const auto &joint = urdf.model.joints[i];
+            std::string joint_name(joint.name.c_str());
+
+            // Get extensions for this joint
+            dp::Vector<dp::String> empty_exts;
+            auto it = urdf.ext.joints.find(dp::String(joint_name.c_str()));
+            const auto &joint_exts = (it != urdf.ext.joints.end()) ? it->second : empty_exts;
+
+            if (joint.type == datapod::robot::Joint::Type::Revolute) {
+                auto steer_ext = parse_steering_flatsim_ext(joint_exts);
+                if (steer_ext) {
+                    // Get child link name (the steer_link)
+                    if (joint.child < urdf.model.links.size()) {
+                        std::string child_name(urdf.model.links[joint.child].name.c_str());
+                        SteeringInfo info;
+                        info.steering_diff = steer_ext->steering_diff;
+                        // Use steering_max from extension if provided (can be negative for opposite direction)
+                        // Otherwise fall back to joint limit upper bound
+                        if (steer_ext->steering_max.has_value()) {
+                            info.steering_max = deg2rad(steer_ext->steering_max.value());
+                        } else if (joint.limits.has_value()) {
+                            info.steering_max = static_cast<float>(joint.limits->upper);
+                        }
+                        info.origin = joint.origin;
+                        steering_map[child_name] = info;
+                    }
                 }
             }
         }
 
-        auto *connect_to_elem = find_element(capability_json, "connect_to");
-        if (connect_to_elem) {
-            json_array_s *connect_to = get_array(connect_to_elem->value);
-            if (connect_to) {
-                for (auto *elem = connect_to->start; elem; elem = elem->next) {
-                    machine.capability.connect_to.push_back(get_string(elem->value));
+        // Second pass: process all joints
+        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
+            const auto &joint = urdf.model.joints[i];
+            std::string joint_name(joint.name.c_str());
+
+            // Get extensions for this joint
+            dp::Vector<dp::String> empty_exts;
+            auto it = urdf.ext.joints.find(dp::String(joint_name.c_str()));
+            const auto &joint_exts = (it != urdf.ext.joints.end()) ? it->second : empty_exts;
+
+            // Get child link
+            if (joint.child >= urdf.model.links.size()) {
+                continue;
+            }
+            const auto &child_link = urdf.model.links[joint.child];
+            std::string child_link_name(child_link.name.c_str());
+
+            // Get parent link name for steering lookup
+            std::string parent_link_name;
+            if (joint.parent < urdf.model.links.size()) {
+                parent_link_name = std::string(urdf.model.links[joint.parent].name.c_str());
+            }
+
+            // Check for wheel (continuous joint with "side" attribute)
+            if (joint.type == datapod::robot::Joint::Type::Continuous) {
+                auto wheel_ext = parse_wheel_flatsim_ext(joint_exts);
+                if (wheel_ext) {
+                    types::Wheel wheel;
+                    wheel.name = child_link_name;
+                    wheel.color = pigment::RGB(30, 30, 30);
+
+                    // Get wheel geometry
+                    datapod::Size size = get_geometry_size(child_link);
+                    wheel.bound.size = size;
+
+                    // Compute wheel position
+                    datapod::Pose wheel_pose = joint.origin;
+
+                    // Check if parent is a steering link
+                    auto steer_it = steering_map.find(parent_link_name);
+                    if (steer_it != steering_map.end()) {
+                        // Combine steer joint origin + wheel joint origin
+                        wheel_pose.point.x += steer_it->second.origin.point.x;
+                        wheel_pose.point.y += steer_it->second.origin.point.y;
+                        wheel_pose.point.z += steer_it->second.origin.point.z;
+                    }
+
+                    // Determine steering_max: wheel ext takes priority, then steering joint, then 0
+                    if (wheel_ext->steering_max.has_value()) {
+                        wheel.steering_max = deg2rad(wheel_ext->steering_max.value());
+                    } else if (steer_it != steering_map.end()) {
+                        wheel.steering_max = steer_it->second.steering_max;
+                    } else {
+                        wheel.steering_max = 0.0f;
+                    }
+                    machine.controls.steerings_max.push_back(wheel.steering_max);
+
+                    // Determine steering_diff: wheel ext takes priority, then steering joint
+                    float steer_diff = wheel_ext->steering_diff;
+                    if (steer_diff == 0.0f && steer_it != steering_map.end()) {
+                        steer_diff = steer_it->second.steering_diff;
+                    }
+                    machine.controls.steerings_diff.push_back(deg2rad(steer_diff));
+
+                    wheel.bound.pose = wheel_pose;
+                    wheel.throttle_max = wheel_ext->throttle_max;
+
+                    machine.wheels.push_back(wheel);
+                    machine.controls.throttles_max.push_back(wheel_ext->throttle_max);
+                    machine.controls.throttles_diff.push_back(wheel_ext->throttle_diff);
+                    machine.controls.left_side.push_back(wheel_ext->side == "left");
+                }
+            }
+
+            // Check for karosserie (fixed joint with karosserie_name)
+            if (joint.type == datapod::robot::Joint::Type::Fixed) {
+                auto karo_ext = parse_karosserie_flatsim_ext(joint_exts);
+                if (karo_ext) {
+                    types::Karosserie kaross;
+                    kaross.name = karo_ext->name;
+                    kaross.color = machine.color;
+                    kaross.has_physics = karo_ext->has_physics;
+
+                    datapod::Size size = get_geometry_size(child_link);
+                    kaross.bound.size = size;
+                    kaross.bound.pose = joint.origin;
+
+                    // Create sections if specified
+                    for (int s = 0; s < karo_ext->sections; ++s) {
+                        types::Section section;
+                        section.name = "section_" + std::to_string(s);
+                        section.bound.pose = utils::make_pose(0.0, 0.0, 0.0, 0.0);
+                        section.bound.size = kaross.bound.size;
+                        section.color = kaross.color;
+                        kaross.sections.push_back(section);
+                    }
+
+                    machine.karosseries.push_back(kaross);
+
+                    // Update bounds only from "body" karosserie
+                    if (karo_ext->name == "body") {
+                        float x = static_cast<float>(joint.origin.point.x);
+                        float y = static_cast<float>(joint.origin.point.y);
+                        min_x = std::min(min_x, x - static_cast<float>(size.x) / 2);
+                        max_x = std::max(max_x, x + static_cast<float>(size.x) / 2);
+                        min_y = std::min(min_y, y - static_cast<float>(size.y) / 2);
+                        max_y = std::max(max_y, y + static_cast<float>(size.y) / 2);
+                    }
+                }
+
+                // Check for hitch
+                auto hitch_ext = parse_hitch_flatsim_ext(joint_exts);
+                if (hitch_ext) {
+                    types::Hitch hitch;
+                    hitch.name = hitch_ext->name;
+                    hitch.is_master = hitch_ext->is_master;
+                    hitch.color = pigment::RGB(50, 50, 50);
+
+                    datapod::Size size = get_geometry_size(child_link);
+                    hitch.bound.size = size;
+                    hitch.bound.pose = joint.origin;
+
+                    machine.hitches[hitch.name] = hitch;
+                }
+
+                // Check for tank
+                auto tank_ext = parse_tank_flatsim_ext(joint_exts);
+                if (tank_ext) {
+                    types::Tank tank;
+                    tank.name = tank_ext->name;
+                    tank.capacity = tank_ext->capacity;
+                    tank.type =
+                        (tank_ext->type == "WASTE") ? types::ContainerType::WASTE : types::ContainerType::HARVEST;
+
+                    datapod::Size size = get_geometry_size(child_link);
+                    tank.bound.size = size;
+                    tank.bound.pose = joint.origin;
+
+                    machine.tank = tank;
+                }
+
+                // Check for power
+                auto power_ext = parse_power_flatsim_ext(joint_exts);
+                if (power_ext) {
+                    types::Power power;
+                    power.name = power_ext->name;
+                    power.capacity = power_ext->capacity;
+                    power.consumption_rate = power_ext->consumption_rate;
+                    power.charge_rate = power_ext->charge_rate;
+                    power.type = (power_ext->type == "BATTERY") ? types::PowerType::BATTERY : types::PowerType::FUEL;
+
+                    machine.power_source = power;
                 }
             }
         }
 
-        auto *unload_to_elem = find_element(capability_json, "unload_to");
-        if (unload_to_elem) {
-            json_array_s *unload_to = get_array(unload_to_elem->value);
-            if (unload_to) {
-                for (auto *elem = unload_to->start; elem; elem = elem->next) {
-                    machine.capability.unload_to.push_back(get_string(elem->value));
-                }
+        // Set machine bounding box
+        float width = max_x - min_x;
+        float height = max_y - min_y;
+        machine.bound.pose = spawn_pose;
+        machine.bound.size = datapod::Size{width, height, 0.3};
+
+        // Determine role based on presence of hitches
+        bool has_slave_hitch = false;
+        for (const auto &[name, hitch] : machine.hitches) {
+            if (!hitch.is_master) {
+                has_slave_hitch = true;
+                break;
             }
         }
+        if (has_slave_hitch && machine.wheels.empty()) {
+            machine.role = types::MachineRole::SLAVE;
+            machine.slave = true;
+        } else if (has_slave_hitch) {
+            // Has both master and slave hitches - could be either
+            machine.role = types::MachineRole::MASTER;
+        } else {
+            machine.role = types::MachineRole::MASTER;
+        }
+
+        return machine;
     }
 
 } // namespace agent

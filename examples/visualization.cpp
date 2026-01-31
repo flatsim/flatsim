@@ -24,10 +24,10 @@ int main() {
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
-    // Load tractor from JSON
-    std::cout << "[Example] Loading tractor from JSON..." << std::endl;
+    // Load tractor from URDF
+    std::cout << "[Example] Loading tractor from URDF..." << std::endl;
     types::Machine machine =
-        agent::Loader::load_from_json("examples/machines/tractor.json", utils::make_pose_2d(0.0, 0.0, 0.0));
+        agent::Loader::load_from_urdf("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(0.0, 0.0, 0.0));
     std::cout << "[Example] Loaded machine: " << machine.name << " with " << machine.wheels.size() << " wheels, "
               << machine.karosseries.size() << " karosseries, " << machine.hitches.size() << " hitches" << std::endl;
 

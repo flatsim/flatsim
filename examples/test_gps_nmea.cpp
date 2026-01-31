@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
     // Spawn tractor with custom UUID for easy SHM access
     datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f);
-    auto &tractor = sim.spawn_agent("examples/machines/tractor.json", spawn_pose, std::string("test_gps_nmea"));
+    auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose, std::string("test_gps_nmea"));
 
     std::cout << "Tractor loaded: " << tractor.name() << " (UUID: " << tractor.uuid() << ")" << std::endl;
 

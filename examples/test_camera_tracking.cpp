@@ -26,7 +26,7 @@ int main() {
         // Spawn first agent at (0, 0)
         std::cout << "\n[Spawn] Agent 1 at (0, 0) - Camera should track this" << std::endl;
         datapod::Pose spawn_pose1 = utils::make_pose_2d(0.0, 0.0, 0.0);
-        auto &agent1 = sim.spawn_agent("examples/machines/tractor.json", spawn_pose1);
+        auto &agent1 = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose1);
         agent1.set_velocity(0.5f, 0.0f); // Move forward
 
         // Run for a bit
@@ -42,7 +42,7 @@ int main() {
         // Spawn second agent at (20, 20)
         std::cout << "\n[Spawn] Agent 2 at (20, 20) - Camera should now track this one!" << std::endl;
         datapod::Pose spawn_pose2 = utils::make_pose_2d(20.0, 20.0, 1.57); // 90 degrees
-        auto &agent2 = sim.spawn_agent("examples/machines/tractor.json", spawn_pose2);
+        auto &agent2 = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose2);
         agent2.set_velocity(0.3f, 0.1f); // Move in a curve
 
         // Run for a bit
@@ -57,7 +57,7 @@ int main() {
         // Spawn third agent at (-20, -20)
         std::cout << "\n[Spawn] Agent 3 at (-20, -20) - Camera should now track this one!" << std::endl;
         datapod::Pose spawn_pose3 = utils::make_pose_2d(-20.0, -20.0, 3.14); // 180 degrees
-        auto &agent3 = sim.spawn_agent("examples/machines/tractor.json", spawn_pose3);
+        auto &agent3 = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose3);
         agent3.set_velocity(0.4f, -0.1f); // Move in opposite curve
 
         // Run simulation with all three agents

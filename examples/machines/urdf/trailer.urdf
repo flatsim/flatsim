@@ -1,0 +1,194 @@
+<?xml version="1.0"?>
+<robot name="trailer">
+  <flatsim>
+    <color rgba="255 150 0 255"/>
+    <turning radius="4.2"/>
+  </flatsim>
+
+  <!-- Base footprint: virtual link at ground level -->
+  <link name="base_footprint"/>
+
+  <!-- Base link: robot origin at center of wheel axis -->
+  <link name="base_link"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.39" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Body karosserie (defines machine bounds) -->
+  <link name="body_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.8 3.5 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.8 3.5 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="body_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="body_link"/>
+    <origin xyz="0 0.5 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="body" karosserie_sections="0" karosserie_has_physics="true"/>
+  </joint>
+
+  <!-- Trailer body parts (karosseries) -->
+  <link name="towing_pole_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.18 1.04 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.18 1.04 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="towing_pole_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="towing_pole_link"/>
+    <origin xyz="0 1.82 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="towing_pole" karosserie_sections="0" karosserie_has_physics="true"/>
+  </joint>
+
+  <link name="hitch_mount_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.24 0.28 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.24 0.28 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="hitch_mount_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="hitch_mount_link"/>
+    <origin xyz="0 -1.30 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="hitch_mount" karosserie_sections="0" karosserie_has_physics="false"/>
+  </joint>
+
+  <!-- Hitches geometry -->
+  <link name="front_hitch_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.05 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.05 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_hitch_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_hitch_link"/>
+    <origin xyz="0 2.54 0" rpy="0 0 0"/>
+    <flatsim hitch_name="front_hitch" hitch_is_master="false"/>
+  </joint>
+
+  <link name="rear_hitch_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.05 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.05 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_hitch_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="rear_hitch_link"/>
+    <origin xyz="0 -1.30 0" rpy="0 0 0"/>
+    <flatsim hitch_name="rear_hitch" hitch_is_master="true"/>
+  </joint>
+
+  <!-- Tank geometry (storage_bin) -->
+  <link name="storage_bin_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.62 2.34 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.62 2.34 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="storage_bin_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="storage_bin_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <flatsim tank_name="storage_bin" tank_type="HARVEST" tank_capacity="2000"/>
+  </joint>
+
+  <!-- Wheels (no steering) -->
+  <link name="rear_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.39" length="0.396"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.39" length="0.396"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_link"/>
+    <origin xyz="0.9 -0.78 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.0" throttle_diff="0" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <link name="rear_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.39" length="0.396"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.39" length="0.396"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_link"/>
+    <origin xyz="-0.9 -0.78 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.0" throttle_diff="0" steering_max="0" steering_diff="0"/>
+  </joint>
+
+</robot>

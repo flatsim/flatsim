@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
         const pigment::RGB color{static_cast<uint8_t>(color_dis(rng)), static_cast<uint8_t>(color_dis(rng)),
                                  static_cast<uint8_t>(color_dis(rng))};
         const std::string uuid = "tractor_" + std::to_string(i);
-        auto &tractor = sim.spawn_agent("examples/machines/tractor.json", utils::make_pose_2d(x, y, 0.0), uuid, color);
+        auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(x, y, 0.0), uuid, color);
         tractors.push_back(&tractor);
         if ((i + 1) % 50 == 0 || i == kNumRobots - 1) {
             std::cout << "[Setup] Spawned " << (i + 1) << "/" << kNumRobots << std::endl;

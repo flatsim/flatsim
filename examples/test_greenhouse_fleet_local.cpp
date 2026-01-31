@@ -521,7 +521,7 @@ int main(int argc, char **argv) {
         auto spawn_pos = graph.to_world(start_node->x, start_node->y);
         const std::string uuid = generate_uuid();
 
-        auto &robot = sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f),
+        auto &robot = sim.spawn_agent("examples/machines/urdf/husky.urdf", utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f),
                                       uuid, colors[i]);
         robots.push_back(&robot);
         robot.set_speed(0.3f);

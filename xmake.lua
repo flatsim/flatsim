@@ -9,8 +9,9 @@ local PROJECT_VERSION = "0.0.3"
 --   Local:  {"name", "../path/to/local"}  (optional: uses git if not found)
 --   System: "pkgconfig::libname" or {system = "boost"}
 local LIB_DEPS = {
-    {"echo", "https://github.com/bresilla/echo.git", "0.0.23"},
-    {"datapod", "https://github.com/robolibs/datapod.git", "0.0.34"},
+    {"echo", "https://github.com/bresilla/echo.git", "0.0.25"},
+    {"datapod", "https://github.com/robolibs/datapod.git", "0.0.46"},
+    {"agent47", "https://github.com/robolibs/agent47.git", "0.0.6"},
     {"concord", "https://github.com/robolibs/concord.git", "0.0.7"},
     {"pigment", "https://github.com/robolibs/pigment.git", "0.0.6"},
     {"entropy", "https://github.com/robolibs/entropy.git", "0.0.6"},

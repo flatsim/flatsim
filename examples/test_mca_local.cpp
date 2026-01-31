@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
     (void)argv;
     std::cout << "=== MCA (Monte Carlo Approximation / DRA-MPPI) Path Following Test (LOCAL mode) ===" << std::endl;
 
-    std::filesystem::path machine_file = "examples/machines/tractor.json";
+    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
 
     simulator::Simulator sim(500.0f, 500.0f, datum);

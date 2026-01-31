@@ -18,8 +18,8 @@ namespace agent {
       private:
         // Connection mode
         bool local_mode_ = false;
-
         // Netpipe (only used in networked mode)
+
         // Single bidirectional RPC channel
         std::unique_ptr<flatsim::RpcPeer> peer_;
         std::string address_;

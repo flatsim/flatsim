@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
     huskies.reserve(4);
     for (int i = 0; i < 4; ++i) {
         const std::string uuid = "husky_" + std::to_string(i);
-        auto &husky = sim.spawn_agent("examples/machines/husky.json", utils::make_pose_2d(spawns[i].x, spawns[i].y, 0.0), uuid,
+        auto &husky = sim.spawn_agent("examples/machines/urdf/husky.urdf", utils::make_pose_2d(spawns[i].x, spawns[i].y, 0.0), uuid,
                                       colors[i]);
         huskies.push_back(&husky);
     }

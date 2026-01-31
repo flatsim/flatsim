@@ -114,7 +114,7 @@ namespace simulator {
         void tock();
 
         // LOCAL mode: Spawn agent directly (returns reference)
-        agent::Agent &spawn_agent(const std::filesystem::path &json_path, datapod::Pose spawn_pose,
+        agent::Agent &spawn_agent(const std::filesystem::path &machine_path, datapod::Pose spawn_pose,
                                   std::optional<std::string> uuid = std::nullopt,
                                   std::optional<pigment::RGB> color = std::nullopt);
 

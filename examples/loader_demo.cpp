@@ -7,7 +7,7 @@
 #include <thread>
 
 int main() {
-    std::cout << "[Example] Loader demo - Load robot from JSON" << std::endl;
+    std::cout << "[Example] Loader demo - Load robot from URDF" << std::endl;
 
     auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
     rec->spawn().exit_on_failure();
@@ -22,7 +22,7 @@ int main() {
         spawn_pose.point.y = 0.0;
         utils::set_yaw(spawn_pose, 0.0);
 
-        auto machine = agent::Loader::load_from_json("examples/machines/husky.json", spawn_pose);
+        auto machine = agent::Loader::load_from_urdf("examples/machines/urdf/husky.urdf", spawn_pose);
 
         std::cout << "[Loader] Loaded machine: " << machine.name << std::endl;
         std::cout << "[Loader] Type: " << machine.type << std::endl;
