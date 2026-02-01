@@ -3,10 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "flatsim/agent/container_manager.hpp"
 #include "flatsim/agent/control_manager.hpp"
-#include "flatsim/agent/network_manager.hpp"
-#include "flatsim/agent/power_manager.hpp"
 #include "flatsim/agent/sensor_manager.hpp"
 #include "flatsim/types.hpp"
 #include <rerun.hpp>
@@ -30,9 +27,8 @@ namespace agent {
         // Device managers - direct public access (same as old Robot class)
         fs::SensorManager sensors;
         ControlManager controls; // agent::ControlManager
-        fs::Network network;
-        fs::ContainerManager container;
-        fs::PowerManager power;
+
+        // NOTE: network/container/power managers removed (agent47 handles comms).
 
         Machine() = default;
         Machine(std::shared_ptr<rerun::RecordingStream> rec, const types::Machine &config);
