@@ -1,6 +1,7 @@
 #include "flatsim/agent.hpp"
 #include "datapod/datapod.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
+#include "flatsim/simulator/machine.hpp"
 #include "flatsim/tagged_zmq.hpp"
 #include "flatsim/transport.hpp"
 #include <agent47/model/urdf.hpp>
@@ -62,6 +63,23 @@ namespace agent {
 
         // No netpipe needed in local mode
         // Initialize machine with config
+        machine_ = Machine(rec_, config);
+
+        // Initialize all managers (sensors, controls, network, power, container)
+        machine_.init();
+        install_sensor_callbacks();
+    }
+
+    // Constructor for local mode (owned by Simulator)
+    Agent::Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
+                 std::shared_ptr<rerun::RecordingStream> rec)
+        : local_mode_(true), rec_(rec), spawned_(true) {
+
+        agent47_ = std::make_shared<agent47::Agent>(urdf_path, identity, bridge);
+
+        // agent47 owns a datapod::robot::Model; flatsim's Agent-side Machine expects a legacy `types::Machine`
+        // config, so adapt via the simulator's URDF->Machine helper.
+        auto config = simulator::machine_from_model(agent47_->model_.model, datapod::Pose{}, std::nullopt);
         machine_ = Machine(rec_, config);
 
         // Initialize all managers (sensors, controls, network, power, container)

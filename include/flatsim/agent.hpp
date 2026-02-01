@@ -18,6 +18,9 @@ namespace agent {
     using TeleportCallback = std::function<void(const std::string &uuid, const datapod::Pose &pose)>;
 
     class Agent {
+      public:
+        std::shared_ptr<agent47::Agent> agent47_;
+
       private:
         bool local_mode_ = false;
         std::unique_ptr<flatsim::RpcPeer> peer_;
@@ -33,6 +36,9 @@ namespace agent {
       public:
         // Agent(const std::string &address = "");
         Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec);
+        Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
+              std::shared_ptr<rerun::RecordingStream> rec);
+
         ~Agent();
         void set_machine(const types::Machine &config);
         Machine &machine() { return machine_; }
