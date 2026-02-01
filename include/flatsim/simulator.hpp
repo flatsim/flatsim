@@ -17,6 +17,10 @@
 #include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
+#include <agent47/bridge/pipe_bridge.hpp>
+
+#include <netpipe/netpipe.hpp>
+
 // Forward declaration for Agent (avoid circular include)
 namespace agent {
     class Agent;
@@ -46,10 +50,37 @@ namespace simulator {
         // Connection mode
         Conn conn_;
 
-        // Netpipe (only used in IPC/TCP/SHM modes)
-        // Single bidirectional RPC channel per agent
-        std::unique_ptr<flatsim::RpcPeer> listen_peer_;                  // Listening peer for accepting connections
-        std::map<std::string, std::unique_ptr<flatsim::RpcPeer>> peers_; // Per-agent bidirectional peers
+        // agent47 netpipe bridge transport (used in IPC/TCP/SHM modes)
+        std::optional<netpipe::Pipe> agent47_listen_pipe_; // Listening pipe for accepting connections
+
+        struct Agent47Peer {
+            std::optional<netpipe::Pipe> pipe;
+            std::unique_ptr<netpipe::Remote<netpipe::Bidirect>> rpc;
+            std::mutex cmd_mutex;
+            dp::Stamp<agent47::types::Command> last_cmd;
+            bool has_cmd = false;
+
+            Agent47Peer() = default;
+            Agent47Peer(const Agent47Peer &) = delete;
+            Agent47Peer &operator=(const Agent47Peer &) = delete;
+            Agent47Peer(Agent47Peer &&other) noexcept
+                : pipe(std::move(other.pipe)), rpc(std::move(other.rpc)), last_cmd(other.last_cmd),
+                  has_cmd(other.has_cmd) {
+                other.has_cmd = false;
+            }
+            Agent47Peer &operator=(Agent47Peer &&other) noexcept {
+                if (this != &other) {
+                    pipe = std::move(other.pipe);
+                    rpc = std::move(other.rpc);
+                    last_cmd = other.last_cmd;
+                    has_cmd = other.has_cmd;
+                    other.has_cmd = false;
+                }
+                return *this;
+            }
+        };
+
+        std::map<std::string, Agent47Peer> agent47_peers_;
         std::string address_;
 
         // Physics world with obstacle management
@@ -87,12 +118,18 @@ namespace simulator {
         void send_state(const std::string &uuid, const types::ser::MachineState &state);
         void send_sensor_state(const std::string &uuid, const types::ser::SensorState &state);
 
-        // IPC/TCP/SHM only - spawn/despawn and connection management
-        void process_spawn_requests();
+        // agent47 netpipe bridge connection management
+        void process_agent47_connections();
         void cleanup_stale_connections();
 
-        // RPC handlers for peer
-        void register_peer_handlers(flatsim::RpcPeer *peer, const std::string &uuid);
+        // agent47 protocol
+        void register_agent47_handlers(Agent47Peer &peer, const std::string &uuid);
+        static netpipe::Message serialize_agent47_feedback(const dp::Stamp<agent47::types::Feedback> &fb);
+        static netpipe::Message serialize_agent47_sensor(const agent47::types::SensorPacket &pkt);
+        void apply_agent47_command(const std::string &uuid, const agent47::types::Command &cmd, float dt);
+
+        // agent47 handshake
+        void bind_agent47_peer_to_uuid(const std::string &old_uuid, const std::string &new_uuid);
 
       public:
         // Constructor for LOCAL mode (no networking)

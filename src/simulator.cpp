@@ -5,6 +5,7 @@
 #include "flatsim/transport.hpp"
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <datapod/serialization/serialize.hpp>
 #include <echo/echo.hpp>
 #include <filesystem>
@@ -21,6 +22,13 @@
 #include <vector>
 
 namespace simulator {
+
+    // agent47 protocol method IDs (must match agent47::PipeBridge)
+    static constexpr dp::u32 AGENT47_METHOD_COMMAND = 1;
+    static constexpr dp::u32 AGENT47_METHOD_FEEDBACK = 2;
+    static constexpr dp::u32 AGENT47_METHOD_SENSOR = 3;
+    static constexpr dp::u32 AGENT47_METHOD_HEARTBEAT = 4;
+    static constexpr dp::u32 AGENT47_METHOD_MODEL = 5;
 
     static std::filesystem::path ipc_dir() {
         const char *env = std::getenv("FLATSIM_IPC_DIR");
@@ -117,27 +125,28 @@ namespace simulator {
 
         init_rerun();
 
-        // NEW: Setup listening RpcPeer for accepting agent connections
-        listen_peer_ = std::make_unique<flatsim::RpcPeer>();
-
-        flatsim::Endpoint listen_endpoint;
+        // agent47 PipeBridge transport: listen on a netpipe::Pipe
+        netpipe::AnyEndpoint ep;
         if (conn_ == Conn::IPC) {
             auto dir = ipc_dir();
-            const std::string peer_path = (dir / "flatsim_peer").string();
-            listen_endpoint = flatsim::Endpoint::ipc(peer_path);
-            remove_ipc_socket_file("ipc://" + peer_path);
+            const std::string sock_path = (dir / "agent47_peer.sock").string();
+            remove_ipc_socket_file("ipc://" + sock_path);
+            ep = netpipe::AnyEndpoint::ipc_endpoint(dp::String(sock_path.c_str()));
+            echo::info("[Simulator] agent47 listening on ipc://", sock_path);
         } else if (conn_ == Conn::TCP) {
-            listen_endpoint = flatsim::Endpoint::tcp(address_.empty() ? "0.0.0.0" : address_, 5555);
+            const std::string host = address_.empty() ? "0.0.0.0" : address_;
+            ep = netpipe::AnyEndpoint::tcp_endpoint(dp::String(host.c_str()), 5556);
+            echo::info("[Simulator] agent47 listening on tcp://", host, ":5556");
         } else if (conn_ == Conn::SHM) {
-            listen_endpoint = flatsim::Endpoint::shm("flatsim_peer", 1024 * 1024); // 1MB buffer
+            ep = netpipe::AnyEndpoint::shm_endpoint(dp::String("agent47_peer"), 1024 * 1024);
+            echo::info("[Simulator] agent47 listening on shm://agent47_peer:1048576");
         }
 
-        if (!listen_peer_->listen(listen_endpoint)) {
-            throw std::runtime_error("Failed to start peer listener on " + listen_endpoint.to_string() + ": " +
-                                     listen_peer_->last_error());
+        auto listen_res = netpipe::Pipe::listen(ep);
+        if (listen_res.is_err()) {
+            throw std::runtime_error("Failed to start agent47 listener");
         }
-
-        echo::info("[Simulator] Listening for agent connections on ", listen_endpoint.to_string());
+        agent47_listen_pipe_.emplace(std::move(listen_res.value()));
 
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
@@ -155,12 +164,20 @@ namespace simulator {
     Simulator::~Simulator() {
         local_agents_.clear();
 
-        // NEW: Close all peer connections
-        if (listen_peer_) listen_peer_->close();
-        for (auto &[uuid, peer] : peers_) {
-            if (peer) peer->close();
+        // Close agent47 peers
+        if (agent47_listen_pipe_.has_value()) {
+            agent47_listen_pipe_->close();
+            agent47_listen_pipe_.reset();
         }
-        peers_.clear();
+        for (auto &[uuid, peer] : agent47_peers_) {
+            (void)uuid;
+            if (peer.rpc) peer.rpc.reset();
+            if (peer.pipe.has_value()) {
+                peer.pipe->close();
+                peer.pipe.reset();
+            }
+        }
+        agent47_peers_.clear();
     }
 
     // ============================================================================
@@ -237,8 +254,6 @@ namespace simulator {
         create_machine(machine_config);
 
         auto agent_ptr = std::make_unique<agent::Agent>(machine_config, rec_);
-        agent_ptr->set_teleport_callback(
-            [this](const std::string &uuid, const datapod::Pose &pose) { this->teleport_machine(uuid, pose); });
         local_agents_.push_back(std::move(agent_ptr));
 
         update_camera_tracking(machine_config.uuid);
@@ -273,12 +288,32 @@ namespace simulator {
                 agent->update_from_physics(state);
             }
         } else {
-            // NEW: Send via RpcPeer
-            auto it = peers_.find(uuid);
-            if (it != peers_.end() && it->second) {
-                auto data = datapod::serialize(state);
-                it->second->call(flatsim::RpcMethod::STATE, data, 100); // 100ms timeout
+            auto it = agent47_peers_.find(uuid);
+            if (it == agent47_peers_.end() || !it->second.rpc) {
+                return;
             }
+
+            // Convert flatsim state -> agent47 feedback and push to agent via RPC method 2.
+            dp::Stamp<agent47::types::Feedback> fb;
+            fb.timestamp = dp::Stamp<agent47::types::Feedback>::now();
+            fb.value.pose.point.x = state.pose.position.x;
+            fb.value.pose.point.y = state.pose.position.y;
+            fb.value.pose.point.z = 0.0;
+            // Minimal rotation: yaw only (agent47 expects quaternion). We keep identity for now.
+            // The agent47 consumer currently mostly uses pose.point and twist.
+            fb.value.pose.rotation.w = 1.0;
+            fb.value.pose.rotation.x = 0.0;
+            fb.value.pose.rotation.y = 0.0;
+            fb.value.pose.rotation.z = 0.0;
+            fb.value.twist.linear.vx = state.velocity.x;
+            fb.value.twist.linear.vy = state.velocity.y;
+            fb.value.twist.linear.vz = 0.0;
+            fb.value.twist.angular.vx = 0.0;
+            fb.value.twist.angular.vy = 0.0;
+            fb.value.twist.angular.vz = state.angular_vel;
+
+            auto msg = serialize_agent47_feedback(fb);
+            (void)it->second.rpc->call(AGENT47_METHOD_FEEDBACK, msg, 100);
         }
     }
 
@@ -290,11 +325,39 @@ namespace simulator {
                 agent->update_from_sensors(state);
             }
         } else {
-            // NEW: Send via RpcPeer
-            auto it = peers_.find(uuid);
-            if (it != peers_.end() && it->second) {
-                auto data = datapod::serialize(state);
-                it->second->call(flatsim::RpcMethod::SENSORS, data, 100); // 100ms timeout
+            auto it = agent47_peers_.find(uuid);
+            if (it == agent47_peers_.end() || !it->second.rpc) {
+                return;
+            }
+
+            if (state.has_lidar) {
+                agent47::types::SensorPacket pkt;
+                pkt.timestamp = static_cast<dp::i64>(dp::Stamp<agent47::types::Feedback>::now());
+                pkt.kind = agent47::types::SensorKind::Lidar;
+                auto lidar = state.lidar;
+                pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::LidarData>(lidar);
+                auto msg = serialize_agent47_sensor(pkt);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
+            }
+
+            if (state.has_gps) {
+                agent47::types::SensorPacket pkt;
+                pkt.timestamp = static_cast<dp::i64>(dp::Stamp<agent47::types::Feedback>::now());
+                pkt.kind = agent47::types::SensorKind::Gnss;
+                auto gps = state.gps;
+                pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::GpsData>(gps);
+                auto msg = serialize_agent47_sensor(pkt);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
+            }
+
+            if (state.has_imu) {
+                agent47::types::SensorPacket pkt;
+                pkt.timestamp = static_cast<dp::i64>(dp::Stamp<agent47::types::Feedback>::now());
+                pkt.kind = agent47::types::SensorKind::Imu;
+                auto imu = state.imu;
+                pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::ImuData>(imu);
+                auto msg = serialize_agent47_sensor(pkt);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
             }
         }
     }
@@ -303,122 +366,236 @@ namespace simulator {
     // Peer Handler Registration
     // ============================================================================
 
-    void Simulator::register_peer_handlers(flatsim::RpcPeer *peer, const std::string &uuid) {
-        if (!peer) return;
+    static void write_u8(netpipe::Message &buf, dp::u8 v) { buf.push_back(v); }
 
-        // SPAWN handler
-        peer->register_method(flatsim::RpcMethod::SPAWN, [this, uuid](const std::vector<uint8_t> &req) {
-            try {
-                auto request = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(req);
-                if (request.type != types::ser::MsgType::SPAWN) {
-                    return std::vector<uint8_t>{0}; // Failure
+    template <typename T> static void write_val(netpipe::Message &buf, const T &val) {
+        const dp::u8 *p = reinterpret_cast<const dp::u8 *>(&val);
+        for (dp::usize i = 0; i < sizeof(T); ++i) {
+            buf.push_back(p[i]);
+        }
+    }
+
+    netpipe::Message Simulator::serialize_agent47_feedback(const dp::Stamp<agent47::types::Feedback> &fb) {
+        netpipe::Message msg;
+        write_val(msg, static_cast<dp::i64>(fb.timestamp));
+
+        write_val(msg, fb.value.pose.point.x);
+        write_val(msg, fb.value.pose.point.y);
+        write_val(msg, fb.value.pose.point.z);
+        write_val(msg, fb.value.pose.rotation.w);
+        write_val(msg, fb.value.pose.rotation.x);
+        write_val(msg, fb.value.pose.rotation.y);
+        write_val(msg, fb.value.pose.rotation.z);
+
+        write_val(msg, fb.value.twist.linear.vx);
+        write_val(msg, fb.value.twist.linear.vy);
+        write_val(msg, fb.value.twist.linear.vz);
+        write_val(msg, fb.value.twist.angular.vx);
+        write_val(msg, fb.value.twist.angular.vy);
+        write_val(msg, fb.value.twist.angular.vz);
+
+        write_val(msg, static_cast<dp::u32>(fb.value.wheels.size()));
+        for (const auto &w : fb.value.wheels) {
+            write_val(msg, w.angle_rad);
+            write_val(msg, w.speed_rps);
+        }
+
+        // flags byte (lidar/gnss/imu). Keep 0 for now.
+        write_u8(msg, 0);
+        return msg;
+    }
+
+    netpipe::Message Simulator::serialize_agent47_sensor(const agent47::types::SensorPacket &pkt) {
+        auto tmp = pkt;
+        auto buf = dp::serialize<dp::Mode::WITH_VERSION, agent47::types::SensorPacket>(tmp);
+        return netpipe::Message(buf.begin(), buf.end());
+    }
+
+    void Simulator::register_agent47_handlers(Agent47Peer &peer, const std::string &uuid) {
+        if (!peer.rpc) {
+            return;
+        }
+
+        peer.rpc->register_method(AGENT47_METHOD_COMMAND,
+                                  [this, uuid](const netpipe::Message &req) -> dp::Res<netpipe::Message> {
+                                      // Decode in the same layout as agent47::PipeBridge::serialize_command.
+                                      // [timestamp_ns:8][lin vx/vy/vz:24][ang vx/vy/vz:24][valid:1]
+                                      if (req.size() < (8 + 24 + 24 + 1)) {
+                                          return dp::result::ok(netpipe::Message{});
+                                      }
+
+                                      const dp::u8 *ptr = req.data();
+                                      auto read_i64 = [&ptr]() {
+                                          dp::i64 v;
+                                          std::memcpy(&v, ptr, sizeof(v));
+                                          ptr += sizeof(v);
+                                          return v;
+                                      };
+                                      auto read_f64 = [&ptr]() {
+                                          dp::f64 v;
+                                          std::memcpy(&v, ptr, sizeof(v));
+                                          ptr += sizeof(v);
+                                          return v;
+                                      };
+                                      auto read_u8 = [&ptr]() {
+                                          dp::u8 v;
+                                          std::memcpy(&v, ptr, sizeof(v));
+                                          ptr += sizeof(v);
+                                          return v;
+                                      };
+
+                                      dp::Stamp<agent47::types::Command> cmd;
+                                      cmd.timestamp = read_i64();
+                                      cmd.value.twist.linear.vx = read_f64();
+                                      cmd.value.twist.linear.vy = read_f64();
+                                      cmd.value.twist.linear.vz = read_f64();
+                                      cmd.value.twist.angular.vx = read_f64();
+                                      cmd.value.twist.angular.vy = read_f64();
+                                      cmd.value.twist.angular.vz = read_f64();
+                                      cmd.value.valid = (read_u8() != 0);
+
+                                      auto it = agent47_peers_.find(uuid);
+                                      if (it != agent47_peers_.end()) {
+                                          std::lock_guard<std::mutex> lock(it->second.cmd_mutex);
+                                          it->second.last_cmd = cmd;
+                                          it->second.has_cmd = true;
+                                      }
+
+                                      last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                                      return dp::result::ok(netpipe::Message{});
+                                  });
+
+        peer.rpc->register_method(AGENT47_METHOD_HEARTBEAT,
+                                  [this, uuid](const netpipe::Message &) -> dp::Res<netpipe::Message> {
+                                      last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                                      return dp::result::ok(netpipe::Message{});
+                                  });
+
+        peer.rpc->register_method(
+            AGENT47_METHOD_MODEL, [this, uuid](const netpipe::Message &req) -> dp::Res<netpipe::Message> {
+                if (req.empty()) {
+                    return dp::result::ok(netpipe::Message{});
                 }
 
-                auto machine = request.machine.to_machine();
-                create_machine(machine);
-                update_camera_tracking(machine.uuid);
-
-                types::ser::Response resp;
-                resp.success = true;
-                resp.state = get_world_state();
-                resp.rerun.grpc_address = datapod::String(rerun_grpc_addr_);
-                resp.rerun.recording_id = datapod::String(recording_id_);
-                resp.rerun.application_id = datapod::String(application_id_);
-
-                auto data = datapod::serialize(resp);
-                return std::vector<uint8_t>(data.begin(), data.end());
-            } catch (const std::exception &e) {
-                echo::error("[Simulator] SPAWN handler error: ", e.what());
-                return std::vector<uint8_t>{0};
-            }
-        });
-
-        // DESPAWN handler
-        peer->register_method(flatsim::RpcMethod::DESPAWN, [this, uuid](const std::vector<uint8_t> &req) {
-            try {
-                auto request = datapod::deserialize<datapod::Mode::NONE, types::ser::Request>(req);
-                std::string despawn_uuid(request.uuid.view());
-
-                bool success = destroy_machine(despawn_uuid);
-                last_heartbeat_.erase(despawn_uuid);
-
-                types::ser::Response resp;
-                resp.success = success;
-                auto data = datapod::serialize(resp);
-                return std::vector<uint8_t>(data.begin(), data.end());
-            } catch (const std::exception &e) {
-                echo::error("[Simulator] DESPAWN handler error: ", e.what());
-                return std::vector<uint8_t>{0};
-            }
-        });
-
-        // CONTROL handler (receives control from agent)
-        peer->register_method(flatsim::RpcMethod::CONTROL, [this, uuid](const std::vector<uint8_t> &req) {
-            try {
-                auto ctrl = datapod::deserialize<datapod::Mode::NONE, types::ser::WheelControl>(req);
-                auto wheel_ctrl = ctrl.to_control();
-
-                auto it = machines_.find(uuid);
-                if (it != machines_.end()) {
-                    it->second.apply_control(wheel_ctrl, 0.016f); // Assume 60Hz
+                dp::ByteBuf buf(req.begin(), req.end());
+                dp::robot::Robot robot;
+                try {
+                    robot = dp::deserialize<dp::Mode::WITH_VERSION, dp::robot::Robot>(buf);
+                } catch (...) {
+                    return dp::result::ok(netpipe::Message{});
                 }
 
-                last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-                return std::vector<uint8_t>{1}; // ACK
-            } catch (const std::exception &e) {
-                echo::error("[Simulator] CONTROL handler error: ", e.what());
-                return std::vector<uint8_t>{0};
-            }
-        });
+                const std::string new_uuid(robot.id.uuid.c_str());
+                if (new_uuid.empty()) {
+                    return dp::result::ok(netpipe::Message{});
+                }
 
-        // HEARTBEAT handler
-        peer->register_method(flatsim::RpcMethod::HEARTBEAT, [this, uuid](const std::vector<uint8_t> &req) {
-            last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-            return std::vector<uint8_t>{1}; // ACK
-        });
+                // Convert dp model -> legacy machine config and create in world.
+                try {
+                    validate_model_for_flatsim(robot.model);
+                    auto machine_config = machine_from_model(robot.model, datapod::Pose{}, std::nullopt);
+                    machine_config.uuid = new_uuid;
+                    machine_config.name = std::string(robot.id.name.c_str());
+                    create_machine(machine_config);
+                    update_camera_tracking(machine_config.uuid);
+                } catch (const std::exception &e) {
+                    echo::error("[Simulator] model handler error: ", e.what());
+                    return dp::result::ok(netpipe::Message{});
+                }
 
-        // LIDAR_CFG handler
-        peer->register_method(flatsim::RpcMethod::LIDAR_CFG, [this, uuid](const std::vector<uint8_t> &req) {
-            try {
-                auto cfg_msg = datapod::deserialize<datapod::Mode::NONE, types::ser::LidarConfigMsg>(req);
-                const std::string msg_uuid(cfg_msg.uuid.view());
-                set_lidar_config(msg_uuid.empty() ? uuid : msg_uuid, cfg_msg.to_config());
-                last_heartbeat_[uuid] = std::chrono::steady_clock::now();
-                return std::vector<uint8_t>{1}; // ACK
-            } catch (const std::exception &e) {
-                echo::error("[Simulator] LIDAR_CFG handler error: ", e.what());
-                return std::vector<uint8_t>{0};
-            }
-        });
+                bind_agent47_peer_to_uuid(uuid, new_uuid);
+                last_heartbeat_[new_uuid] = std::chrono::steady_clock::now();
+
+                return dp::result::ok(netpipe::Message{});
+            });
+    }
+
+    void Simulator::bind_agent47_peer_to_uuid(const std::string &old_uuid, const std::string &new_uuid) {
+        if (old_uuid == new_uuid) {
+            return;
+        }
+        auto it = agent47_peers_.find(old_uuid);
+        if (it == agent47_peers_.end()) {
+            return;
+        }
+        // Move peer entry to the new uuid key.
+        Agent47Peer moved = std::move(it->second);
+        agent47_peers_.erase(it);
+        agent47_peers_.try_emplace(new_uuid, std::move(moved));
+
+        // Move heartbeat entry too.
+        auto hb = last_heartbeat_.find(old_uuid);
+        if (hb != last_heartbeat_.end()) {
+            last_heartbeat_[new_uuid] = hb->second;
+            last_heartbeat_.erase(hb);
+        }
+    }
+
+    void Simulator::apply_agent47_command(const std::string &uuid, const agent47::types::Command &cmd, float dt) {
+        (void)dt;
+        if (!cmd.valid) {
+            return;
+        }
+
+        // Minimal mapping: interpret vx as desired throttle for all wheels, and vz as turn bias.
+        // This is intentionally simple to get the pipe working end-to-end.
+        auto it = machines_.find(uuid);
+        if (it == machines_.end()) {
+            return;
+        }
+
+        types::WheelControl wheel_ctrl;
+        wheel_ctrl.uuid = uuid;
+
+        const auto &cfg = it->second.config();
+        const size_t n = cfg.wheels.size();
+        wheel_ctrl.throttle.assign(n, 0.0f);
+        wheel_ctrl.steering.assign(n, 0.0f);
+
+        const float base = static_cast<float>(cmd.twist.linear.vx);
+        const float yaw = static_cast<float>(cmd.twist.angular.vz);
+
+        // Differential-ish: left gets -(yaw), right gets +(yaw)
+        for (size_t i = 0; i < n; ++i) {
+            const bool left = (i < cfg.controls.left_side.size()) ? cfg.controls.left_side[i] : false;
+            wheel_ctrl.throttle[i] = base + (left ? -yaw : yaw);
+        }
+
+        it->second.apply_control(wheel_ctrl, 0.016f);
     }
 
     // ============================================================================
     // IPC/TCP/SHM Connection Management
     // ============================================================================
 
-    void Simulator::process_spawn_requests() {
-        // Accept new peer connections
-        if (!listen_peer_) {
+    void Simulator::process_agent47_connections() {
+        if (!agent47_listen_pipe_.has_value()) {
             return;
         }
 
-        auto peer = listen_peer_->accept(100, true); // max 100 concurrent, metrics enabled
-        if (peer) {
-            echo::info("[Simulator] Accepted new peer connection");
-
-            // Wait for SPAWN request to get UUID
-            // For now, generate a temporary UUID and register handlers
-            // The SPAWN handler will create the actual machine
-            std::string temp_uuid =
-                "pending_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-
-            register_peer_handlers(peer.get(), temp_uuid);
-
-            // Store peer (will be updated with real UUID after SPAWN)
-            peers_[temp_uuid] = std::move(peer);
-
-            echo::info("[Simulator] Peer registered with temp UUID: ", temp_uuid);
+        auto conn_res = agent47_listen_pipe_->accept();
+        if (conn_res.is_err()) {
+            return;
         }
+
+        auto conn = std::move(conn_res.value());
+        std::string uuid = "agent_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+
+        Agent47Peer p;
+        p.pipe.emplace(std::move(conn));
+        p.rpc = std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*p.pipe->stream().get(),
+                                                                     /*max_concurrent=*/100,
+                                                                     /*enable_metrics=*/false,
+                                                                     /*recv_timeout_ms=*/100,
+                                                                     /*handler_threads=*/2,
+                                                                     /*max_handler_queue=*/100,
+                                                                     /*handler_timeout_ms=*/0,
+                                                                     /*max_incoming=*/100);
+
+        agent47_peers_.try_emplace(uuid, std::move(p));
+        register_agent47_handlers(agent47_peers_.at(uuid), uuid);
+
+        echo::info("[Simulator] agent47 peer connected uuid=", uuid);
     }
 
     void Simulator::cleanup_stale_connections() {
@@ -437,10 +614,14 @@ namespace simulator {
 
         for (const auto &uuid : to_remove) {
             // Close peer
-            auto it = peers_.find(uuid);
-            if (it != peers_.end()) {
-                if (it->second) it->second->close();
-                peers_.erase(it);
+            auto it = agent47_peers_.find(uuid);
+            if (it != agent47_peers_.end()) {
+                if (it->second.rpc) it->second.rpc.reset();
+                if (it->second.pipe.has_value()) {
+                    it->second.pipe->close();
+                    it->second.pipe.reset();
+                }
+                agent47_peers_.erase(it);
             }
 
             last_heartbeat_.erase(uuid);
@@ -485,6 +666,23 @@ namespace simulator {
             }
         }
 
+        // Step 3b: For agent47 mode, apply latest command received via RPC method 1
+        if (conn_ != Conn::LOCAL) {
+            for (auto &[uuid, peer] : agent47_peers_) {
+                std::optional<agent47::types::Command> cmd;
+                {
+                    std::lock_guard<std::mutex> lock(peer.cmd_mutex);
+                    if (peer.has_cmd) {
+                        cmd = peer.last_cmd.value;
+                        peer.has_cmd = false;
+                    }
+                }
+                if (cmd.has_value()) {
+                    apply_agent47_command(uuid, *cmd, dt);
+                }
+            }
+        }
+
         // Step 4: Physics step
         world_->tick(dt);
 
@@ -503,7 +701,7 @@ namespace simulator {
 
         // Step 7: IPC/TCP only - connection management
         if (conn_ != Conn::LOCAL) {
-            process_spawn_requests();
+            process_agent47_connections();
             cleanup_stale_connections();
         }
     }

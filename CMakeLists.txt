@@ -78,8 +78,8 @@ cmake_policy(SET CMP0074 NEW)
 cmake_policy(SET CMP0135 NEW)
 
 # Compiler-specific flags
-set(COMMON_FLAGS -Wall -Wextra -Wpedantic -Wno-reorder -Wno-narrowing -Wno-array-bounds -Wno-vla
-    -Wno-unused-variable -Wno-unused-parameter -Wno-unused-result -Wno-unused-but-set-variable -Wno-parentheses)
+set(COMMON_FLAGS -Wall -Wextra -Wpedantic -Wno-reorder -Wno-narrowing -Wno-array-bounds -Wno-vla -Wno-maybe-uninitialized
+    -Wno-unused-variable -Wno-unused-parameter -Wno-unused-result -Wno-unused-but-set-variable -Wno-parentheses -Wno-unused-function)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(${COMMON_FLAGS} -Wno-stringop-overflow -Wno-stringop-overread)

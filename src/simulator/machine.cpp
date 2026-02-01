@@ -119,6 +119,37 @@ namespace simulator {
         return datapod::Size{0.1, 0.1, 0.1};
     }
 
+    static bool str_eq(const datapod::String &s, const char *lit) { return std::string(s.c_str()) == std::string(lit); }
+
+    static std::optional<types::LidarConfig> lidar_config_from_sensor_props(const datapod::robot::Sensor &sensor) {
+        if (sensor.type.empty()) {
+            return std::nullopt;
+        }
+        if (!str_eq(sensor.type, "lidar") && !str_eq(sensor.type, "LIDAR")) {
+            return std::nullopt;
+        }
+
+        // Defaults match types::LidarConfig defaults.
+        types::LidarConfig cfg;
+        cfg.enabled = true;
+
+        const auto get = [&](const char *key) { return get_prop(sensor.props, key); };
+
+        if (auto v = get("sensor.flatsim.min_range"); !v.empty()) cfg.min_range = std::stof(v);
+        if (auto v = get("sensor.flatsim.max_range"); !v.empty()) cfg.max_range = std::stof(v);
+        if (auto v = get("sensor.flatsim.fov_deg"); !v.empty()) cfg.fov_deg = std::stof(v);
+        if (auto v = get("sensor.flatsim.resolution_deg"); !v.empty()) cfg.resolution_deg = std::stof(v);
+        if (auto v = get("sensor.flatsim.samples"); !v.empty()) {
+            // If samples is given, derive resolution.
+            const float samples = std::stof(v);
+            if (samples > 1.0f) {
+                cfg.resolution_deg = cfg.fov_deg / samples;
+            }
+        }
+
+        return cfg;
+    }
+
     types::Machine machine_from_model(const datapod::robot::Model &model, const datapod::Pose &spawn_pose,
                                       std::optional<pigment::RGB> color) {
         types::Machine machine;
@@ -142,6 +173,18 @@ namespace simulator {
             auto turning_radius = get_prop(model.props, "flatsim.turning.radius");
             if (!turning_radius.empty()) {
                 machine.turning_radius = std::stof(turning_radius);
+            }
+        }
+
+        // Sensors: pull LIDAR config from typed dp::robot::Link::sensor.
+        for (const auto &link : model.links) {
+            if (!link.sensor.has_value()) {
+                continue;
+            }
+            auto cfg = lidar_config_from_sensor_props(link.sensor.value());
+            if (cfg.has_value()) {
+                machine.lidar = cfg;
+                break;
             }
         }
 

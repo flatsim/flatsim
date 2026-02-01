@@ -6,16 +6,13 @@
 #include <rerun.hpp>
 
 #include "flatsim/agent/machine.hpp"
-#include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
+#include <optional>
 
 #include <agent47.hpp>
 #include <datapod/robot.hpp>
 
 namespace agent {
-
-    // Teleport callback type (set by Simulator in LOCAL mode)
-    using TeleportCallback = std::function<void(const std::string &uuid, const datapod::Pose &pose)>;
 
     class Agent {
       public:
@@ -23,20 +20,22 @@ namespace agent {
 
       private:
         bool local_mode_ = false;
-        std::unique_ptr<flatsim::RpcPeer> peer_;
+        std::optional<std::string> agent47_endpoint_;
         std::string address_;
-        flatsim::Endpoint::Type transport_type_ = flatsim::Endpoint::Type::IPC;
         Machine machine_;
         bool spawned_ = false;
         types::SensorData sensor_data_;
         float speed_scale_ = 1.0f;
-        TeleportCallback teleport_callback_;
         std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
         // Agent(const std::string &address = "");
         Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec);
         Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
+              std::shared_ptr<rerun::RecordingStream> rec);
+
+        // Networked mode via agent47 PipeBridge
+        Agent(const types::Machine &config, const std::string &agent47_endpoint,
               std::shared_ptr<rerun::RecordingStream> rec);
 
         ~Agent();
@@ -106,11 +105,7 @@ namespace agent {
         // Braking
         void brake();
 
-        // Teleport to a new pose (LOCAL mode: immediate, IPC/TCP: sends request)
-        void teleport(const datapod::Pose &pose);
-
-        // Set teleport callback (called by Simulator in LOCAL mode)
-        void set_teleport_callback(TeleportCallback cb) { teleport_callback_ = std::move(cb); }
+        // Teleport/reset intentionally not supported (agent47-only comms).
 
         // Navigation enable/disable (shortcut for machine().set_navigation_enabled())
         void set_navigation_enabled(bool enabled) { machine_.set_navigation_enabled(enabled); }
@@ -131,7 +126,6 @@ namespace agent {
 
       private:
         // Transport abstraction - handles LOCAL vs IPC/TCP internally
-        void register_peer_handlers(); // NEW: Register RPC handlers for bidirectional communication
         void install_sensor_callbacks();
     };
 
