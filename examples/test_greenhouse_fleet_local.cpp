@@ -5,43 +5,27 @@
 // Run:
 //   ./build/linux/x86_64/release/test_greenhouse_fleet_local
 
+#include "flatsim/utils.hpp"
 #include <algorithm>
-#include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <cmath>
-#include "flatsim/utils.hpp"
 #include <fstream>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <map>
-#include "flatsim/utils.hpp"
 #include <mutex>
-#include "flatsim/utils.hpp"
 #include <queue>
-#include "flatsim/utils.hpp"
 #include <random>
-#include "flatsim/utils.hpp"
 #include <set>
-#include "flatsim/utils.hpp"
 #include <sstream>
-#include "flatsim/utils.hpp"
 #include <string>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 #include <vector>
-#include "flatsim/utils.hpp"
 
 #include "flatsim/agent.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
-#include "flatsim/utils.hpp"
 #include <rerun.hpp>
-#include "flatsim/utils.hpp"
 
 // =============================================================================
 // Graph structures (loaded from YAML)
@@ -430,11 +414,11 @@ static void visualize_graph_static(std::shared_ptr<rerun::RecordingStream> rec, 
         if (!n1 || !n2) continue;
         auto p1 = graph.to_world(n1->x, n1->y);
         auto p2 = graph.to_world(n2->x, n2->y);
-        lines.push_back(rerun::LineStrip3D(
-            {rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.0f),
-             rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.0f)}));
+        lines.push_back(rerun::LineStrip3D({rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.0f),
+                                            rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.0f)}));
     }
-    rec->log_static("graph/edges", rerun::LineStrips3D(lines).with_radii({0.03f}).with_colors({rerun::Color(100, 100, 100)}));
+    rec->log_static("graph/edges",
+                    rerun::LineStrips3D(lines).with_radii({0.03f}).with_colors({rerun::Color(100, 100, 100)}));
 }
 
 static void visualize_edge_claims(std::shared_ptr<rerun::RecordingStream> rec, const NavGraph &graph,
@@ -450,12 +434,12 @@ static void visualize_edge_claims(std::shared_ptr<rerun::RecordingStream> rec, c
         if (!n1 || !n2) continue;
         auto p1 = graph.to_world(n1->x, n1->y);
         auto p2 = graph.to_world(n2->x, n2->y);
-        lines.push_back(rerun::LineStrip3D(
-            {rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.05f),
-             rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.05f)}));
+        lines.push_back(rerun::LineStrip3D({rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.05f),
+                                            rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.05f)}));
         const int owner = claims.at(e.id);
-        const rerun::Color c = (owner % 3 == 0) ? rerun::Color(255, 80, 80) : (owner % 3 == 1) ? rerun::Color(80, 255, 80)
-                                                                                                 : rerun::Color(80, 80, 255);
+        const rerun::Color c = (owner % 3 == 0)   ? rerun::Color(255, 80, 80)
+                               : (owner % 3 == 1) ? rerun::Color(80, 255, 80)
+                                                  : rerun::Color(80, 80, 255);
         colors.push_back(c);
     }
     rec->log("graph/claims", rerun::LineStrips3D(lines).with_radii({0.08f}).with_colors(colors));
@@ -521,8 +505,8 @@ int main(int argc, char **argv) {
         auto spawn_pos = graph.to_world(start_node->x, start_node->y);
         const std::string uuid = generate_uuid();
 
-        auto &robot = sim.spawn_agent("examples/machines/urdf/husky.urdf", utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f),
-                                      uuid, colors[i]);
+        auto &robot = sim.spawn_agent("examples/machines/urdf/husky.urdf",
+                                      utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f), uuid, colors[i]);
         robots.push_back(&robot);
         robot.set_speed(0.3f);
         robot.controls().tracker().set_enabled(true);
@@ -663,4 +647,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-

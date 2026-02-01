@@ -1,17 +1,11 @@
 #include "flatsim/agent/loader/loader.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <rerun.hpp>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 
 int main() {
     std::cout << "[Example] Visualization demo (single-thread tick()/tock() + Rerun)" << std::endl;

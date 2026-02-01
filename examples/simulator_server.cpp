@@ -8,21 +8,14 @@
 // This process ONLY uses simulator:: namespace code
 
 #include "flatsim/simulator.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <rerun.hpp>
-#include "flatsim/utils.hpp"
 #include <signal.h>
-#include "flatsim/utils.hpp"
 #include <string>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 
 static bool running = true;
 

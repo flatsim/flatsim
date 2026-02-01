@@ -10,23 +10,15 @@
 //   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
 
 #include "flatsim/agent.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <filesystem>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <numbers>
-#include "flatsim/utils.hpp"
 #include <rerun.hpp>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 #include <vector>
-#include "flatsim/utils.hpp"
 
 int main(int argc, char **argv) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
@@ -66,7 +58,8 @@ int main(int argc, char **argv) {
 
     // Load tractor - spawn at first waypoint
     // Spawn tractor at path start, pointing in +X direction (yaw=0)
-    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
+    datapod::Pose spawn_pose =
+        utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
     auto tractor_config = agent::Loader::load_from_urdf(machine_file, spawn_pose);
     tractor_config.uuid = "mpc_tractor";
     std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
@@ -156,9 +149,8 @@ int main(int argc, char **argv) {
             auto status = mpc->get_status();
             auto current_pose = tractor.machine().world_pose();
 
-            std::cout << "[MPC] " << step_count / 60 << "s: "
-                      << "Pos(" << current_pose.point.x << "," << current_pose.point.y << "), "
-                      << "Yaw=" << utils::get_yaw(current_pose) << ", "
+            std::cout << "[MPC] " << step_count / 60 << "s: " << "Pos(" << current_pose.point.x << ","
+                      << current_pose.point.y << "), " << "Yaw=" << utils::get_yaw(current_pose) << ", "
                       << "CTE=" << status.cross_track_error << "m, "
                       << "HeadingErr=" << (status.heading_error * 180.0 / std::numbers::pi) << "deg" << std::endl;
         }

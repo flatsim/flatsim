@@ -2,8 +2,8 @@
 
 #include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
-#include "rerun.hpp"
 #include <algorithm>
+#include <rerun.hpp>
 #include <string>
 
 namespace fs {

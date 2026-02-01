@@ -17,6 +17,20 @@ namespace agent {
 
     static float deg2rad(float deg) { return deg * (M_PI / 180.0f); }
 
+    // Helper to get a prop value, returning empty string if not found
+    static std::string get_prop(const dp::Map<dp::String, dp::String> &props, const std::string &key) {
+        auto it = props.find(dp::String(key.c_str()));
+        if (it != props.end()) {
+            return std::string(it->second.c_str());
+        }
+        return "";
+    }
+
+    // Helper to check if a prop exists
+    static bool has_prop(const dp::Map<dp::String, dp::String> &props, const std::string &key) {
+        return props.find(dp::String(key.c_str())) != props.end();
+    }
+
     std::string Loader::generate_uuid() {
         static std::random_device rd;
         static std::mt19937 gen(rd());
@@ -68,69 +82,39 @@ namespace agent {
     }
 
     // ========================================================================
-    // URDF Loading Implementation
+    // URDF Loading Implementation (using props maps)
     // ========================================================================
 
-    // Helper to extract attribute value from raw XML string like: <flatsim attr="value" .../>
-    static std::string extract_attr(const std::string &xml, const std::string &attr_name) {
-        std::string search = attr_name + "=\"";
-        auto pos = xml.find(search);
-        if (pos == std::string::npos) {
-            return "";
-        }
-        pos += search.length();
-        auto end = xml.find('"', pos);
-        if (end == std::string::npos) {
-            return "";
-        }
-        return xml.substr(pos, end - pos);
-    }
-
-    // Helper to check if an attribute exists in raw XML
-    static bool has_attr(const std::string &xml, const std::string &attr_name) {
-        return xml.find(attr_name + "=\"") != std::string::npos;
-    }
-
-    // Parse robot-level <flatsim> extension: <flatsim><color rgba="..."/><turning radius="..."/></flatsim>
+    // Parse robot-level props: flatsim.color.rgba, flatsim.turning.radius
     struct RobotFlatsimExt {
         pigment::RGB color{128, 128, 128};
         float turning_radius = 1.0f;
         bool has_color = false;
     };
 
-    static RobotFlatsimExt parse_robot_flatsim_ext(const dp::Vector<dp::String> &robot_exts) {
+    static RobotFlatsimExt parse_robot_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
         RobotFlatsimExt ext;
-        for (const auto &xml_str : robot_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            // Parse <color rgba="r g b a"/>
-            auto color_pos = xml.find("<color");
-            if (color_pos != std::string::npos) {
-                std::string rgba = extract_attr(xml.substr(color_pos), "rgba");
-                if (!rgba.empty()) {
-                    float r, g, b, a;
-                    if (sscanf(rgba.c_str(), "%f %f %f %f", &r, &g, &b, &a) >= 3) {
-                        ext.color = pigment::RGB(static_cast<int>(r), static_cast<int>(g), static_cast<int>(b));
-                        ext.has_color = true;
-                    }
-                }
-            }
-            // Parse <turning radius="..."/>
-            auto turn_pos = xml.find("<turning");
-            if (turn_pos != std::string::npos) {
-                std::string radius_str = extract_attr(xml.substr(turn_pos), "radius");
-                if (!radius_str.empty()) {
-                    ext.turning_radius = std::stof(radius_str);
-                }
+
+        // Parse flatsim.color.rgba = "r g b a"
+        std::string rgba = get_prop(props, "flatsim.color.rgba");
+        if (!rgba.empty()) {
+            float r, g, b, a;
+            if (sscanf(rgba.c_str(), "%f %f %f %f", &r, &g, &b, &a) >= 3) {
+                ext.color = pigment::RGB(static_cast<int>(r), static_cast<int>(g), static_cast<int>(b));
+                ext.has_color = true;
             }
         }
+
+        // Parse flatsim.turning.radius = "..."
+        std::string radius_str = get_prop(props, "flatsim.turning.radius");
+        if (!radius_str.empty()) {
+            ext.turning_radius = std::stof(radius_str);
+        }
+
         return ext;
     }
 
-    // Wheel extension: <flatsim side="left|right" throttle_max="..." throttle_diff="..." steering_max="..."
-    // steering_diff="..."/>
+    // Wheel extension from joint.props: flatsim.side, flatsim.throttle_max, etc.
     struct WheelFlatsimExt {
         std::string side; // "left" or "right"
         float throttle_max = 1.0f;
@@ -139,162 +123,148 @@ namespace agent {
         float steering_diff = 0.0f;
     };
 
-    static std::optional<WheelFlatsimExt> parse_wheel_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            if (!has_attr(xml, "side")) {
-                continue;
-            }
-            WheelFlatsimExt ext;
-            ext.side = extract_attr(xml, "side");
-            std::string throttle_max = extract_attr(xml, "throttle_max");
-            if (!throttle_max.empty()) {
-                ext.throttle_max = std::stof(throttle_max);
-            }
-            std::string throttle_diff = extract_attr(xml, "throttle_diff");
-            if (!throttle_diff.empty()) {
-                ext.throttle_diff = std::stof(throttle_diff);
-            }
-            std::string steering_max = extract_attr(xml, "steering_max");
-            if (!steering_max.empty()) {
-                ext.steering_max = std::stof(steering_max);
-            }
-            std::string steering_diff = extract_attr(xml, "steering_diff");
-            if (!steering_diff.empty()) {
-                ext.steering_diff = std::stof(steering_diff);
-            }
-            return ext;
+    static std::optional<WheelFlatsimExt> parse_wheel_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        // Wheel joints have "flatsim.side" attribute
+        if (!has_prop(props, "flatsim.side")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+
+        WheelFlatsimExt ext;
+        ext.side = get_prop(props, "flatsim.side");
+
+        std::string throttle_max = get_prop(props, "flatsim.throttle_max");
+        if (!throttle_max.empty()) {
+            ext.throttle_max = std::stof(throttle_max);
+        }
+
+        std::string throttle_diff = get_prop(props, "flatsim.throttle_diff");
+        if (!throttle_diff.empty()) {
+            ext.throttle_diff = std::stof(throttle_diff);
+        }
+
+        std::string steering_max = get_prop(props, "flatsim.steering_max");
+        if (!steering_max.empty()) {
+            ext.steering_max = std::stof(steering_max);
+        }
+
+        std::string steering_diff = get_prop(props, "flatsim.steering_diff");
+        if (!steering_diff.empty()) {
+            ext.steering_diff = std::stof(steering_diff);
+        }
+
+        return ext;
     }
 
-    // Steering extension: <flatsim steering_diff="..." steering_max="..."/> (on revolute joint, no "side" attr)
-    // steering_max is in degrees and can be negative to indicate opposite steering direction
+    // Steering extension from joint.props: flatsim.steering_diff, flatsim.steering_max (no side attr)
     struct SteeringFlatsimExt {
         float steering_diff = 0.0f;
         std::optional<float> steering_max; // degrees, negative = opposite direction
     };
 
-    static std::optional<SteeringFlatsimExt> parse_steering_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            // Steering joints have steering_diff but NOT side
-            if (has_attr(xml, "side")) {
-                continue;
-            }
-            if (!has_attr(xml, "steering_diff") && !has_attr(xml, "steering_max")) {
-                continue;
-            }
-            SteeringFlatsimExt ext;
-            std::string steering_diff = extract_attr(xml, "steering_diff");
-            if (!steering_diff.empty()) {
-                ext.steering_diff = std::stof(steering_diff);
-            }
-            std::string steering_max = extract_attr(xml, "steering_max");
-            if (!steering_max.empty()) {
-                ext.steering_max = std::stof(steering_max);
-            }
-            return ext;
+    static std::optional<SteeringFlatsimExt> parse_steering_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        // Steering joints have steering_diff but NOT side
+        if (has_prop(props, "flatsim.side")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+        if (!has_prop(props, "flatsim.steering_diff") && !has_prop(props, "flatsim.steering_max")) {
+            return std::nullopt;
+        }
+
+        SteeringFlatsimExt ext;
+
+        std::string steering_diff = get_prop(props, "flatsim.steering_diff");
+        if (!steering_diff.empty()) {
+            ext.steering_diff = std::stof(steering_diff);
+        }
+
+        std::string steering_max = get_prop(props, "flatsim.steering_max");
+        if (!steering_max.empty()) {
+            ext.steering_max = std::stof(steering_max);
+        }
+
+        return ext;
     }
 
-    // Karosserie extension: <flatsim karosserie_name="..." karosserie_sections="..." karosserie_has_physics="..."/>
+    // Karosserie extension: flatsim.karosserie_name, flatsim.karosserie_sections, flatsim.karosserie_has_physics
     struct KarosserieFlatsimExt {
         std::string name;
         int sections = 0;
         bool has_physics = true;
     };
 
-    static std::optional<KarosserieFlatsimExt> parse_karosserie_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            if (!has_attr(xml, "karosserie_name")) {
-                continue;
-            }
-            KarosserieFlatsimExt ext;
-            ext.name = extract_attr(xml, "karosserie_name");
-            std::string sections = extract_attr(xml, "karosserie_sections");
-            if (!sections.empty()) {
-                ext.sections = std::stoi(sections);
-            }
-            std::string has_physics = extract_attr(xml, "karosserie_has_physics");
-            if (!has_physics.empty()) {
-                ext.has_physics = (has_physics == "true" || has_physics == "1");
-            }
-            return ext;
+    static std::optional<KarosserieFlatsimExt>
+    parse_karosserie_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        if (!has_prop(props, "flatsim.karosserie_name")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+
+        KarosserieFlatsimExt ext;
+        ext.name = get_prop(props, "flatsim.karosserie_name");
+
+        std::string sections = get_prop(props, "flatsim.karosserie_sections");
+        if (!sections.empty()) {
+            ext.sections = std::stoi(sections);
+        }
+
+        std::string has_physics = get_prop(props, "flatsim.karosserie_has_physics");
+        if (!has_physics.empty()) {
+            ext.has_physics = (has_physics == "true" || has_physics == "1");
+        }
+
+        return ext;
     }
 
-    // Hitch extension: <flatsim hitch_name="..." hitch_is_master="..."/>
+    // Hitch extension: flatsim.hitch_name, flatsim.hitch_is_master
     struct HitchFlatsimExt {
         std::string name;
         bool is_master = true;
     };
 
-    static std::optional<HitchFlatsimExt> parse_hitch_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            if (!has_attr(xml, "hitch_name")) {
-                continue;
-            }
-            HitchFlatsimExt ext;
-            ext.name = extract_attr(xml, "hitch_name");
-            std::string is_master = extract_attr(xml, "hitch_is_master");
-            if (!is_master.empty()) {
-                ext.is_master = (is_master == "true" || is_master == "1");
-            }
-            return ext;
+    static std::optional<HitchFlatsimExt> parse_hitch_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        if (!has_prop(props, "flatsim.hitch_name")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+
+        HitchFlatsimExt ext;
+        ext.name = get_prop(props, "flatsim.hitch_name");
+
+        std::string is_master = get_prop(props, "flatsim.hitch_is_master");
+        if (!is_master.empty()) {
+            ext.is_master = (is_master == "true" || is_master == "1");
+        }
+
+        return ext;
     }
 
-    // Tank extension: <flatsim tank_name="..." tank_type="..." tank_capacity="..."/>
+    // Tank extension: flatsim.tank_name, flatsim.tank_type, flatsim.tank_capacity
     struct TankFlatsimExt {
         std::string name;
         std::string type = "HARVEST";
         float capacity = 1000.0f;
     };
 
-    static std::optional<TankFlatsimExt> parse_tank_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            if (!has_attr(xml, "tank_name")) {
-                continue;
-            }
-            TankFlatsimExt ext;
-            ext.name = extract_attr(xml, "tank_name");
-            std::string type = extract_attr(xml, "tank_type");
-            if (!type.empty()) {
-                ext.type = type;
-            }
-            std::string capacity = extract_attr(xml, "tank_capacity");
-            if (!capacity.empty()) {
-                ext.capacity = std::stof(capacity);
-            }
-            return ext;
+    static std::optional<TankFlatsimExt> parse_tank_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        if (!has_prop(props, "flatsim.tank_name")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+
+        TankFlatsimExt ext;
+        ext.name = get_prop(props, "flatsim.tank_name");
+
+        std::string type = get_prop(props, "flatsim.tank_type");
+        if (!type.empty()) {
+            ext.type = type;
+        }
+
+        std::string capacity = get_prop(props, "flatsim.tank_capacity");
+        if (!capacity.empty()) {
+            ext.capacity = std::stof(capacity);
+        }
+
+        return ext;
     }
 
-    // Power extension: <flatsim power_name="..." power_type="..." power_capacity="..." power_consumption_rate="..."
-    // power_charge_rate="..."/>
+    // Power extension: flatsim.power_name, flatsim.power_type, flatsim.power_capacity, etc.
     struct PowerFlatsimExt {
         std::string name;
         std::string type = "FUEL";
@@ -303,36 +273,35 @@ namespace agent {
         float charge_rate = 0.0f;
     };
 
-    static std::optional<PowerFlatsimExt> parse_power_flatsim_ext(const dp::Vector<dp::String> &joint_exts) {
-        for (const auto &xml_str : joint_exts) {
-            std::string xml(xml_str.c_str());
-            if (xml.find("<flatsim") == std::string::npos) {
-                continue;
-            }
-            if (!has_attr(xml, "power_name")) {
-                continue;
-            }
-            PowerFlatsimExt ext;
-            ext.name = extract_attr(xml, "power_name");
-            std::string type = extract_attr(xml, "power_type");
-            if (!type.empty()) {
-                ext.type = type;
-            }
-            std::string capacity = extract_attr(xml, "power_capacity");
-            if (!capacity.empty()) {
-                ext.capacity = std::stof(capacity);
-            }
-            std::string consumption_rate = extract_attr(xml, "power_consumption_rate");
-            if (!consumption_rate.empty()) {
-                ext.consumption_rate = std::stof(consumption_rate);
-            }
-            std::string charge_rate = extract_attr(xml, "power_charge_rate");
-            if (!charge_rate.empty()) {
-                ext.charge_rate = std::stof(charge_rate);
-            }
-            return ext;
+    static std::optional<PowerFlatsimExt> parse_power_flatsim_ext(const dp::Map<dp::String, dp::String> &props) {
+        if (!has_prop(props, "flatsim.power_name")) {
+            return std::nullopt;
         }
-        return std::nullopt;
+
+        PowerFlatsimExt ext;
+        ext.name = get_prop(props, "flatsim.power_name");
+
+        std::string type = get_prop(props, "flatsim.power_type");
+        if (!type.empty()) {
+            ext.type = type;
+        }
+
+        std::string capacity = get_prop(props, "flatsim.power_capacity");
+        if (!capacity.empty()) {
+            ext.capacity = std::stof(capacity);
+        }
+
+        std::string consumption_rate = get_prop(props, "flatsim.power_consumption_rate");
+        if (!consumption_rate.empty()) {
+            ext.consumption_rate = std::stof(consumption_rate);
+        }
+
+        std::string charge_rate = get_prop(props, "flatsim.power_charge_rate");
+        if (!charge_rate.empty()) {
+            ext.charge_rate = std::stof(charge_rate);
+        }
+
+        return ext;
     }
 
     // Extract geometry size from link's visual/collision
@@ -379,7 +348,7 @@ namespace agent {
         if (result.is_err()) {
             throw std::runtime_error("Failed to parse URDF: " + urdf_path.string());
         }
-        robomod::Urdf urdf = result.value();
+        datapod::robot::Model model = result.value();
 
         types::Machine machine;
 
@@ -389,26 +358,26 @@ namespace agent {
         machine.type = machine.name;
         machine.rci = 0;
 
-        // Parse robot-level extensions (color, turning radius)
-        RobotFlatsimExt robot_ext = parse_robot_flatsim_ext(urdf.ext.robot);
+        // Parse robot-level props (color, turning radius)
+        RobotFlatsimExt robot_ext = parse_robot_flatsim_ext(model.props);
         machine.color = color.value_or(robot_ext.color);
         machine.turning_radius = robot_ext.turning_radius;
 
         // Build link name -> index map
         std::unordered_map<std::string, size_t> link_map;
-        for (size_t i = 0; i < urdf.model.links.size(); ++i) {
-            link_map[std::string(urdf.model.links[i].name.c_str())] = i;
+        for (size_t i = 0; i < model.links.size(); ++i) {
+            link_map[std::string(model.links[i].name.c_str())] = i;
         }
 
         // Build joint name -> index map and child_link -> joint map
         std::unordered_map<std::string, size_t> joint_map;
         std::unordered_map<std::string, size_t> child_to_joint;
-        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
-            const auto &joint = urdf.model.joints[i];
+        for (size_t i = 0; i < model.joints.size(); ++i) {
+            const auto &joint = model.joints[i];
             joint_map[std::string(joint.name.c_str())] = i;
             // Find child link name
-            if (joint.child < urdf.model.links.size()) {
-                std::string child_name(urdf.model.links[joint.child].name.c_str());
+            if (joint.child < model.links.size()) {
+                std::string child_name(model.links[joint.child].name.c_str());
                 child_to_joint[child_name] = i;
             }
         }
@@ -429,21 +398,15 @@ namespace agent {
         float max_y = std::numeric_limits<float>::lowest();
 
         // First pass: collect steering joints (revolute with steering_diff but no side)
-        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
-            const auto &joint = urdf.model.joints[i];
-            std::string joint_name(joint.name.c_str());
-
-            // Get extensions for this joint
-            dp::Vector<dp::String> empty_exts;
-            auto it = urdf.ext.joints.find(dp::String(joint_name.c_str()));
-            const auto &joint_exts = (it != urdf.ext.joints.end()) ? it->second : empty_exts;
+        for (size_t i = 0; i < model.joints.size(); ++i) {
+            const auto &joint = model.joints[i];
 
             if (joint.type == datapod::robot::Joint::Type::Revolute) {
-                auto steer_ext = parse_steering_flatsim_ext(joint_exts);
+                auto steer_ext = parse_steering_flatsim_ext(joint.props);
                 if (steer_ext) {
                     // Get child link name (the steer_link)
-                    if (joint.child < urdf.model.links.size()) {
-                        std::string child_name(urdf.model.links[joint.child].name.c_str());
+                    if (joint.child < model.links.size()) {
+                        std::string child_name(model.links[joint.child].name.c_str());
                         SteeringInfo info;
                         info.steering_diff = steer_ext->steering_diff;
                         // Use steering_max from extension if provided (can be negative for opposite direction)
@@ -461,31 +424,25 @@ namespace agent {
         }
 
         // Second pass: process all joints
-        for (size_t i = 0; i < urdf.model.joints.size(); ++i) {
-            const auto &joint = urdf.model.joints[i];
-            std::string joint_name(joint.name.c_str());
-
-            // Get extensions for this joint
-            dp::Vector<dp::String> empty_exts;
-            auto it = urdf.ext.joints.find(dp::String(joint_name.c_str()));
-            const auto &joint_exts = (it != urdf.ext.joints.end()) ? it->second : empty_exts;
+        for (size_t i = 0; i < model.joints.size(); ++i) {
+            const auto &joint = model.joints[i];
 
             // Get child link
-            if (joint.child >= urdf.model.links.size()) {
+            if (joint.child >= model.links.size()) {
                 continue;
             }
-            const auto &child_link = urdf.model.links[joint.child];
+            const auto &child_link = model.links[joint.child];
             std::string child_link_name(child_link.name.c_str());
 
             // Get parent link name for steering lookup
             std::string parent_link_name;
-            if (joint.parent < urdf.model.links.size()) {
-                parent_link_name = std::string(urdf.model.links[joint.parent].name.c_str());
+            if (joint.parent < model.links.size()) {
+                parent_link_name = std::string(model.links[joint.parent].name.c_str());
             }
 
             // Check for wheel (continuous joint with "side" attribute)
             if (joint.type == datapod::robot::Joint::Type::Continuous) {
-                auto wheel_ext = parse_wheel_flatsim_ext(joint_exts);
+                auto wheel_ext = parse_wheel_flatsim_ext(joint.props);
                 if (wheel_ext) {
                     types::Wheel wheel;
                     wheel.name = child_link_name;
@@ -536,7 +493,7 @@ namespace agent {
 
             // Check for karosserie (fixed joint with karosserie_name)
             if (joint.type == datapod::robot::Joint::Type::Fixed) {
-                auto karo_ext = parse_karosserie_flatsim_ext(joint_exts);
+                auto karo_ext = parse_karosserie_flatsim_ext(joint.props);
                 if (karo_ext) {
                     types::Karosserie kaross;
                     kaross.name = karo_ext->name;
@@ -571,7 +528,7 @@ namespace agent {
                 }
 
                 // Check for hitch
-                auto hitch_ext = parse_hitch_flatsim_ext(joint_exts);
+                auto hitch_ext = parse_hitch_flatsim_ext(joint.props);
                 if (hitch_ext) {
                     types::Hitch hitch;
                     hitch.name = hitch_ext->name;
@@ -586,7 +543,7 @@ namespace agent {
                 }
 
                 // Check for tank
-                auto tank_ext = parse_tank_flatsim_ext(joint_exts);
+                auto tank_ext = parse_tank_flatsim_ext(joint.props);
                 if (tank_ext) {
                     types::Tank tank;
                     tank.name = tank_ext->name;
@@ -602,7 +559,7 @@ namespace agent {
                 }
 
                 // Check for power
-                auto power_ext = parse_power_flatsim_ext(joint_exts);
+                auto power_ext = parse_power_flatsim_ext(joint.props);
                 if (power_ext) {
                     types::Power power;
                     power.name = power_ext->name;
