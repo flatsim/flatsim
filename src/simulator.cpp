@@ -9,6 +9,7 @@
 #include <datapod/serialization/serialize.hpp>
 #include <echo/echo.hpp>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <netpipe/netpipe.hpp>
 #include <rerun.hpp>
@@ -22,6 +23,15 @@
 #include <vector>
 
 namespace simulator {
+
+    static std::string uuid_to_string(const dp::sugar::UUID &u) {
+        std::ostringstream ss;
+        ss << std::hex << std::setfill('0');
+        for (dp::u8 b : u.bytes) {
+            ss << std::setw(2) << static_cast<int>(b);
+        }
+        return ss.str();
+    }
 
     // agent47 protocol method IDs (must match agent47::PipeBridge)
     static constexpr dp::u32 AGENT47_METHOD_COMMAND = 1;
@@ -485,7 +495,7 @@ namespace simulator {
                     return dp::result::ok(netpipe::Message{});
                 }
 
-                const std::string new_uuid(robot.id.uuid.c_str());
+                std::string new_uuid = uuid_to_string(robot.id.uuid);
                 if (new_uuid.empty()) {
                     return dp::result::ok(netpipe::Message{});
                 }
