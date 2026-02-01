@@ -9,6 +9,7 @@
 #include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
+#include <agent47.hpp>
 #include <datapod/robot.hpp>
 
 namespace agent {
@@ -18,41 +19,21 @@ namespace agent {
 
     class Agent {
       private:
-        // Connection mode
         bool local_mode_ = false;
-        // Netpipe (only used in networked mode)
-
-        // Single bidirectional RPC channel
         std::unique_ptr<flatsim::RpcPeer> peer_;
         std::string address_;
         flatsim::Endpoint::Type transport_type_ = flatsim::Endpoint::Type::IPC;
-
-        // Core component - Machine contains all managers (sensors, controls, network, etc.)
         Machine machine_;
         bool spawned_ = false;
-
-        // Sensor data from simulator
         types::SensorData sensor_data_;
-
-        // Speed control
         float speed_scale_ = 1.0f;
-
-        // Teleport callback (LOCAL mode only - set by Simulator)
         TeleportCallback teleport_callback_;
-
-        // Rerun visualization
         std::shared_ptr<rerun::RecordingStream> rec_;
 
       public:
-        // Constructor for networked mode (IPC/TCP)
-        Agent(const std::string &address = "");
-
-        // Constructor for local mode (owned by Simulator)
+        // Agent(const std::string &address = "");
         Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec);
-
         ~Agent();
-
-        // Machine configuration
         void set_machine(const types::Machine &config);
         Machine &machine() { return machine_; }
         const Machine &machine() const { return machine_; }

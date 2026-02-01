@@ -1,4 +1,5 @@
 #include "flatsim/agent.hpp"
+#include "datapod/datapod.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/tagged_zmq.hpp"
 #include "flatsim/transport.hpp"
@@ -22,7 +23,7 @@ namespace agent {
         std::stringstream buffer;
         buffer << file.rdbuf();
 
-        auto result = robomod::from_urdf_string(dp::String(buffer.str().c_str()));
+        auto result = agent47::from_urdf_string(dp::String(buffer.str().c_str()));
         if (result.is_err()) {
             throw std::runtime_error("Failed to parse URDF: " + urdf_path.string());
         }
@@ -40,20 +41,20 @@ namespace agent {
 
     static std::string ipc_endpoint(const std::filesystem::path &path) { return "ipc://" + path.string(); }
 
-    // Constructor for networked mode (IPC/TCP/SHM)
-    Agent::Agent(const std::string &address) : local_mode_(false), address_(address), rec_(nullptr) {
-        // Determine transport type from address
-        if (address_.empty()) {
-            transport_type_ = flatsim::Endpoint::Type::IPC;
-        } else if (address_.starts_with("shm://")) {
-            transport_type_ = flatsim::Endpoint::Type::SHM;
-        } else {
-            transport_type_ = flatsim::Endpoint::Type::TCP;
-        }
-
-        // NEW: Single RpcPeer will be created after spawn
-        // Note: peer_ will be initialized in spawn()
-    }
+    // // Constructor for networked mode (IPC/TCP/SHM)
+    // Agent::Agent(const std::string &address) : local_mode_(false), address_(address), rec_(nullptr) {
+    //     // Determine transport type from address
+    //     if (address_.empty()) {
+    //         transport_type_ = flatsim::Endpoint::Type::IPC;
+    //     } else if (address_.starts_with("shm://")) {
+    //         transport_type_ = flatsim::Endpoint::Type::SHM;
+    //     } else {
+    //         transport_type_ = flatsim::Endpoint::Type::TCP;
+    //     }
+    //
+    //     // NEW: Single RpcPeer will be created after spawn
+    //     // Note: peer_ will be initialized in spawn()
+    // }
 
     // Constructor for local mode (owned by Simulator)
     Agent::Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec)

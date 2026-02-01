@@ -10,6 +10,7 @@
 //   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
 
 #include "flatsim/agent.hpp"
+#include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
 #include <filesystem>
@@ -22,22 +23,8 @@
 int main(int argc, char **argv) {
     std::cout << "=== MPC (Model Predictive Control) Path Following Test ===" << std::endl;
 
-    // Connection:
-    // - Default: IPC (`ipc://...`) using `FLATSIM_IPC_DIR` (defaults to `/tmp`).
-    // - TCP: pass `--host 127.0.0.1` (server must be in TCP mode).
-    std::string host;
-    for (int i = 1; i < argc; ++i) {
-        const std::string arg = argv[i];
-        if (arg == "--host" && i + 1 < argc) {
-            host = argv[++i];
-        } else if (arg == "--tcp") {
-            if (host.empty()) {
-                host = "127.0.0.1";
-            }
-        } else if (arg == "--ipc") {
-            host.clear();
-        }
-    }
+    (void)argc;
+    (void)argv;
 
     std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
     if (!std::filesystem::exists(machine_file)) {
@@ -55,27 +42,21 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Load tractor - spawn at first waypoint
-    // Spawn tractor at path start, pointing in +X direction (yaw=0)
+    auto rec = std::make_shared<rerun::RecordingStream>("flatsim", "space");
+    rec->spawn().exit_on_failure();
+
+    datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
+
+    // LOCAL mode: run Simulator + Agent in-process.
+    simulator::Simulator sim(simulator::Conn::LOCAL, "", 100.0f, 100.0f, datum, rec);
+
+    // Spawn tractor at path start.
     datapod::Pose spawn_pose =
         utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
-    auto model = agent::Agent::load_model_from_urdf(machine_file);
-    std::cout << "[URDF] Parsed dp::robot::Model" << std::endl;
-    (void)model;
 
-    throw std::runtime_error("test_mpc requires dp::robot::Model -> types::Machine wiring (Loader removed)");
-
-    // Create agent (rerun connection will be set up automatically after spawn)
-    agent::Agent tractor(host);
-    (void)tractor;
-
-    // Spawn in simulator
-    std::cout << "[Agent] Spawning in simulator..." << std::endl;
-    if (!tractor.spawn()) {
-        std::cerr << "[Agent] Failed to spawn. Is simulator_server running?" << std::endl;
-        return 1;
-    }
-    std::cout << "[Agent] Spawned successfully!" << std::endl;
+    std::cout << "[Agent] Spawning tractor (LOCAL) from URDF..." << std::endl;
+    agent::Agent &tractor = sim.spawn_agent(machine_file, spawn_pose);
+    std::cout << "[Agent] Spawned: uuid=" << tractor.uuid() << " name=" << tractor.name() << std::endl;
 
     // Switch to MPC controller (was initialized with PID by default)
     tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPC);
@@ -138,11 +119,12 @@ int main(int argc, char **argv) {
             break;
         }
 
-        // Tick agent (blocks until state received)
-        // Navigation is automatic - controller updates inside tick()
-        tractor.tick(dt, 100);
+        // Advance simulation and agent (LOCAL mode).
+        sim.tick(dt);
+        tractor.tick(dt, 0);
 
         // Tock for visualization
+        sim.tock();
         tractor.tock();
 
         // Print progress every 2 seconds
@@ -158,7 +140,7 @@ int main(int argc, char **argv) {
 
         step_count++;
 
-        // Sleep to match 60 FPS like old test
+        // Sleep to approximate real-time (optional, keeps CPU down).
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
@@ -172,7 +154,7 @@ int main(int argc, char **argv) {
     auto final_pose = tractor.machine().world_pose();
     std::cout << "[MPC] Final position: (" << final_pose.point.x << ", " << final_pose.point.y << ")" << std::endl;
 
-    tractor.despawn();
+    // LOCAL mode cleanup handled by Simulator lifetime.
     std::cout << "[Agent] Done" << std::endl;
 
     return 0;
