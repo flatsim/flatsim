@@ -9,6 +9,8 @@
 #include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
+#include <datapod/robot.hpp>
+
 namespace agent {
 
     // Teleport callback type (set by Simulator in LOCAL mode)
@@ -132,6 +134,13 @@ namespace agent {
 
         // Name access
         const std::string &name() const { return machine_.name(); }
+
+        // ============================================================================
+        // URDF
+        // ============================================================================
+
+        /// Parse a URDF file into a `datapod::robot::Model` using agent47's URDF parser.
+        static datapod::robot::Model load_model_from_urdf(const std::filesystem::path &urdf_path);
 
       private:
         // Transport abstraction - handles LOCAL vs IPC/TCP internally

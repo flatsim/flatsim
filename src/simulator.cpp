@@ -1,6 +1,6 @@
 #include "flatsim/simulator.hpp"
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/loader/loader.hpp"
+#include "flatsim/simulator/machine.hpp"
 #include "flatsim/tagged_zmq.hpp"
 #include "flatsim/transport.hpp"
 #include <chrono>
@@ -222,7 +222,12 @@ namespace simulator {
             throw std::runtime_error("spawn_agent() only available in LOCAL mode");
         }
 
-        auto machine_config = agent::Loader::load_from_urdf(machine_path, spawn_pose, color);
+        auto model = agent::Agent::load_model_from_urdf(machine_path);
+
+        validate_model_for_flatsim(model);
+
+        // TEMP: the simulation stack is still `types::Machine` based. Convert from dp model here.
+        auto machine_config = machine_from_model(model, spawn_pose, color);
 
         // Override UUID if provided
         if (uuid.has_value()) {
@@ -232,16 +237,11 @@ namespace simulator {
         create_machine(machine_config);
 
         auto agent_ptr = std::make_unique<agent::Agent>(machine_config, rec_);
-
-        // Set teleport callback so Agent can call back to Simulator
         agent_ptr->set_teleport_callback(
             [this](const std::string &uuid, const datapod::Pose &pose) { this->teleport_machine(uuid, pose); });
-
         local_agents_.push_back(std::move(agent_ptr));
 
-        // Update camera tracking to follow this newly spawned agent
         update_camera_tracking(machine_config.uuid);
-
         return *local_agents_.back();
     }
 

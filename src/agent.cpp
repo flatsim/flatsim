@@ -2,13 +2,32 @@
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/tagged_zmq.hpp"
 #include "flatsim/transport.hpp"
+#include <agent47/model/urdf.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <netpipe/netpipe.hpp>
+#include <sstream>
+#include <stdexcept>
 
 namespace agent {
+
+    datapod::robot::Model Agent::load_model_from_urdf(const std::filesystem::path &urdf_path) {
+        std::ifstream file(urdf_path);
+        if (!file.is_open()) {
+            throw std::runtime_error("Cannot open URDF file: " + urdf_path.string());
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+
+        auto result = robomod::from_urdf_string(dp::String(buffer.str().c_str()));
+        if (result.is_err()) {
+            throw std::runtime_error("Failed to parse URDF: " + urdf_path.string());
+        }
+        return result.value();
+    }
 
     static std::filesystem::path ipc_dir() {
         const char *env = std::getenv("FLATSIM_IPC_DIR");

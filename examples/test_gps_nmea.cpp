@@ -9,30 +9,19 @@
 // Sensors are added to the Machine's SensorManager which auto-enables SHM output.
 
 #include "flatsim/agent.hpp"
-#include "flatsim/utils.hpp"
-#include "flatsim/agent/loader/loader.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/gps_sensor.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/agent/sensor/imu_sensor.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include "rerun/recording_stream.hpp"
-#include "flatsim/utils.hpp"
 
+#include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <cmath>
-#include "flatsim/utils.hpp"
 #include <iostream>
-#include "flatsim/utils.hpp"
 #include <numbers>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 #include <vector>
-#include "flatsim/utils.hpp"
 
 int main(int argc, char *argv[]) {
     (void)argc;
@@ -180,10 +169,8 @@ int main(int argc, char *argv[]) {
             if (imu_sensor) {
                 auto imu_data = imu_sensor->get_imu_data();
                 std::cout << "IMU: accel=(" << imu_data.accel_x << "," << imu_data.accel_y << "," << imu_data.accel_z
-                          << ") m/s^2"
-                          << ", gyro=(" << imu_data.gyro_x << "," << imu_data.gyro_y << "," << imu_data.gyro_z
-                          << ") rad/s"
-                          << ", yaw=" << imu_data.yaw << " rad" << std::endl;
+                          << ") m/s^2" << ", gyro=(" << imu_data.gyro_x << "," << imu_data.gyro_y << ","
+                          << imu_data.gyro_z << ") rad/s" << ", yaw=" << imu_data.yaw << " rad" << std::endl;
             }
         }
 

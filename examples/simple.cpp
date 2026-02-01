@@ -2,7 +2,6 @@
 // Demonstrates high-level Agent API (set_velocity) with in-process Simulator
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
@@ -21,14 +20,13 @@ int main() {
     simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
     try {
-        datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, 0.0);
-        auto machine = agent::Loader::load_from_urdf("examples/machines/urdf/tractor.urdf", spawn_pose);
+        auto model = agent::Agent::load_model_from_urdf("examples/machines/urdf/tractor.urdf");
+        std::cout << "[URDF] Parsed dp::robot::Model from tractor.urdf" << std::endl;
+        (void)model;
 
-        std::cout << "[Loader] Loaded: " << machine.name << std::endl;
-
+        throw std::runtime_error("Example requires dp::robot::Model -> types::Machine wiring (Loader removed)");
         agent::Agent robot("");
-        robot.set_machine(machine);
-        robot.spawn();
+        (void)robot;
 
         const float dt = 0.016f;
         std::cout << "[Example] Driving in circle using robot.set_velocity()" << std::endl;

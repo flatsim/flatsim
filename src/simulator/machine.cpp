@@ -2,9 +2,345 @@
 #include "flatsim/utils.hpp"
 #include <cmath>
 #include <concord/concord.hpp>
+#include <cstdio>
+#include <datapod/adapters.hpp>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 
 namespace simulator {
+
+    static float deg2rad(float deg) { return deg * (static_cast<float>(M_PI) / 180.0f); }
+
+    static std::string get_prop(const datapod::Map<datapod::String, datapod::String> &props, const std::string &key) {
+        auto it = props.find(datapod::String(key.c_str()));
+        if (it == props.end()) {
+            return "";
+        }
+        return std::string(it->second.c_str());
+    }
+
+    static bool has_prop(const datapod::Map<datapod::String, datapod::String> &props, const std::string &key) {
+        return props.find(datapod::String(key.c_str())) != props.end();
+    }
+
+    void validate_model_for_flatsim(const datapod::robot::Model &model) {
+        if (!has_prop(model.props, "flatsim.color.rgba")) {
+            throw std::runtime_error("URDF missing robot prop: flatsim.color.rgba");
+        }
+        if (!has_prop(model.props, "flatsim.turning.radius")) {
+            throw std::runtime_error("URDF missing robot prop: flatsim.turning.radius");
+        }
+
+        bool has_wheel = false;
+        for (const auto &joint : model.joints) {
+            if (has_prop(joint.props, "flatsim.side")) {
+                has_wheel = true;
+                if (!has_prop(joint.props, "flatsim.throttle_max")) {
+                    throw std::runtime_error("URDF wheel joint missing prop: flatsim.throttle_max");
+                }
+                if (!has_prop(joint.props, "flatsim.throttle_diff")) {
+                    throw std::runtime_error("URDF wheel joint missing prop: flatsim.throttle_diff");
+                }
+                if (!has_prop(joint.props, "flatsim.steering_max")) {
+                    throw std::runtime_error("URDF wheel joint missing prop: flatsim.steering_max");
+                }
+                if (!has_prop(joint.props, "flatsim.steering_diff")) {
+                    throw std::runtime_error("URDF wheel joint missing prop: flatsim.steering_diff");
+                }
+            }
+
+            if (has_prop(joint.props, "flatsim.karosserie_name")) {
+                if (!has_prop(joint.props, "flatsim.karosserie_sections")) {
+                    throw std::runtime_error("URDF karosserie joint missing prop: flatsim.karosserie_sections");
+                }
+                if (!has_prop(joint.props, "flatsim.karosserie_has_physics")) {
+                    throw std::runtime_error("URDF karosserie joint missing prop: flatsim.karosserie_has_physics");
+                }
+            }
+
+            if (has_prop(joint.props, "flatsim.hitch_name") && !has_prop(joint.props, "flatsim.hitch_is_master")) {
+                throw std::runtime_error("URDF hitch joint missing prop: flatsim.hitch_is_master");
+            }
+
+            if (has_prop(joint.props, "flatsim.tank_name")) {
+                if (!has_prop(joint.props, "flatsim.tank_type")) {
+                    throw std::runtime_error("URDF tank joint missing prop: flatsim.tank_type");
+                }
+                if (!has_prop(joint.props, "flatsim.tank_capacity")) {
+                    throw std::runtime_error("URDF tank joint missing prop: flatsim.tank_capacity");
+                }
+            }
+
+            if (has_prop(joint.props, "flatsim.power_name")) {
+                if (!has_prop(joint.props, "flatsim.power_type")) {
+                    throw std::runtime_error("URDF power joint missing prop: flatsim.power_type");
+                }
+                if (!has_prop(joint.props, "flatsim.power_capacity")) {
+                    throw std::runtime_error("URDF power joint missing prop: flatsim.power_capacity");
+                }
+                if (!has_prop(joint.props, "flatsim.power_consumption_rate")) {
+                    throw std::runtime_error("URDF power joint missing prop: flatsim.power_consumption_rate");
+                }
+                if (!has_prop(joint.props, "flatsim.power_charge_rate")) {
+                    throw std::runtime_error("URDF power joint missing prop: flatsim.power_charge_rate");
+                }
+            }
+        }
+
+        if (!has_wheel) {
+            throw std::runtime_error("URDF has no wheel joints (missing flatsim.side on any joint)");
+        }
+    }
+
+    static datapod::Size get_geometry_size(const datapod::robot::Link &link) {
+        if (!link.collisions.empty()) {
+            const auto &geom = link.collisions[0].geom;
+            if (geom.is_box()) {
+                return geom.as_box()->size;
+            }
+            if (geom.is_cylinder()) {
+                auto *cyl = geom.as_cylinder();
+                return datapod::Size{cyl->length, cyl->radius * 2.0, cyl->radius * 2.0};
+            }
+        }
+        if (!link.visuals.empty()) {
+            const auto &geom = link.visuals[0].geom;
+            if (geom.is_box()) {
+                return geom.as_box()->size;
+            }
+            if (geom.is_cylinder()) {
+                auto *cyl = geom.as_cylinder();
+                return datapod::Size{cyl->length, cyl->radius * 2.0, cyl->radius * 2.0};
+            }
+        }
+        return datapod::Size{0.1, 0.1, 0.1};
+    }
+
+    types::Machine machine_from_model(const datapod::robot::Model &model, const datapod::Pose &spawn_pose,
+                                      std::optional<pigment::RGB> color) {
+        types::Machine machine;
+
+        machine.name = "urdf";
+        machine.uuid = "urdf";
+        machine.type = machine.name;
+        machine.rci = 0;
+
+        {
+            pigment::RGB parsed_color{128, 128, 128};
+            auto rgba = get_prop(model.props, "flatsim.color.rgba");
+            if (!rgba.empty()) {
+                float r, g, b, a;
+                if (std::sscanf(rgba.c_str(), "%f %f %f %f", &r, &g, &b, &a) >= 3) {
+                    parsed_color = pigment::RGB(static_cast<int>(r), static_cast<int>(g), static_cast<int>(b));
+                }
+            }
+            machine.color = color.value_or(parsed_color);
+
+            auto turning_radius = get_prop(model.props, "flatsim.turning.radius");
+            if (!turning_radius.empty()) {
+                machine.turning_radius = std::stof(turning_radius);
+            }
+        }
+
+        std::unordered_map<std::string, size_t> child_to_joint;
+        for (size_t i = 0; i < model.joints.size(); ++i) {
+            const auto &joint = model.joints[i];
+            if (joint.child < model.links.size()) {
+                child_to_joint[std::string(model.links[joint.child].name.c_str())] = i;
+            }
+        }
+
+        struct SteeringInfo {
+            float steering_max = 0.0f;
+            float steering_diff = 0.0f;
+            datapod::Pose origin;
+        };
+        std::unordered_map<std::string, SteeringInfo> steering_map;
+        for (const auto &joint : model.joints) {
+            if (joint.type != datapod::robot::Joint::Type::Revolute) {
+                continue;
+            }
+            if (has_prop(joint.props, "flatsim.side")) {
+                continue;
+            }
+            if (!has_prop(joint.props, "flatsim.steering_diff") && !has_prop(joint.props, "flatsim.steering_max")) {
+                continue;
+            }
+            if (joint.child >= model.links.size()) {
+                continue;
+            }
+            std::string child_name(model.links[joint.child].name.c_str());
+
+            SteeringInfo info;
+            info.origin = joint.origin;
+            auto steering_diff = get_prop(joint.props, "flatsim.steering_diff");
+            if (!steering_diff.empty()) {
+                info.steering_diff = std::stof(steering_diff);
+            }
+            if (has_prop(joint.props, "flatsim.steering_max")) {
+                info.steering_max = deg2rad(std::stof(get_prop(joint.props, "flatsim.steering_max")));
+            } else if (joint.limits.has_value()) {
+                info.steering_max = static_cast<float>(joint.limits->upper);
+            }
+            steering_map[child_name] = info;
+        }
+
+        float min_x = std::numeric_limits<float>::max();
+        float max_x = std::numeric_limits<float>::lowest();
+        float min_y = std::numeric_limits<float>::max();
+        float max_y = std::numeric_limits<float>::lowest();
+
+        for (const auto &joint : model.joints) {
+            if (joint.child >= model.links.size()) {
+                continue;
+            }
+            const auto &child_link = model.links[joint.child];
+            std::string child_link_name(child_link.name.c_str());
+
+            std::string parent_link_name;
+            if (joint.parent < model.links.size()) {
+                parent_link_name = std::string(model.links[joint.parent].name.c_str());
+            }
+
+            if (joint.type == datapod::robot::Joint::Type::Continuous && has_prop(joint.props, "flatsim.side")) {
+                types::Wheel wheel;
+                wheel.name = child_link_name;
+                wheel.color = pigment::RGB(30, 30, 30);
+                wheel.bound.size = get_geometry_size(child_link);
+
+                datapod::Pose wheel_pose = joint.origin;
+                auto steer_it = steering_map.find(parent_link_name);
+                if (steer_it != steering_map.end()) {
+                    wheel_pose.point.x += steer_it->second.origin.point.x;
+                    wheel_pose.point.y += steer_it->second.origin.point.y;
+                    wheel_pose.point.z += steer_it->second.origin.point.z;
+                }
+                wheel.bound.pose = wheel_pose;
+
+                if (has_prop(joint.props, "flatsim.steering_max")) {
+                    wheel.steering_max = deg2rad(std::stof(get_prop(joint.props, "flatsim.steering_max")));
+                } else if (steer_it != steering_map.end()) {
+                    wheel.steering_max = steer_it->second.steering_max;
+                }
+                machine.controls.steerings_max.push_back(wheel.steering_max);
+
+                float steer_diff = 0.0f;
+                auto steering_diff = get_prop(joint.props, "flatsim.steering_diff");
+                if (!steering_diff.empty()) {
+                    steer_diff = std::stof(steering_diff);
+                } else if (steer_it != steering_map.end()) {
+                    steer_diff = steer_it->second.steering_diff;
+                }
+                machine.controls.steerings_diff.push_back(deg2rad(steer_diff));
+
+                wheel.throttle_max = std::stof(get_prop(joint.props, "flatsim.throttle_max"));
+                machine.controls.throttles_max.push_back(wheel.throttle_max);
+                machine.controls.throttles_diff.push_back(std::stof(get_prop(joint.props, "flatsim.throttle_diff")));
+                machine.controls.left_side.push_back(get_prop(joint.props, "flatsim.side") == "left");
+
+                machine.wheels.push_back(wheel);
+                continue;
+            }
+
+            if (joint.type != datapod::robot::Joint::Type::Fixed) {
+                continue;
+            }
+
+            if (has_prop(joint.props, "flatsim.karosserie_name")) {
+                types::Karosserie kaross;
+                kaross.name = get_prop(joint.props, "flatsim.karosserie_name");
+                kaross.color = machine.color;
+                kaross.has_physics = (get_prop(joint.props, "flatsim.karosserie_has_physics") == "true" ||
+                                      get_prop(joint.props, "flatsim.karosserie_has_physics") == "1");
+                kaross.bound.size = get_geometry_size(child_link);
+                kaross.bound.pose = joint.origin;
+
+                int sections = std::stoi(get_prop(joint.props, "flatsim.karosserie_sections"));
+                for (int s = 0; s < sections; ++s) {
+                    types::Section section;
+                    section.name = "section_" + std::to_string(s);
+                    section.bound.pose = utils::make_pose(0.0, 0.0, 0.0, 0.0);
+                    section.bound.size = kaross.bound.size;
+                    section.color = kaross.color;
+                    kaross.sections.push_back(section);
+                }
+                machine.karosseries.push_back(kaross);
+
+                if (kaross.name == "body") {
+                    float x = static_cast<float>(joint.origin.point.x);
+                    float y = static_cast<float>(joint.origin.point.y);
+                    min_x = std::min(min_x, x - static_cast<float>(kaross.bound.size.x) / 2);
+                    max_x = std::max(max_x, x + static_cast<float>(kaross.bound.size.x) / 2);
+                    min_y = std::min(min_y, y - static_cast<float>(kaross.bound.size.y) / 2);
+                    max_y = std::max(max_y, y + static_cast<float>(kaross.bound.size.y) / 2);
+                }
+            }
+
+            if (has_prop(joint.props, "flatsim.hitch_name")) {
+                types::Hitch hitch;
+                hitch.name = get_prop(joint.props, "flatsim.hitch_name");
+                hitch.is_master = (get_prop(joint.props, "flatsim.hitch_is_master") == "true" ||
+                                   get_prop(joint.props, "flatsim.hitch_is_master") == "1");
+                hitch.color = pigment::RGB(50, 50, 50);
+                hitch.bound.size = get_geometry_size(child_link);
+                hitch.bound.pose = joint.origin;
+                machine.hitches[hitch.name] = hitch;
+            }
+
+            if (has_prop(joint.props, "flatsim.tank_name")) {
+                types::Tank tank;
+                tank.name = get_prop(joint.props, "flatsim.tank_name");
+                tank.capacity = std::stof(get_prop(joint.props, "flatsim.tank_capacity"));
+                tank.type = (get_prop(joint.props, "flatsim.tank_type") == "WASTE") ? types::ContainerType::WASTE
+                                                                                    : types::ContainerType::HARVEST;
+                tank.bound.size = get_geometry_size(child_link);
+                tank.bound.pose = joint.origin;
+                machine.tank = tank;
+            }
+
+            if (has_prop(joint.props, "flatsim.power_name")) {
+                types::Power power;
+                power.name = get_prop(joint.props, "flatsim.power_name");
+                power.capacity = std::stof(get_prop(joint.props, "flatsim.power_capacity"));
+                power.consumption_rate = std::stof(get_prop(joint.props, "flatsim.power_consumption_rate"));
+                power.charge_rate = std::stof(get_prop(joint.props, "flatsim.power_charge_rate"));
+                power.type = (get_prop(joint.props, "flatsim.power_type") == "BATTERY") ? types::PowerType::BATTERY
+                                                                                        : types::PowerType::FUEL;
+                machine.power_source = power;
+            }
+        }
+
+        float width = max_x - min_x;
+        float height = max_y - min_y;
+        if (!std::isfinite(width) || !std::isfinite(height) || width <= 0.0f || height <= 0.0f) {
+            width = 1.0f;
+            height = 1.0f;
+        }
+        machine.bound.pose = spawn_pose;
+        machine.bound.size = datapod::Size{width, height, 0.3};
+
+        bool has_slave_hitch = false;
+        for (const auto &[name, hitch] : machine.hitches) {
+            (void)name;
+            if (!hitch.is_master) {
+                has_slave_hitch = true;
+                break;
+            }
+        }
+        if (has_slave_hitch && machine.wheels.empty()) {
+            machine.role = types::MachineRole::SLAVE;
+            machine.slave = true;
+        } else if (has_slave_hitch) {
+            machine.role = types::MachineRole::MASTER;
+        } else {
+            machine.role = types::MachineRole::MASTER;
+        }
+
+        return machine;
+    }
 
     Machine::Machine(std::shared_ptr<rerun::RecordingStream> rec, std::shared_ptr<flywheel::World> world,
                      const types::Machine &config, uint32_t group)

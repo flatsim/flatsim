@@ -10,7 +10,6 @@
 //   ./build/linux/x86_64/release/test_mpc --host 127.0.0.1
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
 #include <filesystem>
@@ -60,13 +59,15 @@ int main(int argc, char **argv) {
     // Spawn tractor at path start, pointing in +X direction (yaw=0)
     datapod::Pose spawn_pose =
         utils::make_pose_2d(0.0, 0.0, -1.5708f); // -90 deg to compensate for tractor's default orientation
-    auto tractor_config = agent::Loader::load_from_urdf(machine_file, spawn_pose);
-    tractor_config.uuid = "mpc_tractor";
-    std::cout << "[Loader] Loaded: " << tractor_config.name << std::endl;
+    auto model = agent::Agent::load_model_from_urdf(machine_file);
+    std::cout << "[URDF] Parsed dp::robot::Model" << std::endl;
+    (void)model;
+
+    throw std::runtime_error("test_mpc requires dp::robot::Model -> types::Machine wiring (Loader removed)");
 
     // Create agent (rerun connection will be set up automatically after spawn)
     agent::Agent tractor(host);
-    tractor.set_machine(tractor_config);
+    (void)tractor;
 
     // Spawn in simulator
     std::cout << "[Agent] Spawning in simulator..." << std::endl;

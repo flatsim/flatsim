@@ -1,4 +1,4 @@
-#include "flatsim/agent/loader/loader.hpp"
+#include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
@@ -22,50 +22,14 @@ int main() {
         spawn_pose.point.y = 0.0;
         utils::set_yaw(spawn_pose, 0.0);
 
-        auto machine = agent::Loader::load_from_urdf("examples/machines/urdf/husky.urdf", spawn_pose);
+        auto model = agent::Agent::load_model_from_urdf("examples/machines/urdf/husky.urdf");
+        std::cout << "[URDF] Parsed dp::robot::Model from husky.urdf" << std::endl;
+        (void)model;
 
-        std::cout << "[Loader] Loaded machine: " << machine.name << std::endl;
-        std::cout << "[Loader] Type: " << machine.type << std::endl;
-        std::cout << "[Loader] UUID: " << machine.uuid << std::endl;
-        std::cout << "[Loader] Wheels: " << machine.wheels.size() << std::endl;
+        std::cout << "[Info] Loader removed; dp::robot::Model parsed + validated." << std::endl;
+        return 0;
 
-        sim.create_machine(machine);
-
-        const float dt = 0.016f;
-        const auto wheel_count = machine.wheels.size();
-        std::cout << "[Example] Driving in circle - steering left with forward throttle" << std::endl;
-
-        for (int i = 0; i < 500; ++i) {
-            types::WheelControl ctrl;
-            ctrl.uuid = machine.uuid;
-            ctrl.steering.assign(wheel_count, 0.0f);
-            ctrl.throttle.assign(wheel_count, 0.6f);
-
-            // Best-effort: assume the first 2 wheels are steerable
-            if (wheel_count >= 2) {
-                ctrl.steering[0] = 0.3f;
-                ctrl.steering[1] = 0.3f;
-            }
-
-            sim.apply_control(ctrl, dt);
-            sim.tick(dt);
-
-            if (i % 2 == 0) {
-                sim.tock();
-            }
-
-            if (i % 60 == 0) {
-                auto ws_state = sim.get_world_state();
-                for (const auto &ms : ws_state.machines) {
-                    if (std::string(ms.uuid.view()) == machine.uuid) {
-                        std::cout << "[Sim] Tick " << i << " - Position: (" << ms.pose.position.x << ", "
-                                  << ms.pose.position.y << ") yaw=" << ms.pose.angle << std::endl;
-                    }
-                }
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
+        // Old demo used Simulator + types::Machine; that path is intentionally removed.
     } catch (const std::exception &e) {
         std::cerr << "[Error] Failed to load machine: " << e.what() << std::endl;
     }

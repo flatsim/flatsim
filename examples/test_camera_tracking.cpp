@@ -2,7 +2,6 @@
 // This example spawns multiple agents and shows how the camera tracks the last one
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>

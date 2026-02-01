@@ -2,7 +2,6 @@
 // This process ONLY uses agent:: namespace code
 
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/loader/loader.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
@@ -47,16 +46,14 @@ int main(int argc, char **argv) {
             }
         }
     }
-    datapod::Pose spawn_pose = utils::make_pose_2d(10.0, 10.0, 0.0);
+    auto model = agent::Agent::load_model_from_urdf(machine_file);
+    std::cout << "[Client] Parsed dp::robot::Model from URDF" << std::endl;
+    (void)model;
 
-    // Load machine configuration
-    types::Machine machine_config = agent::Loader::load_from_urdf(machine_file, spawn_pose);
-    machine_config.uuid = "agent_001";
-    std::cout << "[Client] Loaded machine: " << machine_config.name << std::endl;
+    throw std::runtime_error("agent_client requires dp::robot::Model -> types::Machine wiring (Loader removed)");
 
     // Create agent (rerun will be set up automatically after spawn)
     agent::Agent agent(host);
-    agent.set_machine(machine_config);
 
     // Spawn in simulator
     std::cout << "[Client] Spawning in simulator..." << std::endl;

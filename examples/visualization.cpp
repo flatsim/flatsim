@@ -1,4 +1,4 @@
-#include "flatsim/agent/loader/loader.hpp"
+#include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/types.hpp"
 #include "flatsim/utils.hpp"
@@ -18,42 +18,15 @@ int main() {
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(simulator::Conn::IPC, "", 100.0f, 100.0f, datum, rec);
 
-    // Load tractor from URDF
-    std::cout << "[Example] Loading tractor from URDF..." << std::endl;
-    types::Machine machine =
-        agent::Loader::load_from_urdf("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(0.0, 0.0, 0.0));
-    std::cout << "[Example] Loaded machine: " << machine.name << " with " << machine.wheels.size() << " wheels, "
-              << machine.karosseries.size() << " karosseries, " << machine.hitches.size() << " hitches" << std::endl;
+    std::cout << "[Example] Parsing URDF into dp::robot::Model..." << std::endl;
+    auto model = agent::Agent::load_model_from_urdf("examples/machines/urdf/tractor.urdf");
+    std::cout << "[Example] URDF parsed + validated" << std::endl;
+    (void)model;
 
-    sim.create_machine(machine);
+    std::cout << "[Info] Loader removed; dp::robot::Model parsed + validated." << std::endl;
+    return 0;
 
-    const float dt = 0.016f;
-    std::cout << "[Example] Driving in a circle (tick at ~60Hz, tock at ~30Hz)..." << std::endl;
-    for (int i = 0; i < 500; ++i) {
-        types::WheelControl ctrl;
-        ctrl.uuid = machine.uuid;
-        ctrl.steering = {0.3f, 0.3f, 0.0f, 0.0f};
-        ctrl.throttle = {0.6f, 0.6f, 0.6f, 0.6f};
-
-        sim.apply_control(ctrl, dt);
-        sim.tick(dt);
-
-        if (i % 2 == 0) {
-            sim.tock();
-        }
-
-        if (i % 60 == 0) {
-            auto ws_state = sim.get_world_state();
-            for (const auto &ms : ws_state.machines) {
-                if (std::string(ms.uuid.view()) == machine.uuid) {
-                    std::cout << "[Sim] Tick " << i << " - Pose: (" << ms.pose.position.x << ", " << ms.pose.position.y
-                              << ") yaw=" << ms.pose.angle << std::endl;
-                }
-            }
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-    }
+    // Old demo relied on Simulator + types::Machine; that path is intentionally removed.
 
     std::cout << "[Example] Done!" << std::endl;
 
