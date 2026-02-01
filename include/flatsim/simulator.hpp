@@ -14,7 +14,6 @@
 #include "flatsim/simulator/data.hpp"
 #include "flatsim/simulator/machine.hpp"
 #include "flatsim/simulator/world.hpp"
-#include "flatsim/transport.hpp"
 #include "flatsim/types.hpp"
 
 #include <agent47/bridge/pipe_bridge.hpp>

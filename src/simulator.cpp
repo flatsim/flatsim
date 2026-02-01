@@ -2,7 +2,6 @@
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator/machine.hpp"
 #include "flatsim/tagged_zmq.hpp"
-#include "flatsim/transport.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <cstring>

@@ -54,14 +54,14 @@ float get_robot_size(const agent::Agent &robot) {
 }
 
 // Check if LIDAR detects an obstacle in front within the given range
-float check_lidar_forward(fs::LIDARSensor *lidar, float forward_angle_range, const datapod::Pose &robot_pose,
+float check_lidar_forward(const types::LidarData *lidar, float forward_angle_range, const datapod::Pose &robot_pose,
                           std::shared_ptr<rerun::RecordingStream> rec, const std::string &robot_id, pigment::RGB color,
                           bool debug_output = false) {
     if (!lidar) {
         return std::numeric_limits<float>::max();
     }
 
-    const auto &data = lidar->get_lidar_data();
+    const auto &data = *lidar;
 
     if (data.ranges.empty()) {
         if (debug_output) {
@@ -274,33 +274,14 @@ int main() {
         // Spawn tractor with unique UUID and color
         std::string uuid = "tractor_" + std::to_string(m);
         datapod::Pose spawn_pose = utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f);
-        auto &tractor =
-            sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose, uuid, ROBOT_COLORS[m % ROBOT_COLORS.size()]);
+        auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose, uuid,
+                                        ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
         echo::info("Loaded tractor ", m, " at (", spawn_x, ", ", spawn_y, ") UUID: ", uuid);
 
-        // Get robot size for LIDAR configuration
-        float robot_size = get_robot_size(tractor);
-
-        // Configure LIDAR on the simulator's machine (simulator will do raycasting)
-        types::LidarConfig lidar_cfg;
-        lidar_cfg.enabled = true;
-        lidar_cfg.min_range = robot_size + 0.5f; // min range > robot size
-        lidar_cfg.max_range = 15.0f;             // 15m max range
-        lidar_cfg.fov_deg = 90.0f;               // 45 degree FOV
-        lidar_cfg.resolution_deg = 2.0f;         // 3 degree resolution
-        sim.set_lidar_config(uuid, lidar_cfg);
-
-        // Add LIDAR sensor on agent side to receive data from simulator
-        auto lidar = std::make_unique<fs::LIDARSensor>(fs::LIDARSensor::ScanPattern::SECTOR_2D,
-                                                       10.0f,                   // 10 Hz update rate
-                                                       lidar_cfg.min_range,     // min range
-                                                       lidar_cfg.max_range,     // max range
-                                                       lidar_cfg.fov_deg,       // FOV
-                                                       lidar_cfg.resolution_deg // resolution
-        );
-        tractor.machine().sensors.add(std::move(lidar));
-        echo::info("Added LIDAR sensor to Robot ", m);
+        // LIDAR config + presence come from URDF now (dp::robot::Link::sensor).
+        // The simulator will raycast based on machine.lidar config, and the agent receives
+        // LIDAR samples via the sensor stream.
 
         // Configure MPPI controller
         tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
@@ -361,17 +342,17 @@ int main() {
             auto &robot = *agents[i];
             float size_m = get_robot_size(robot);
 
-            auto *lidar = robot.machine().sensors.get<fs::LIDARSensor>();
+            const auto &sd = robot.get_sensor_data();
             float safe_distance = 2.0f * size_m;
 
             bool should_stop = false;
 
-            if (lidar) {
+            if (sd.has_lidar) {
                 auto pos_m = robot.get_position();
                 bool debug = false; // Disable LIDAR debug output (too noisy)
 
-                float min_obstacle_dist =
-                    check_lidar_forward(lidar, 0.52f, pos_m, rec, robot.uuid(), robot.machine().config().color, debug);
+                float min_obstacle_dist = check_lidar_forward(&sd.lidar, 0.52f, pos_m, rec, robot.uuid(),
+                                                              robot.machine().config().color, debug);
 
                 if (min_obstacle_dist < safe_distance) {
                     should_stop = true;

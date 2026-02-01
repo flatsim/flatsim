@@ -129,9 +129,14 @@ namespace simulator {
             return std::nullopt;
         }
 
-        // Defaults match types::LidarConfig defaults.
+        // Defaults: pick something visible/useful out of the box.
+        // (Previously test_farmtrax set these explicitly.)
         types::LidarConfig cfg;
         cfg.enabled = true;
+        cfg.min_range = 0.5f;
+        cfg.max_range = 15.0f;
+        cfg.fov_deg = 90.0f;
+        cfg.resolution_deg = 2.0f;
 
         const auto get = [&](const char *key) { return get_prop(sensor.props, key); };
 
