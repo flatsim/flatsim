@@ -26,6 +26,14 @@ namespace simulator {
     types::Machine machine_from_model(const datapod::robot::Model &model, const datapod::Pose &spawn_pose,
                                       std::optional<pigment::RGB> color);
 
+    /// Convert twist command (linear/angular velocity) to per-wheel control.
+    /// Handles both Ackermann and differential drive configurations.
+    /// @param config Machine configuration with wheel layout and control limits
+    /// @param linear Linear velocity command [-1, 1]
+    /// @param angular Angular velocity command [-1, 1]
+    /// @return WheelControl with per-wheel steering and throttle values
+    types::WheelControl twist_to_wheel_control(const types::Machine &config, float linear, float angular);
+
     // Forward declare
     class Data;
 

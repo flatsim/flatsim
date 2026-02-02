@@ -1,16 +1,15 @@
 #pragma once
 
 #include <algorithm>
-#include <functional>
 #include <memory>
-#include <rerun.hpp>
-
-#include "flatsim/agent/machine.hpp"
-#include "flatsim/types.hpp"
 #include <optional>
+#include <rerun.hpp>
+#include <utility>
 
+#include "flatsim/types.hpp"
 #include <agent47.hpp>
 #include <datapod/robot.hpp>
+#include <drivekit/tracker.hpp>
 
 namespace agent {
 
@@ -21,15 +20,26 @@ namespace agent {
       private:
         bool local_mode_ = false;
         std::optional<std::string> agent47_endpoint_;
-        std::string address_;
-        Machine machine_;
         bool spawned_ = false;
-        types::SensorData sensor_data_;
-        float speed_scale_ = 1.0f;
         std::shared_ptr<rerun::RecordingStream> rec_;
 
+        // Machine state (updated from simulator)
+        types::Machine config_;
+        datapod::Pose world_pose_;
+        float linear_velocity_ = 0.0f;
+        float angular_velocity_ = 0.0f;
+        types::SensorData sensor_data_;
+
+        // Control state
+        float cmd_linear_ = 0.0f;
+        float cmd_angular_ = 0.0f;
+        float speed_scale_ = 1.0f;
+
+        // Path following (uses agent47's drivekit)
+        std::unique_ptr<drivekit::Tracker> tracker_;
+        bool tracker_enabled_ = false;
+
       public:
-        // Agent(const std::string &address = "");
         Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec);
         Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
               std::shared_ptr<rerun::RecordingStream> rec);
@@ -39,89 +49,82 @@ namespace agent {
               std::shared_ptr<rerun::RecordingStream> rec);
 
         ~Agent();
-        void set_machine(const types::Machine &config);
-        Machine &machine() { return machine_; }
-        const Machine &machine() const { return machine_; }
 
         // Networked mode: spawn/despawn via IPC
         bool spawn();
         bool despawn();
 
-        // Control interface (delegates to machine.controls)
-        void set_linear(float linear);
-        void set_angular(float angular);
-        void set_velocity(float linear, float angular);
-
-        // Control manager access (delegates to machine.controls)
-        ControlManager &controls() { return machine_.controls; }
-        const ControlManager &controls() const { return machine_.controls; }
+        // Control interface
+        void set_linear(float linear) { cmd_linear_ = linear; }
+        void set_angular(float angular) { cmd_angular_ = angular; }
+        void set_velocity(float linear, float angular) {
+            cmd_linear_ = linear;
+            cmd_angular_ = angular;
+        }
 
         // Tick/tock pattern
-        // Networked mode: tick() blocks until state message received from simulator
-        // Local mode: tick() just runs navigation (state updated by Simulator)
         void tick(float dt, int timeout_ms = 100);
         void tock();
 
         // Transport abstraction - called by Simulator
-        // LOCAL mode: direct state update
-        // IPC/TCP mode: state already received via recv_state()
         void update_from_physics(const types::ser::MachineState &state);
         void update_from_sensors(const types::ser::SensorState &state);
 
-        // Get current wheel control (used by Simulator in LOCAL mode)
-        types::WheelControl get_wheel_control() const;
+        // Get current twist command (used by Simulator to convert to wheel control)
+        std::pair<float, float> get_twist() const { return {cmd_linear_ * speed_scale_, cmd_angular_}; }
 
-        // Get sensor data (updated by Simulator)
+        // Get sensor data
         const types::SensorData &get_sensor_data() const { return sensor_data_; }
 
-        // Check if in local mode
+        // Check mode
         bool is_local() const { return local_mode_; }
 
         // ============================================================================
-        // Convenience API (shortcuts to avoid deep nesting)
+        // State accessors
         // ============================================================================
 
-        // Direct access to drivekit::Tracker (shortcut for machine().tracker())
-        drivekit::Tracker *tracker() { return machine_.tracker(); }
-        const drivekit::Tracker *tracker() const { return machine_.tracker(); }
-
-        // Position/pose (alias for machine().world_pose())
-        const datapod::Pose &get_position() const { return machine_.world_pose(); }
-
-        // Velocity access
-        float get_linear_velocity() const { return machine_.linear_velocity(); }
-        float get_angular_velocity() const { return machine_.angular_velocity(); }
+        const types::Machine &config() const { return config_; }
+        const datapod::Pose &get_position() const { return world_pose_; }
+        float get_linear_velocity() const { return linear_velocity_; }
+        float get_angular_velocity() const { return angular_velocity_; }
         void get_velocity(float &linear, float &angular) const {
-            linear = machine_.linear_velocity();
-            angular = machine_.angular_velocity();
+            linear = linear_velocity_;
+            angular = angular_velocity_;
         }
 
-        // Speed control (scales velocity commands, 0.0 to 1.0)
+        // ============================================================================
+        // Tracker / Navigation
+        // ============================================================================
+
+        drivekit::Tracker *tracker() { return tracker_.get(); }
+        const drivekit::Tracker *tracker() const { return tracker_.get(); }
+        void set_tracker_enabled(bool enabled) { tracker_enabled_ = enabled; }
+        bool is_tracker_enabled() const { return tracker_enabled_; }
+
+        // ============================================================================
+        // Speed / Braking
+        // ============================================================================
+
         void set_speed(float scale) { speed_scale_ = std::clamp(scale, 0.0f, 1.0f); }
         float get_speed() const { return speed_scale_; }
         void speed_up(float delta = 0.1f) { set_speed(speed_scale_ + delta); }
         void slow_down(float delta = 0.1f) { set_speed(speed_scale_ - delta); }
+        void brake() {
+            cmd_linear_ = 0.0f;
+            cmd_angular_ = 0.0f;
+        }
 
-        // Braking
-        void brake();
+        // ============================================================================
+        // Identity
+        // ============================================================================
 
-        // Teleport/reset intentionally not supported (agent47-only comms).
-
-        // Navigation enable/disable (shortcut for machine().set_navigation_enabled())
-        void set_navigation_enabled(bool enabled) { machine_.set_navigation_enabled(enabled); }
-        bool is_navigation_enabled() const { return machine_.is_navigation_enabled(); }
-
-        // UUID access
-        const std::string &uuid() const { return machine_.uuid(); }
-
-        // Name access
-        const std::string &name() const { return machine_.name(); }
+        const std::string &uuid() const { return config_.uuid; }
+        const std::string &name() const { return config_.name; }
 
         // ============================================================================
         // URDF
         // ============================================================================
 
-        /// Parse a URDF file into a `datapod::robot::Model` using agent47's URDF parser.
         static datapod::robot::Model load_model_from_urdf(const std::filesystem::path &urdf_path);
     };
 

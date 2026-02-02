@@ -309,7 +309,7 @@ namespace simulator {
 
     agent::Agent *Simulator::get_agent(const std::string &uuid) {
         for (auto &agent : local_agents_) {
-            if (agent->machine().uuid() == uuid) {
+            if (agent->uuid() == uuid) {
                 return agent.get();
             }
         }
@@ -604,36 +604,19 @@ namespace simulator {
     }
 
     void Simulator::apply_agent47_command(const std::string &uuid, const agent47::types::Command &cmd, float dt) {
-        (void)dt;
         if (!cmd.valid) {
             return;
         }
 
-        // Minimal mapping: interpret vx as desired throttle for all wheels, and vz as turn bias.
-        // This is intentionally simple to get the pipe working end-to-end.
         auto it = machines_.find(uuid);
         if (it == machines_.end()) {
             return;
         }
 
-        types::WheelControl wheel_ctrl;
-        wheel_ctrl.uuid = uuid;
-
-        const auto &cfg = it->second.config();
-        const size_t n = cfg.wheels.size();
-        wheel_ctrl.throttle.assign(n, 0.0f);
-        wheel_ctrl.steering.assign(n, 0.0f);
-
-        const float base = static_cast<float>(cmd.twist.linear.vx);
-        const float yaw = static_cast<float>(cmd.twist.angular.vz);
-
-        // Differential-ish: left gets -(yaw), right gets +(yaw)
-        for (size_t i = 0; i < n; ++i) {
-            const bool left = (i < cfg.controls.left_side.size()) ? cfg.controls.left_side[i] : false;
-            wheel_ctrl.throttle[i] = base + (left ? -yaw : yaw);
-        }
-
-        it->second.apply_control(wheel_ctrl, 0.016f);
+        float linear = static_cast<float>(cmd.twist.linear.vx);
+        float angular = static_cast<float>(cmd.twist.angular.vz);
+        auto wheel_ctrl = simulator::twist_to_wheel_control(it->second.config(), linear, angular);
+        it->second.apply_control(wheel_ctrl, dt);
     }
 
     // ============================================================================
@@ -744,13 +727,14 @@ namespace simulator {
             }
         }
 
-        // Step 3: For LOCAL mode, get controls from agents
+        // Step 3: For LOCAL mode, get twist from agents and convert to wheel control
         // For networked mode, controls are received via peer handlers (asynchronous)
         if (conn_ == Conn::LOCAL) {
             for (auto &agent : local_agents_) {
-                auto ctrl = agent->get_wheel_control();
-                auto it = machines_.find(ctrl.uuid);
+                auto [linear, angular] = agent->get_twist();
+                auto it = machines_.find(agent->uuid());
                 if (it != machines_.end()) {
+                    auto ctrl = simulator::twist_to_wheel_control(it->second.config(), linear, angular);
                     it->second.apply_control(ctrl, dt);
                 }
             }

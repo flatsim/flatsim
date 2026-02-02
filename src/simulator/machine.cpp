@@ -96,6 +96,88 @@ namespace simulator {
         }
     }
 
+    types::WheelControl twist_to_wheel_control(const types::Machine &config, float linear, float angular) {
+        types::WheelControl ctrl;
+        ctrl.uuid = config.uuid;
+
+        const size_t n = config.wheels.size();
+        ctrl.steering.resize(n, 0.0f);
+        ctrl.throttle.resize(n, 0.0f);
+
+        if (n == 0) {
+            return ctrl;
+        }
+
+        const auto &mc = config.controls;
+        constexpr float in_min = -1.0f, in_max = 1.0f;
+
+        // Check if differential drive (all steering_max are 0)
+        bool is_differential = true;
+        for (size_t i = 0; i < mc.steerings_max.size(); ++i) {
+            if (std::abs(mc.steerings_max[i]) > 1e-6f) {
+                is_differential = false;
+                break;
+            }
+        }
+
+        // Compute steering angles
+        const float ang_sign = (angular < 0.0f ? -1.0f : 1.0f);
+        for (size_t i = 0; i < n; ++i) {
+            if (i < mc.steerings_max.size()) {
+                float o1 = mc.steerings_max[i] - ang_sign * mc.steerings_diff[i];
+                float o2 = -mc.steerings_max[i] + ang_sign * mc.steerings_diff[i];
+                ctrl.steering[i] = utils::mapper(angular, in_min, in_max, o1, o2);
+            }
+        }
+
+        // Find max steering for Ackermann differential calc
+        float steering_for_diff = is_differential ? angular : 0.0f;
+        if (!is_differential) {
+            for (size_t i = 0; i < n; ++i) {
+                if (std::abs(ctrl.steering[i]) > std::abs(steering_for_diff)) {
+                    steering_for_diff = ctrl.steering[i];
+                }
+            }
+        }
+        const float diff_sign = (steering_for_diff < 0.0f ? -1.0f : 1.0f);
+
+        // Compute throttle values
+        for (size_t i = 0; i < n; ++i) {
+            float lin_val = linear;
+
+            if (is_differential) {
+                // Differential drive: mix linear/angular into left/right
+                if (i < mc.throttles_diff.size() && std::abs(mc.throttles_diff[i]) > 1e-6f) {
+                    float left_cmd = std::clamp(linear + angular, in_min, in_max);
+                    float right_cmd = std::clamp(linear - angular, in_min, in_max);
+                    lin_val = (mc.throttles_diff[i] < 0.0f) ? left_cmd : right_cmd;
+                }
+            } else {
+                // Ackermann: scale inner wheel speed
+                bool left_side = (i < mc.left_side.size()) ? mc.left_side[i] : false;
+                if (ctrl.steering[i] > 0.0f && left_side) {
+                    lin_val = linear * utils::ackermann_scale(ctrl.steering[i], config.bound.size.x);
+                } else if (ctrl.steering[i] < 0.0f && !left_side) {
+                    lin_val = linear * utils::ackermann_scale(ctrl.steering[i], config.bound.size.x);
+                }
+
+                // Apply throttle differential
+                if (i < mc.throttles_diff.size() && std::abs(mc.throttles_diff[i]) > 1e-6f &&
+                    std::abs(steering_for_diff) > 1e-6f) {
+                    float adj = diff_sign * mc.throttles_diff[i];
+                    lin_val = lin_val * (1.0f + adj);
+                }
+            }
+
+            lin_val = std::clamp(lin_val, in_min, in_max);
+            if (i < mc.throttles_max.size()) {
+                ctrl.throttle[i] = utils::mapper(lin_val, in_min, in_max, -mc.throttles_max[i], mc.throttles_max[i]);
+            }
+        }
+
+        return ctrl;
+    }
+
     static datapod::Size get_geometry_size(const datapod::robot::Link &link) {
         if (!link.collisions.empty()) {
             const auto &geom = link.collisions[0].geom;

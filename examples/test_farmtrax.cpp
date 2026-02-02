@@ -45,8 +45,8 @@ float calculate_distance(const datapod::Pose &p1, const datapod::Pose &p2) {
 
 // Get robot's approximate size (diagonal of bounding box)
 float get_robot_size(const agent::Agent &robot) {
-    float size_x = robot.machine().config().bound.size.x;
-    float size_y = robot.machine().config().bound.size.y;
+    float size_x = robot.config().bound.size.x;
+    float size_y = robot.config().bound.size.y;
     return std::sqrt(size_x * size_x + size_y * size_y);
 }
 
@@ -277,9 +277,8 @@ int main() {
         echo::info("Loaded tractor ", m, " at (", spawn_x, ", ", spawn_y, ") UUID: ", uuid);
 
         // Configure MPPI controller
-        tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
-        tractor.controls().tracker().set_enabled(true);
-        tractor.set_navigation_enabled(true);
+        tractor.tracker()->set_controller_type(drivekit::TrackerType::MPPI);
+        tractor.set_tracker_enabled(true);
 
         auto *mppi_controller = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker()->get_controller());
 
@@ -344,8 +343,8 @@ int main() {
                 auto pos_m = robot.get_position();
                 bool debug = false; // Disable LIDAR debug output (too noisy)
 
-                float min_obstacle_dist = check_lidar_forward(&sd.lidar, 0.52f, pos_m, rec, robot.uuid(),
-                                                              robot.machine().config().color, debug);
+                float min_obstacle_dist =
+                    check_lidar_forward(&sd.lidar, 0.52f, pos_m, rec, robot.uuid(), robot.config().color, debug);
 
                 if (min_obstacle_dist < safe_distance) {
                     should_stop = true;
@@ -357,11 +356,11 @@ int main() {
             }
 
             if (should_stop && !robot_stopped[m]) {
-                robot.machine().set_navigation_enabled(false);
+                robot.set_tracker_enabled(false);
                 robot.brake();
                 robot_stopped[m] = true;
             } else if (!should_stop && robot_stopped[m]) {
-                robot.machine().set_navigation_enabled(true);
+                robot.set_tracker_enabled(true);
                 robot_stopped[m] = false;
                 echo::info("Robot ", m, " resuming");
             }
