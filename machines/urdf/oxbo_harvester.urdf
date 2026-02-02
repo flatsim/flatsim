@@ -1,0 +1,346 @@
+<?xml version="1.0"?>
+<robot name="harvester">
+  <flatsim>
+    <color rgba="255 200 0 255"/>
+    <turning radius="3.5"/>
+  </flatsim>
+
+  <!-- Base footprint: virtual link at ground level -->
+  <link name="base_footprint"/>
+
+  <!-- Base link: robot origin at center of wheel axis -->
+  <link name="base_link"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.768" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Sensor tree root -->
+  <link name="sensor_link"/>
+  <joint name="sensor_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gnss_link">
+    <sensor name="GNSS" type="gnss">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </sensor>
+  </link>
+  <joint name="gnss_joint" type="fixed">
+    <parent link="sensor_link"/>
+    <child link="gnss_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link">
+    <sensor name="IMU" type="imu">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </sensor>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="sensor_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="lidar_link">
+    <sensor name="LIDAR" type="lidar">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <flatsim/>
+    </sensor>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="sensor_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Body karosserie (defines machine bounds) -->
+  <link name="body_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="2.8 7.68 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="2.8 7.68 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="body_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="body_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="body" karosserie_sections="0" karosserie_has_physics="true"/>
+  </joint>
+
+  <!-- Karosseries: front/back -->
+  <link name="front_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="3.528 1.7664 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="3.528 1.7664 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="front_link"/>
+    <origin xyz="0 4.7232 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="front" karosserie_sections="5" karosserie_has_physics="true"/>
+  </joint>
+
+  <link name="back_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="2.52 1.152 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="2.52 1.152 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="back_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="back_link"/>
+    <origin xyz="0 -4.416 0" rpy="0 0 0"/>
+    <flatsim karosserie_name="back" karosserie_sections="0" karosserie_has_physics="true"/>
+  </joint>
+
+  <!-- Tank geometry (harvest_bin) -->
+  <link name="harvest_bin_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.68 2.24 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.68 2.24 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="harvest_bin_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="harvest_bin_link"/>
+    <origin xyz="0 2.24 0" rpy="0 0 0"/>
+    <flatsim tank_name="harvest_bin" tank_type="HARVEST" tank_capacity="10000"/>
+  </joint>
+
+  <!-- Power: represent tank geometry and store parameters as tags -->
+  <link name="fuel_tank_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.5 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.5 0.3"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="fuel_tank_fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="fuel_tank_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <flatsim power_name="fuel_tank" power_type="FUEL" power_capacity="200" power_consumption_rate="0.05" power_charge_rate="0"/>
+  </joint>
+
+  <!-- Wheels: front and rear steering (per max_angles != 0), middle fixed -->
+
+  <!-- front_right (14deg) -->
+  <link name="front_right_steer_link"/>
+  <joint name="front_right_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_right_steer_link"/>
+    <origin xyz="1.4 2.304 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.2443460953" upper="0.2443460953" effort="0" velocity="0"/>
+    <flatsim steering_max="14" steering_diff="-2"/>
+  </joint>
+  <link name="front_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="front_right_steer_link"/>
+    <child link="front_right_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.01" throttle_diff="0" steering_max="14" steering_diff="-2"/>
+  </joint>
+
+  <!-- front_left (14deg) -->
+  <link name="front_left_steer_link"/>
+  <joint name="front_left_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_left_steer_link"/>
+    <origin xyz="-1.4 2.304 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.2443460953" upper="0.2443460953" effort="0" velocity="0"/>
+    <flatsim steering_max="14" steering_diff="2"/>
+  </joint>
+  <link name="front_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="front_left_steer_link"/>
+    <child link="front_left_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.01" throttle_diff="0" steering_max="14" steering_diff="2"/>
+  </joint>
+
+  <!-- middle_right (no steering) -->
+  <link name="middle_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="middle_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="middle_right_wheel_link"/>
+    <origin xyz="1.4 0.1 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.0" throttle_diff="0" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <!-- middle_left (no steering) -->
+  <link name="middle_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="middle_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="middle_left_wheel_link"/>
+    <origin xyz="-1.4 0.1 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.0" throttle_diff="0" steering_max="0" steering_diff="0"/>
+  </joint>
+
+  <!-- rear_right (-25deg) -->
+  <link name="rear_right_steer_link"/>
+  <joint name="rear_right_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rear_right_steer_link"/>
+    <origin xyz="1.4 -2.688 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.4363323129" upper="0.4363323129" effort="0" velocity="0"/>
+    <flatsim steering_max="-25" steering_diff="4"/>
+  </joint>
+  <link name="rear_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="rear_right_steer_link"/>
+    <child link="rear_right_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="right" throttle_max="0.3" throttle_diff="0" steering_max="-25" steering_diff="4"/>
+  </joint>
+
+  <!-- rear_left (-25deg) -->
+  <link name="rear_left_steer_link"/>
+  <joint name="rear_left_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rear_left_steer_link"/>
+    <origin xyz="-1.4 -2.688 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.4363323129" upper="0.4363323129" effort="0" velocity="0"/>
+    <flatsim steering_max="-25" steering_diff="-4"/>
+  </joint>
+  <link name="rear_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.768" length="0.7"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="rear_left_steer_link"/>
+    <child link="rear_left_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <flatsim side="left" throttle_max="0.3" throttle_diff="0" steering_max="-25" steering_diff="-4"/>
+  </joint>
+
+</robot>

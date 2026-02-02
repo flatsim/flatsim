@@ -1,70 +1,150 @@
 #include "flatsim/agent.hpp"
-#include "flatsim/agent/sensor/lidar_sensor.hpp"
-#include "flatsim/tagged_zmq.hpp"
-#include "flatsim/transport.hpp"
-#include <chrono>
+#include "datapod/datapod.hpp"
+#include "flatsim/simulator/machine.hpp"
+#include "flatsim/utils.hpp"
+#include <agent47/model/urdf.hpp>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <netpipe/netpipe.hpp>
+#include <sstream>
+#include <stdexcept>
 
 namespace agent {
 
-    static std::filesystem::path ipc_dir() {
-        const char *env = std::getenv("FLATSIM_IPC_DIR");
-        std::filesystem::path dir = env && *env ? std::filesystem::path(env) : std::filesystem::path("/tmp");
-        if (dir.is_relative()) {
-            dir = std::filesystem::absolute(dir);
+    static std::filesystem::path find_urdf(const std::filesystem::path &path) {
+        // If absolute or exists, use as-is
+        if (path.is_absolute() || std::filesystem::exists(path)) {
+            return path;
         }
-        return dir;
+        // Check multiple locations for relative paths
+        std::vector<std::filesystem::path> search_paths = {
+            path,                                  // Current directory
+            std::filesystem::path("..") / path,    // Parent (running from build/)
+            std::filesystem::path("../..") / path, // Two levels up
+        };
+        for (const auto &p : search_paths) {
+            if (std::filesystem::exists(p)) {
+                return std::filesystem::canonical(p);
+            }
+        }
+        throw std::runtime_error("URDF not found: " + path.string());
     }
 
-    static std::string ipc_endpoint(const std::filesystem::path &path) { return "ipc://" + path.string(); }
+    datapod::robot::Model Agent::load_model_from_urdf(const std::filesystem::path &urdf_path) {
+        auto resolved = find_urdf(urdf_path);
+        std::ifstream file(resolved);
+        if (!file.is_open()) {
+            throw std::runtime_error("Cannot open URDF file: " + resolved.string());
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
 
-    // Constructor for networked mode (IPC/TCP/SHM)
-    Agent::Agent(const std::string &address) : local_mode_(false), address_(address), rec_(nullptr) {
-        // Determine transport type from address
-        if (address_.empty()) {
-            transport_type_ = flatsim::Endpoint::Type::IPC;
-        } else if (address_.starts_with("shm://")) {
-            transport_type_ = flatsim::Endpoint::Type::SHM;
+        auto result = agent47::from_urdf_string(dp::String(buffer.str().c_str()));
+        if (result.is_err()) {
+            throw std::runtime_error("Failed to parse URDF: " + urdf_path.string());
+        }
+        return result.value();
+    }
+
+    static drivekit::RobotConstraints build_constraints(const types::Machine &config) {
+        drivekit::RobotConstraints constraints;
+
+        // Determine steering type
+        bool is_differential = true;
+        for (const auto &wheel : config.wheels) {
+            if (std::abs(wheel.steering_max) > 1e-6f) {
+                is_differential = false;
+                break;
+            }
+        }
+        constraints.steering_type =
+            is_differential ? drivekit::SteeringType::DIFFERENTIAL : drivekit::SteeringType::ACKERMANN;
+
+        // Derive geometry from wheel positions
+        if (!config.wheels.empty()) {
+            double max_y = -1e9, min_y = 1e9, max_x = -1e9, min_x = 1e9;
+            for (const auto &w : config.wheels) {
+                max_y = std::max(max_y, static_cast<double>(w.bound.pose.point.y));
+                min_y = std::min(min_y, static_cast<double>(w.bound.pose.point.y));
+                max_x = std::max(max_x, static_cast<double>(w.bound.pose.point.x));
+                min_x = std::min(min_x, static_cast<double>(w.bound.pose.point.x));
+            }
+            constraints.wheelbase = std::max(0.1, std::abs(max_y - min_y));
+            constraints.track_width = std::max(0.1, std::abs(max_x - min_x));
         } else {
-            transport_type_ = flatsim::Endpoint::Type::TCP;
+            constraints.wheelbase = 1.5;
+            constraints.track_width = 1.5;
         }
 
-        // NEW: Single RpcPeer will be created after spawn
-        // Note: peer_ will be initialized in spawn()
+        // Normalized velocity units [-1, 1]
+        constraints.max_linear_velocity = 1.0;
+        constraints.min_linear_velocity = -1.0;
+        constraints.max_linear_acceleration = 1.0;
+        constraints.max_angular_velocity = 1.0;
+
+        // Steering limits
+        double max_steer = 0.0;
+        for (const auto &wheel : config.wheels) {
+            max_steer = std::max(max_steer, static_cast<double>(std::abs(wheel.steering_max)));
+        }
+        constraints.max_steering_angle = max_steer > 0 ? max_steer : 30.0 * M_PI / 180.0;
+        constraints.max_steering_rate = 1.0;
+
+        constraints.min_turning_radius = config.turning_radius;
+        constraints.robot_length = config.bound.size.y;
+        constraints.robot_width = config.bound.size.x;
+
+        return constraints;
     }
 
-    // Constructor for local mode (owned by Simulator)
+    static void init_tracker(std::unique_ptr<drivekit::Tracker> &tracker, const types::Machine &config,
+                             std::shared_ptr<rerun::RecordingStream> rec) {
+        tracker = std::make_unique<drivekit::Tracker>(drivekit::TrackerType::PID);
+        auto constraints = build_constraints(config);
+        tracker->init(constraints, rec, config.uuid);
+
+        drivekit::ControllerConfig ctrl_config;
+        ctrl_config.allow_reverse = false;
+        tracker->get_controller()->set_config(ctrl_config);
+    }
+
+    // Constructor for local mode
     Agent::Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec)
+        : local_mode_(true), rec_(rec), spawned_(true), config_(config) {
+        world_pose_ = config_.bound.pose;
+        init_tracker(tracker_, config_, rec_);
+    }
+
+    // Constructor for local mode with agent47 bridge
+    Agent::Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
+                 std::shared_ptr<rerun::RecordingStream> rec)
         : local_mode_(true), rec_(rec), spawned_(true) {
 
-        // No netpipe needed in local mode
-        // Initialize machine with config
-        machine_ = Machine(rec_, config);
+        agent47_ = std::make_shared<agent47::Agent>(urdf_path, identity, bridge);
+        config_ = simulator::machine_from_model(agent47_->model_.model, datapod::Pose{}, std::nullopt);
+        world_pose_ = config_.bound.pose;
+        init_tracker(tracker_, config_, rec_);
+    }
 
-        // Initialize all managers (sensors, controls, network, power, container)
-        machine_.init();
-        install_sensor_callbacks();
+    // Constructor for networked mode via agent47 PipeBridge
+    Agent::Agent(const types::Machine &config, const std::string &agent47_endpoint,
+                 std::shared_ptr<rerun::RecordingStream> rec)
+        : local_mode_(false), agent47_endpoint_(agent47_endpoint), rec_(rec), spawned_(false), config_(config) {
+
+        world_pose_ = config_.bound.pose;
+        init_tracker(tracker_, config_, rec_);
+
+        // Create agent47 wrapper with an owned PipeBridge
+        auto *bridge = new agent47::PipeBridge();
+        agent47_ = std::make_shared<agent47::Agent>(dp::robot::Robot{}, bridge);
     }
 
     Agent::~Agent() {
-        // Only do netpipe cleanup in networked mode
-        if (!local_mode_) {
-            if (spawned_) {
-                despawn();
-            }
-            if (peer_) {
-                peer_->close();
-            }
+        if (!local_mode_ && spawned_) {
+            despawn();
         }
-    }
-
-    void Agent::set_machine(const types::Machine &config) {
-        machine_ = Machine(rec_, config);
-        machine_.init();
-        install_sensor_callbacks();
     }
 
     bool Agent::spawn() {
@@ -73,132 +153,22 @@ namespace agent {
             return false;
         }
 
-        // Create peer endpoint
-        flatsim::Endpoint peer_endpoint;
-        if (transport_type_ == flatsim::Endpoint::Type::IPC) {
-            auto dir = ipc_dir();
-            peer_endpoint = flatsim::Endpoint::ipc((dir / "flatsim_peer").string());
-        } else if (transport_type_ == flatsim::Endpoint::Type::TCP) {
-            std::string host = address_.empty() ? "127.0.0.1" : address_;
-            peer_endpoint = flatsim::Endpoint::tcp(host, 5555);
-        } else if (transport_type_ == flatsim::Endpoint::Type::SHM) {
-            peer_endpoint = flatsim::Endpoint::shm("flatsim_peer", 1024 * 1024);
+        if (!agent47_ || !agent47_->bridge_) {
+            std::cerr << "[Agent] agent47 bridge not configured" << std::endl;
+            return false;
         }
-
-        // Create and connect peer
-        peer_ = std::make_unique<flatsim::RpcPeer>();
-        if (!peer_->connect(peer_endpoint, 100, true)) {
-            std::cerr << "[Agent] Failed to connect to simulator at " << peer_endpoint.to_string() << std::endl;
-            std::cerr << "[Agent] Error: " << peer_->last_error() << std::endl;
+        if (!agent47_endpoint_.has_value()) {
+            std::cerr << "[Agent] missing agent47 endpoint" << std::endl;
             return false;
         }
 
-        // Register handlers for incoming calls from Simulator
-        register_peer_handlers();
-
-        // Prepare spawn request
-        types::ser::Request req;
-        req.type = types::ser::MsgType::SPAWN;
-        req.machine = types::ser::Machine::from_machine(machine_.config());
-
-        auto req_data = datapod::serialize(req);
-        auto resp_data = peer_->call(flatsim::RpcMethod::SPAWN, req_data, 5000);
-
-        if (resp_data.empty()) {
-            std::cerr << "[Agent] Spawn RPC call failed or timed out" << std::endl;
-            std::cerr << "[Agent] Error: " << peer_->last_error() << std::endl;
+        if (!agent47_->bridge_->connect(*agent47_endpoint_)) {
+            std::cerr << "[Agent] failed to connect agent47 bridge to " << *agent47_endpoint_ << std::endl;
             return false;
         }
 
-        try {
-            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(resp_data);
-            if (!resp.success) {
-                std::cerr << "[Agent] Spawn request rejected by simulator" << std::endl;
-                return false;
-            }
-
-            // Create RecordingStream using info from simulator
-            std::string rerun_addr(resp.rerun.grpc_address.view());
-            std::string rec_id(resp.rerun.recording_id.view());
-            std::string app_id(resp.rerun.application_id.view());
-
-            rec_ = std::make_shared<rerun::RecordingStream>(app_id, rec_id);
-            auto conn_result = rec_->connect_grpc(rerun_addr);
-            if (conn_result.is_err()) {
-                std::cerr << "[Agent] Warning: Failed to connect to Rerun Viewer" << std::endl;
-            }
-
-            // Update machine with rerun and initialize all managers
-            machine_ = Machine(rec_, machine_.config());
-            machine_.init();
-            install_sensor_callbacks();
-
-            // Update state from response
-            for (const auto &ms : resp.state.machines) {
-                if (std::string(ms.uuid.view()) == machine_.uuid()) {
-                    machine_.update_state(ms);
-                    break;
-                }
-            }
-
-            spawned_ = true;
-            return true;
-
-        } catch (const std::exception &e) {
-            std::cerr << "[Agent] Failed to deserialize spawn response: " << e.what() << std::endl;
-            return false;
-        }
-    }
-
-    void Agent::register_peer_handlers() {
-        if (!peer_) {
-            return;
-        }
-
-        // Register STATE handler (receives state updates from simulator)
-        peer_->register_method(flatsim::RpcMethod::STATE, [this](const std::vector<uint8_t> &req) {
-            try {
-                auto state = datapod::deserialize<datapod::Mode::NONE, types::ser::MachineState>(req);
-                if (std::string(state.uuid.view()) == machine_.uuid()) {
-                    machine_.update_state(state);
-                }
-            } catch (const std::exception &e) {
-                std::cerr << "[Agent] Failed to deserialize STATE: " << e.what() << std::endl;
-            }
-            // Return ACK
-            std::vector<uint8_t> ack{1};
-            return ack;
-        });
-
-        // Register SENSORS handler (receives sensor data from simulator)
-        peer_->register_method(flatsim::RpcMethod::SENSORS, [this](const std::vector<uint8_t> &req) {
-            try {
-                auto sensors = datapod::deserialize<datapod::Mode::NONE, types::ser::SensorState>(req);
-                if (std::string(sensors.uuid.view()) == machine_.uuid()) {
-                    sensor_data_ = sensors.to_sensor_data();
-                }
-            } catch (const std::exception &e) {
-                std::cerr << "[Agent] Failed to deserialize SENSORS: " << e.what() << std::endl;
-            }
-            // Return ACK
-            std::vector<uint8_t> ack{1};
-            return ack;
-        });
-
-        // Register TELEPORT handler (receives teleport commands from simulator)
-        peer_->register_method(flatsim::RpcMethod::TELEPORT, [this](const std::vector<uint8_t> &req) {
-            try {
-                auto pose = datapod::deserialize<datapod::Mode::NONE, datapod::Pose>(req);
-                // Update machine pose directly
-                // TODO: Implement proper teleport handling
-                std::cerr << "[Agent] Received TELEPORT command" << std::endl;
-            } catch (const std::exception &e) {
-                std::cerr << "[Agent] Failed to deserialize TELEPORT: " << e.what() << std::endl;
-            }
-            // Return ACK
-            std::vector<uint8_t> ack{1};
-            return ack;
-        });
+        spawned_ = true;
+        return true;
     }
 
     bool Agent::despawn() {
@@ -206,37 +176,11 @@ namespace agent {
             return false;
         }
 
-        types::ser::Request req;
-        req.type = types::ser::MsgType::DESPAWN;
-        req.uuid = datapod::String(machine_.uuid());
-
-        auto req_data = datapod::serialize(req);
-        auto resp_data = peer_->call(flatsim::RpcMethod::DESPAWN, req_data, 5000);
-
-        if (resp_data.empty()) {
-            std::cerr << "[Agent] Despawn RPC call failed or timed out" << std::endl;
-            return false;
+        if (agent47_ && agent47_->bridge_) {
+            agent47_->bridge_->disconnect();
         }
-
-        try {
-            auto resp = datapod::deserialize<datapod::Mode::NONE, types::ser::Response>(resp_data);
-            if (resp.success) {
-                spawned_ = false;
-                return true;
-            }
-        } catch (const std::exception &e) {
-            std::cerr << "[Agent] Failed to deserialize despawn response: " << e.what() << std::endl;
-        }
-        return false;
-    }
-
-    void Agent::set_linear(float linear) { machine_.controls.set_linear(linear); }
-
-    void Agent::set_angular(float angular) { machine_.controls.set_angular(angular); }
-
-    void Agent::set_velocity(float linear, float angular) {
-        machine_.controls.set_linear(linear);
-        machine_.controls.set_angular(angular);
+        spawned_ = false;
+        return true;
     }
 
     void Agent::tick(float dt, int timeout_ms) {
@@ -245,45 +189,91 @@ namespace agent {
         }
 
         if (local_mode_) {
-            // LOCAL MODE: State is already updated by Simulator via update_from_physics()
-            // Use sensor data from simulator if available
-            if (sensor_data_.has_gps || sensor_data_.has_imu || sensor_data_.has_lidar) {
-                machine_.tick(dt, sensor_data_);
-            } else {
-                machine_.tick(dt);
+            // LOCAL MODE: State already updated via update_from_physics()
+            // Run tracker if enabled
+            if (tracker_enabled_ && tracker_) {
+                drivekit::RobotState state;
+                state.pose = world_pose_;
+                state.velocity.linear = linear_velocity_;
+                state.velocity.angular = angular_velocity_;
+                state.timestamp = 0.0;
+
+                auto cmd = tracker_->tick(state, dt);
+                if (cmd.valid) {
+                    // Invert angular: drivekit uses CCW positive, simulator uses CW positive
+                    cmd_linear_ = static_cast<float>(cmd.linear_velocity);
+                    cmd_angular_ = -static_cast<float>(cmd.angular_velocity);
+                }
             }
             return;
         }
 
-        // NETWORKED MODE: RpcPeer bidirectional communication
-
-        // Send heartbeat to simulator (every 30 ticks)
-        static int tick_count = 0;
-        tick_count++;
-        if (tick_count % 30 == 0) {
-            types::ser::Request hb_req;
-            hb_req.type = types::ser::MsgType::HEARTBEAT;
-            hb_req.uuid = datapod::String(machine_.uuid());
-
-            auto hb_data = datapod::serialize(hb_req);
-            peer_->call(flatsim::RpcMethod::HEARTBEAT, hb_data, 500); // Short timeout for heartbeat
+        // NETWORKED MODE: agent47 PipeBridge
+        if (!agent47_ || !agent47_->bridge_) {
+            return;
         }
 
-        // Call machine tick to process state update and run all managers
-        // Note: State updates are received via registered STATE handler (asynchronous)
-        if (sensor_data_.has_gps || sensor_data_.has_imu || sensor_data_.has_lidar) {
-            machine_.tick(dt, sensor_data_);
-        } else {
-            machine_.tick(dt);
+        // Drain sensor packets
+        for (int i = 0; i < 16; ++i) {
+            agent47::types::SensorPacket pkt;
+            if (!agent47_->bridge_->sensor(pkt, 0)) {
+                break;
+            }
+            try {
+                if (pkt.kind == agent47::types::SensorKind::Lidar) {
+                    auto lidar = dp::deserialize<dp::Mode::WITH_VERSION, types::ser::LidarData>(pkt.payload);
+                    sensor_data_.lidar = lidar.to_lidar();
+                    sensor_data_.has_lidar = true;
+                } else if (pkt.kind == agent47::types::SensorKind::Gnss) {
+                    auto gps = dp::deserialize<dp::Mode::WITH_VERSION, types::ser::GpsData>(pkt.payload);
+                    sensor_data_.gps = gps.to_gps();
+                    sensor_data_.has_gps = true;
+                } else if (pkt.kind == agent47::types::SensorKind::Imu) {
+                    auto imu = dp::deserialize<dp::Mode::WITH_VERSION, types::ser::ImuData>(pkt.payload);
+                    sensor_data_.imu = imu.to_imu();
+                    sensor_data_.has_imu = true;
+                }
+            } catch (...) {
+                // ignore malformed packets
+            }
         }
 
-        // Get current control from machine's control manager and send to simulator
-        auto wheel_ctrl = machine_.controls.get_wheel_control();
-        auto ctrl_ser = types::ser::WheelControl::from_control(wheel_ctrl);
-        auto ctrl_data = datapod::serialize(ctrl_ser);
+        // Receive feedback (pose/twist) from simulator
+        dp::Stamp<agent47::types::Feedback> fb;
+        if (agent47_->bridge_->recv(fb, timeout_ms)) {
+            world_pose_.point.x = fb.value.pose.point.x;
+            world_pose_.point.y = fb.value.pose.point.y;
+            world_pose_.rotation = fb.value.pose.rotation;
 
-        // Send control command to simulator
-        peer_->call(flatsim::RpcMethod::CONTROL, ctrl_data, timeout_ms);
+            float yaw = static_cast<float>(fb.value.pose.rotation.to_euler().yaw);
+            float vx = static_cast<float>(fb.value.twist.linear.vx);
+            float vy = static_cast<float>(fb.value.twist.linear.vy);
+            linear_velocity_ = vx * std::cos(yaw) + vy * std::sin(yaw);
+            angular_velocity_ = static_cast<float>(fb.value.twist.angular.vz);
+        }
+
+        // Run tracker if enabled
+        if (tracker_enabled_ && tracker_) {
+            drivekit::RobotState state;
+            state.pose = world_pose_;
+            state.velocity.linear = linear_velocity_;
+            state.velocity.angular = angular_velocity_;
+            state.timestamp = 0.0;
+
+            auto cmd = tracker_->tick(state, dt);
+            if (cmd.valid) {
+                cmd_linear_ = static_cast<float>(cmd.linear_velocity);
+                cmd_angular_ = -static_cast<float>(cmd.angular_velocity);
+            }
+        }
+
+        // Send twist command
+        dp::Stamp<agent47::types::Command> cmd;
+        cmd.timestamp = dp::Stamp<agent47::types::Command>::now();
+        cmd.value.valid = true;
+        cmd.value.twist.linear.vx = cmd_linear_ * speed_scale_;
+        cmd.value.twist.angular.vz = cmd_angular_;
+        agent47_->bridge_->send(cmd);
     }
 
     void Agent::tock() {
@@ -291,96 +281,19 @@ namespace agent {
             return;
         }
 
-        // Call machine tock for visualization (container, tracker, etc.)
-        machine_.tock();
+        // Visualize tracker path if enabled
+        if (tracker_enabled_ && tracker_) {
+            tracker_->tock();
+        }
     }
 
-    // LOCAL mode: Update state from physics (called by Simulator)
-    void Agent::update_from_physics(const types::ser::MachineState &state) { machine_.update_state(state); }
+    void Agent::update_from_physics(const types::ser::MachineState &state) {
+        world_pose_ = state.pose.to_datapod();
+        float yaw = static_cast<float>(world_pose_.rotation.to_euler().yaw);
+        linear_velocity_ = state.velocity.x * std::cos(yaw) + state.velocity.y * std::sin(yaw);
+        angular_velocity_ = state.angular_vel;
+    }
 
-    // LOCAL mode: Update sensor data (called by Simulator)
     void Agent::update_from_sensors(const types::ser::SensorState &state) { sensor_data_ = state.to_sensor_data(); }
-
-    // LOCAL mode: Get current wheel control (called by Simulator)
-    types::WheelControl Agent::get_wheel_control() const {
-        auto ctrl = machine_.controls.get_wheel_control();
-        // Apply speed scale to throttle
-        for (auto &t : ctrl.throttle) {
-            t *= speed_scale_;
-        }
-        return ctrl;
-    }
-
-    void Agent::brake() {
-        // Set zero velocity and apply brake
-        machine_.controls.set_linear(0.0f);
-        machine_.controls.set_angular(0.0f);
-        // TODO: When brake force is implemented in WheelControl, set it here
-    }
-
-    void Agent::teleport(const datapod::Pose &pose) {
-        if (local_mode_) {
-            // LOCAL mode: use callback to Simulator
-            if (teleport_callback_) {
-                teleport_callback_(machine_.uuid(), pose);
-            }
-        } else {
-            // Networked mode: send teleport request via RPC
-            auto pose_data = datapod::serialize(pose);
-            peer_->call(flatsim::RpcMethod::TELEPORT, pose_data, 1000);
-        }
-    }
-
-    void Agent::install_sensor_callbacks() {
-        machine_.sensors.set_on_add([this](fs::Sensor &sensor) {
-            if (local_mode_) {
-                // LOCAL mode: sensor config is handled directly by simulator
-                return;
-            }
-
-            if (!peer_ || !spawned_) {
-                return;
-            }
-
-            auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
-            if (!lidar) {
-                return;
-            }
-
-            types::LidarConfig cfg;
-            cfg.enabled = true;
-            cfg.min_range = lidar->get_min_range();
-            cfg.max_range = lidar->get_max_range();
-            cfg.fov_deg = lidar->get_fov_deg();
-            cfg.resolution_deg = lidar->get_resolution_deg();
-
-            auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
-            auto bytes = datapod::serialize(msg);
-            peer_->call(flatsim::RpcMethod::LIDAR_CFG, bytes, 1000);
-        });
-
-        // Send config for existing sensors
-        if (local_mode_ || !spawned_ || !peer_) {
-            return;
-        }
-
-        machine_.sensors.for_each([this](fs::Sensor &sensor) {
-            auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
-            if (!lidar) {
-                return;
-            }
-
-            types::LidarConfig cfg;
-            cfg.enabled = true;
-            cfg.min_range = lidar->get_min_range();
-            cfg.max_range = lidar->get_max_range();
-            cfg.fov_deg = lidar->get_fov_deg();
-            cfg.resolution_deg = lidar->get_resolution_deg();
-
-            auto msg = types::ser::LidarConfigMsg::from_config(machine_.uuid(), cfg);
-            auto bytes = datapod::serialize(msg);
-            peer_->call(flatsim::RpcMethod::LIDAR_CFG, bytes, 1000);
-        });
-    }
 
 } // namespace agent

@@ -1,5 +1,7 @@
 #include "flatsim/simulator/machine/wheel.hpp"
 
+#include <echo/echo.hpp>
+
 namespace simulator {
 
     Wheel::Wheel(std::shared_ptr<flywheel::World> world, std::shared_ptr<rerun::RecordingStream> rec,
@@ -18,6 +20,9 @@ namespace simulator {
 
         pose = utils::shift(parent_bound.pose, bound.pose);
         auto wheel_tf = utils::pose_to_transform(pose);
+
+        echo::info("[Wheel] init name=", name, " size=(", bound.size.x, ",", bound.size.y, ") pos=(",
+                   wheel_tf.position.x, ",", wheel_tf.position.y, ") rot=", wheel_tf.rotation.GetAngle());
 
         wheel = world->CreateBox(bound.size.x, bound.size.y, wheel_tf);
         if (!wheel) {

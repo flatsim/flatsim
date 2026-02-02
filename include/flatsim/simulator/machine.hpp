@@ -9,9 +9,30 @@
 #include "flatsim/simulator/machine/chassis.hpp"
 #include "flatsim/types.hpp"
 #include "flywheel/flywheel.hpp"
+#include <datapod/robot.hpp>
+#include <optional>
 #include <rerun.hpp>
 
 namespace simulator {
+
+    /// Validate that a parsed URDF model contains the flatsim-required extensions.
+    /// Throws `std::runtime_error` with a human-readable message on failure.
+    void validate_model_for_flatsim(const datapod::robot::Model &model);
+
+    /// Build a legacy `types::Machine` config from a parsed URDF model.
+    ///
+    /// Note: this is a transitional adapter until the simulation stack consumes
+    /// `datapod::robot::Model` directly.
+    types::Machine machine_from_model(const datapod::robot::Model &model, const datapod::Pose &spawn_pose,
+                                      std::optional<pigment::RGB> color);
+
+    /// Convert twist command (linear/angular velocity) to per-wheel control.
+    /// Handles both Ackermann and differential drive configurations.
+    /// @param config Machine configuration with wheel layout and control limits
+    /// @param linear Linear velocity command [-1, 1]
+    /// @param angular Angular velocity command [-1, 1]
+    /// @return WheelControl with per-wheel steering and throttle values
+    types::WheelControl twist_to_wheel_control(const types::Machine &config, float linear, float angular);
 
     // Forward declare
     class Data;

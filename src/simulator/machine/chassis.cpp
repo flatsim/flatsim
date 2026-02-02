@@ -1,6 +1,8 @@
 #include "flatsim/simulator/machine/chassis.hpp"
 #include "flatsim/utils.hpp"
 
+#include <echo/echo.hpp>
+
 namespace simulator {
 
     float distance(float x1, float y1, float x2, float y2) {
@@ -14,6 +16,9 @@ namespace simulator {
     void Chassis::init(types::Machine &robo) {
         this->bound = robo.bound;
         this->color = robo.color;
+
+        echo::info("[Chassis] init uuid=", robo.uuid, " pose x=", bound.pose.point.x, " y=", bound.pose.point.y,
+                   " yaw=", utils::get_yaw(bound.pose));
 
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
@@ -112,6 +117,16 @@ namespace simulator {
     flywheel::Transform Chassis::get_transform() const { return body->GetTransform(); }
 
     void Chassis::tock(const std::string &label) {
+        static int dbg_tock = 0;
+        if (dbg_tock < 10) {
+            const bool has_body = (body != nullptr);
+            const double x = has_body ? body->GetPosition().x : 0.0;
+            const double y = has_body ? body->GetPosition().y : 0.0;
+            echo::info("[Chassis] tock uuid=", robot_info->uuid, " online=", robot_state->online,
+                       " rec=", (rec != nullptr), " x=", x, " y=", y, " w=", bound.size.x, " h=", bound.size.y);
+            dbg_tock++;
+        }
+
         if (!robot_state->online) return;
         if (!rec) return;
 
@@ -124,9 +139,10 @@ namespace simulator {
         auto th = body->GetRotation().GetAngle();
         auto w = float(bound.size.x);
         auto h = float(bound.size.y);
+        const float z = 0.3f;
         rec->log_static(
             robot_info->uuid + "/chassis",
-            rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, 0.0f}})
+            rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, z}})
                 .with_radii({{0.02f}})
                 // .with_labels({label})
                 // .with_fill_mode(rerun::FillMode::Solid)
