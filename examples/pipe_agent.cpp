@@ -2,7 +2,7 @@
 //
 // Run:
 //   ./build/.../pipe_server --ipc
-//   ./build/.../pipe_agent --urdf examples_old/machines/urdf/tractor.urdf --name tractor_0
+//   ./build/.../pipe_agent --urdf machines/urdf/tractor.urdf --name tractor_0
 
 #include <agent47.hpp>
 #include <agent47/bridge/pipe_bridge.hpp>
@@ -30,10 +30,30 @@ static std::filesystem::path ipc_dir() {
 
 static std::string default_endpoint() { return std::string("ipc://") + (ipc_dir() / "agent47_peer.sock").string(); }
 
+static std::filesystem::path find_urdf(const std::filesystem::path &path) {
+    // If absolute or exists, use as-is
+    if (path.is_absolute() || std::filesystem::exists(path)) {
+        return path;
+    }
+    // Check multiple locations for relative paths
+    std::vector<std::filesystem::path> search_paths = {
+        path,                                     // Current directory
+        std::filesystem::path("..") / path,       // Parent (running from build/)
+        std::filesystem::path("../..") / path,    // Two levels up
+    };
+    for (const auto &p : search_paths) {
+        if (std::filesystem::exists(p)) {
+            return std::filesystem::canonical(p);
+        }
+    }
+    throw std::runtime_error("URDF not found: " + path.string());
+}
+
 static dp::robot::Model load_model_from_urdf(const std::filesystem::path &urdf_path) {
-    std::ifstream f(urdf_path);
+    auto resolved = find_urdf(urdf_path);
+    std::ifstream f(resolved);
     if (!f.good()) {
-        throw std::runtime_error("failed to open urdf: " + urdf_path.string());
+        throw std::runtime_error("failed to open urdf: " + resolved.string());
     }
     std::stringstream ss;
     ss << f.rdbuf();
@@ -61,7 +81,7 @@ static bool send_model_retry(agent47::PipeBridge &bridge, const dp::robot::Robot
 
 int main(int argc, char **argv) {
     std::string endpoint = default_endpoint();
-    std::filesystem::path urdf = "examples_old/machines/urdf/tractor.urdf";
+    std::filesystem::path urdf = "machines/urdf/tractor.urdf";
     std::string name = "pipe_agent";
     float vx = 0.0f;
     float wz = 0.0f;

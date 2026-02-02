@@ -29,7 +29,23 @@ static std::filesystem::path ipc_dir() {
 
 static std::string default_endpoint() { return std::string("ipc://") + (ipc_dir() / "agent47_peer.sock").string(); }
 
-static dp::robot::Model load_model_from_urdf(const std::filesystem::path &urdf_path) {
+static std::filesystem::path find_urdf(const std::string &relative_path) {
+    // Check multiple locations for the URDF file
+    std::vector<std::filesystem::path> search_paths = {
+        relative_path,                                     // Current directory
+        std::filesystem::path("..") / relative_path,       // Parent (running from build/)
+        std::filesystem::path("../..") / relative_path,    // Two levels up
+    };
+    for (const auto &p : search_paths) {
+        if (std::filesystem::exists(p)) {
+            return std::filesystem::canonical(p);
+        }
+    }
+    throw std::runtime_error("URDF not found: " + relative_path);
+}
+
+static dp::robot::Model load_model_from_urdf(const std::string &relative_path) {
+    auto urdf_path = find_urdf(relative_path);
     std::ifstream f(urdf_path);
     if (!f.good()) {
         throw std::runtime_error("failed to open urdf: " + urdf_path.string());
@@ -80,7 +96,7 @@ int main() {
         robot.id.name = dp::String("one_binary");
         robot.id.uuid = dp::sugar::uuid::generate_v4();
         robot.id.ip = dp::sugar::ip::v4(0, 0, 0, 0);
-        robot.model = load_model_from_urdf("examples_old/machines/urdf/tractor.urdf");
+        robot.model = load_model_from_urdf("machines/urdf/tractor.urdf");
 
         agent47::PipeBridge bridge;
         if (!bridge.connect(endpoint)) {

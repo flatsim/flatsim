@@ -271,7 +271,7 @@ int main() {
         // Spawn tractor with unique UUID and color
         std::string uuid = "tractor_" + std::to_string(m);
         datapod::Pose spawn_pose = utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f);
-        auto &tractor = sim.spawn_agent("examples_old/machines/urdf/tractor.urdf", spawn_pose, uuid,
+        auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", spawn_pose, uuid,
                                         ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
         echo::info("Loaded tractor ", m, " at (", spawn_x, ", ", spawn_y, ") UUID: ", uuid);
