@@ -123,10 +123,6 @@ namespace agent {
 
         /// Parse a URDF file into a `datapod::robot::Model` using agent47's URDF parser.
         static datapod::robot::Model load_model_from_urdf(const std::filesystem::path &urdf_path);
-
-      private:
-        // Transport abstraction - handles LOCAL vs IPC/TCP internally
-        void install_sensor_callbacks();
     };
 
 } // namespace agent

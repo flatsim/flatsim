@@ -1,6 +1,5 @@
 #include "flatsim/agent.hpp"
 #include "datapod/datapod.hpp"
-#include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator/machine.hpp"
 #include <agent47/model/urdf.hpp>
 #include <chrono>
@@ -45,31 +44,21 @@ namespace agent {
     // Constructor for local mode (owned by Simulator)
     Agent::Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec)
         : local_mode_(true), rec_(rec), spawned_(true) {
-
-        // No netpipe needed in local mode
-        // Initialize machine with config
         machine_ = Machine(rec_, config);
-
-        // Initialize all managers (sensors, controls, network, power, container)
         machine_.init();
-        install_sensor_callbacks();
     }
 
-    // Constructor for local mode (owned by Simulator)
+    // Constructor for local mode with agent47 bridge
     Agent::Agent(dp::String urdf_path, dp::robot::Identity identity, agent47::Bridge *bridge,
                  std::shared_ptr<rerun::RecordingStream> rec)
         : local_mode_(true), rec_(rec), spawned_(true) {
 
         agent47_ = std::make_shared<agent47::Agent>(urdf_path, identity, bridge);
 
-        // agent47 owns a datapod::robot::Model; flatsim's Agent-side Machine expects a legacy `types::Machine`
-        // config, so adapt via the simulator's URDF->Machine helper.
+        // agent47 owns a datapod::robot::Model; convert to legacy types::Machine config
         auto config = simulator::machine_from_model(agent47_->model_.model, datapod::Pose{}, std::nullopt);
         machine_ = Machine(rec_, config);
-
-        // Initialize all managers (sensors, controls, network, power, container)
         machine_.init();
-        install_sensor_callbacks();
     }
 
     // Constructor for networked mode via agent47 PipeBridge
@@ -78,9 +67,8 @@ namespace agent {
         : local_mode_(false), agent47_endpoint_(agent47_endpoint), rec_(rec), spawned_(false) {
         machine_ = Machine(rec_, config);
         machine_.init();
-        install_sensor_callbacks();
 
-        // Create agent47 wrapper with an owned PipeBridge.
+        // Create agent47 wrapper with an owned PipeBridge
         auto *bridge = new agent47::PipeBridge();
         agent47_ = std::make_shared<agent47::Agent>(dp::robot::Robot{}, bridge);
     }
@@ -94,7 +82,6 @@ namespace agent {
     void Agent::set_machine(const types::Machine &config) {
         machine_ = Machine(rec_, config);
         machine_.init();
-        install_sensor_callbacks();
     }
 
     bool Agent::spawn() {
@@ -251,36 +238,6 @@ namespace agent {
         // Set zero velocity and apply brake
         machine_.controls.set_linear(0.0f);
         machine_.controls.set_angular(0.0f);
-        // TODO: When brake force is implemented in WheelControl, set it here
-    }
-
-    void Agent::install_sensor_callbacks() {
-        machine_.sensors.set_on_add([this](fs::Sensor &sensor) {
-            if (local_mode_) {
-                // LOCAL mode: sensor config is handled directly by simulator
-                return;
-            }
-
-            if (!spawned_) {
-                return;
-            }
-
-            auto *lidar = dynamic_cast<fs::LIDARSensor *>(&sensor);
-            if (!lidar) {
-                return;
-            }
-
-            types::LidarConfig cfg;
-            cfg.enabled = true;
-            cfg.min_range = lidar->get_min_range();
-            cfg.max_range = lidar->get_max_range();
-            cfg.fov_deg = lidar->get_fov_deg();
-            cfg.resolution_deg = lidar->get_resolution_deg();
-
-            (void)cfg;
-        });
-
-        // No sensor config on agent47 bridge yet.
     }
 
 } // namespace agent

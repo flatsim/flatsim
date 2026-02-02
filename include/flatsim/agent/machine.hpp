@@ -4,7 +4,6 @@
 #include <string>
 
 #include "flatsim/agent/control_manager.hpp"
-#include "flatsim/agent/sensor_manager.hpp"
 #include "flatsim/types.hpp"
 #include <rerun.hpp>
 
@@ -24,11 +23,9 @@ namespace agent {
         bool navigation_enabled_ = true;
 
       public:
-        // Device managers - direct public access (same as old Robot class)
-        fs::SensorManager sensors;
-        ControlManager controls; // agent::ControlManager
+        ControlManager controls;
 
-        // NOTE: network/container/power managers removed (agent47 handles comms).
+        // NOTE: sensor/network/container/power managers removed (agent47 handles comms).
 
         Machine() = default;
         Machine(std::shared_ptr<rerun::RecordingStream> rec, const types::Machine &config);
@@ -83,10 +80,6 @@ namespace agent {
 
         // Position access (alias)
         const datapod::Pose &get_position() const { return world_pose_; }
-
-        // Enable FIFO/SHM output for all sensors
-        bool enable_sensor_shm_output() { return sensors.enable_fifo_output(config_.uuid); }
-        void disable_sensor_shm_output() { sensors.disable_fifo_output(); }
     };
 
 } // namespace agent
