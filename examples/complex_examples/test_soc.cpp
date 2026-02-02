@@ -1,23 +1,16 @@
-// SOC (SVG-MPPI) Stochastic Optimal Control Path Following Test (LOCAL mode)
-//
-// Migrated from `examples_old/test_soc.cpp` to the current Agent/Simulator APIs.
-//
-// Note:
-// SOC's obstacle-aware cost uses `drivekit::WorldConstraints` (predicted obstacles). In the current Flatsim Agent API
-// we don't yet pass WorldConstraints into `drivekit::Tracker::tick(...)`, so this example focuses on controller setup
-// and path tracking while still placing obstacles in the physics world for visualization/collisions.
+// SOC (SVG-MPPI) Stochastic Optimal Control Path Following Test
 //
 // Run:
-//   ./build/linux/x86_64/release/test_soc_local
+//   ./build/test_soc
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <algorithm>
 #include <chrono>
-#include <filesystem>
+#include <cmath>
+#include <drivekit.hpp>
 #include <iostream>
-#include <numbers>
 #include <thread>
 #include <vector>
 
@@ -36,25 +29,22 @@ static std::vector<datapod::Point> corridor_path(float x0, float x1, float step,
     return path;
 }
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-    std::cout << "=== SOC (SVG-MPPI) Path Following Test (LOCAL mode) ===" << std::endl;
+int main() {
+    std::cout << "=== SOC (SVG-MPPI) Path Following Test ===" << std::endl;
 
-    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
-
     simulator::Simulator sim(500.0f, 500.0f, datum);
-    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -static_cast<float>(std::numbers::pi / 2.0));
-    auto &tractor = sim.spawn_agent(machine_file, spawn_pose);
 
-    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::SOC);
-    tractor.controls().tracker().set_enabled(true);
-    tractor.set_navigation_enabled(true);
+    datapod::Pose spawn_pose = utils::make_pose_2d(0.0, 0.0, -1.5708f);
+    auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", spawn_pose, "soc_0");
+    std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
+
+    tractor.tracker()->set_controller_type(drivekit::TrackerType::SOC);
+    tractor.set_tracker_enabled(true);
 
     auto *soc = dynamic_cast<drivekit::pred::SOCFollower *>(tractor.tracker()->get_controller());
     if (!soc) {
-        std::cerr << "[Error] Failed to cast to SOC controller" << std::endl;
+        std::cerr << "[Error] Failed to cast to SOC controller\n";
         return 1;
     }
 
@@ -83,14 +73,14 @@ int main(int argc, char **argv) {
 
     soc->set_soc_config(soc_config);
 
-    std::cout << "[SOC] Config: horizon=" << soc_config.horizon_steps << " dt=" << soc_config.dt
+    std::cout << "SOC Config: horizon=" << soc_config.horizon_steps << " dt=" << soc_config.dt
               << " samples=" << soc_config.num_samples << " guide=" << soc_config.guide_samples
-              << " svgd_it=" << soc_config.svgd_iterations << " ref_v=" << soc_config.ref_velocity << std::endl;
+              << " svgd_it=" << soc_config.svgd_iterations << " ref_v=" << soc_config.ref_velocity << "\n";
 
     const auto path_pts = corridor_path(0.0f, 50.0f, 0.5f, 0.0f);
     tractor.tracker()->set_path(drivekit::PathGoal(path_pts, 1.0f, 2.0f, false));
 
-    // Obstacles (physics + visualization).
+    // Obstacles (physics + visualization)
     sim.world().add_obstacle(types::StaticObstacle{1, datapod::Point{15.0, 0.0, 0.0}, 0.8, 0.1});
     sim.world().add_obstacle(types::StaticObstacle{2, datapod::Point{30.0, 0.8, 0.0}, 0.8, 0.1});
     sim.world().add_obstacle(types::StaticObstacle{3, datapod::Point{45.0, -0.8, 0.0}, 0.8, 0.1});
@@ -102,8 +92,10 @@ int main(int argc, char **argv) {
     sim.world().add_obstacle(types::DynamicObstacle{3, datapod::Point{35.0, 4.0, 0.0}, datapod::Point{0.0, -0.6, 0.0},
                                                     0.5, 0.3, 10.0, false});
 
-    std::cout << "[World] Static obstacles: " << sim.world().static_obstacles().size()
-              << " | Dynamic obstacles: " << sim.world().dynamic_obstacles().size() << std::endl;
+    std::cout << "World: " << sim.world().static_obstacles().size() << " static, "
+              << sim.world().dynamic_obstacles().size() << " dynamic obstacles\n";
+
+    std::cout << "\nStarting SOC path following...\n" << std::endl;
 
     float dt = 0.1f;
     int step_count = 0;
@@ -116,7 +108,7 @@ int main(int argc, char **argv) {
         const auto now = std::chrono::steady_clock::now();
         const auto elapsed_s = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
         if (elapsed_s > 300) {
-            std::cout << "[SOC] Timeout reached" << std::endl;
+            std::cout << "Timeout reached\n";
             break;
         }
 
@@ -132,9 +124,8 @@ int main(int argc, char **argv) {
         cte_samples++;
 
         if (step_count % 20 == 0) {
-            std::cout << "[SOC] " << (step_count / 10) << "s "
-                      << "Pos(" << pos.point.x << "," << pos.point.y << ") "
-                      << "CTE=" << status.cross_track_error << "m" << std::endl;
+            std::cout << (step_count / 10) << "s: Pos(" << pos.point.x << "," << pos.point.y << ") "
+                      << "CTE=" << status.cross_track_error << "m\n";
         }
 
         step_count++;
@@ -145,10 +136,9 @@ int main(int argc, char **argv) {
     std::cout << "Completed: " << (tractor.tracker()->is_path_completed() ? "yes" : "no") << std::endl;
     std::cout << "Total time: " << (step_count / 10.0f) << "s" << std::endl;
     std::cout << "Max CTE: " << max_cte << "m" << std::endl;
-    std::cout << "Avg CTE: " << (cte_samples > 0 ? (total_cte / static_cast<float>(cte_samples)) : 0.0f) << "m"
-              << std::endl;
+    std::cout << "Avg CTE: " << (cte_samples > 0 ? (total_cte / static_cast<float>(cte_samples)) : 0.0f) << "m\n";
     const auto final_pos = tractor.get_position();
-    std::cout << "Final position: (" << final_pos.point.x << ", " << final_pos.point.y << ")" << std::endl;
+    std::cout << "Final position: (" << final_pos.point.x << ", " << final_pos.point.y << ")\n";
 
     return 0;
 }

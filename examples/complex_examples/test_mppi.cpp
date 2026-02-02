@@ -1,39 +1,30 @@
+// MPPI Path Following Test
+//
+// Run:
+//   ./build/test_mppi
+
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include <chrono>
 #include <cmath>
-#include <echo/echo.hpp>
-#include <echo/widget.hpp>
-#include <filesystem>
+#include <drivekit.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-
-    echo::banner("MPPI");
-
-    echo::info(" === MPPI Path Following Test (LOCAL mode) ===");
-
-    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
-    if (!std::filesystem::exists(machine_file)) {
-        std::cerr << "[Error] Missing machine file: " << machine_file << std::endl;
-        return 1;
-    }
+int main() {
+    std::cout << "=== MPPI Path Following Test ===" << std::endl;
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    auto &tractor = sim.spawn_agent(machine_file, utils::make_pose_2d(0.0, 0.0, -1.5708f), "mppi_0");
+    auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", utils::make_pose_2d(0.0, 0.0, -1.5708f), "mppi_0");
     std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
 
-    // echo::info("Tractor loaded: " + tractor.name() + " (" + tractor.uuid() + ")");
-
-    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);
-    tractor.controls().tracker().set_enabled(true);
-    tractor.set_navigation_enabled(true);
+    // Configure MPPI controller
+    tractor.tracker()->set_controller_type(drivekit::TrackerType::MPPI);
+    tractor.set_tracker_enabled(true);
 
     auto *mppi = dynamic_cast<drivekit::pred::MPPIFollower *>(tractor.tracker()->get_controller());
     if (!mppi) {

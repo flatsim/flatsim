@@ -1,42 +1,30 @@
-// Carrot Algorithm Path Following Test (LOCAL mode - single process)
-//
-// Migrated from `examples_old/test_carrot.cpp` to the current Agent/Simulator APIs.
+// Carrot Algorithm Path Following Test
 //
 // Run:
-//   ./build/linux/x86_64/release/test_carrot_local
+//   ./build/test_carrot
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
 #include <cmath>
-#include <filesystem>
+#include <drivekit.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-
-    std::cout << "=== Carrot Algorithm Path Following Test (LOCAL mode) ===" << std::endl;
-
-    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
-    if (!std::filesystem::exists(machine_file)) {
-        std::cerr << "[Error] Missing machine file: " << machine_file << std::endl;
-        return 1;
-    }
+int main() {
+    std::cout << "=== Carrot Algorithm Path Following Test ===" << std::endl;
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    auto &tractor = sim.spawn_agent(machine_file, utils::make_pose_2d(0.0, 0.0, 0.0f), "carrot_0");
+    auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", utils::make_pose_2d(0.0, 0.0, 0.0f), "carrot_0");
     std::cout << "Tractor loaded: " << tractor.name() << " (" << tractor.uuid() << ")\n";
 
     std::cout << "\n--- Testing Carrot Controller with Straight Path ---" << std::endl;
-    tractor.controls().tracker().set_controller_type(drivekit::TrackerType::CARROT);
-    tractor.controls().tracker().set_enabled(true);
-    tractor.set_navigation_enabled(true);
+    tractor.tracker()->set_controller_type(drivekit::TrackerType::CARROT);
+    tractor.set_tracker_enabled(true);
 
     auto params = tractor.tracker()->get_controller_params();
     params.carrot_distance = 1.0f;

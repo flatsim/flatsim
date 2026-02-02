@@ -1,19 +1,15 @@
-// PID Controller Path Following Test (LOCAL mode - single process)
-//
-// Migrated from `examples_old/test_pid.cpp` to the current Agent/Simulator APIs.
+// PID Controller Path Following Test
 //
 // Run:
-//   ./build/linux/x86_64/release/test_pid_local
+//   ./build/test_pid
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
-#include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <filesystem>
+#include <drivekit.hpp>
 #include <iostream>
-#include <string>
 #include <thread>
 #include <vector>
 
@@ -65,17 +61,8 @@ static std::vector<datapod::Point> generate_l_shape(float offset_x, float offset
     return path;
 }
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-
-    std::cout << "=== PID Controller Path Following Test (LOCAL mode) ===" << std::endl;
-
-    std::filesystem::path machine_file = "examples/machines/urdf/tractor.urdf";
-    if (!std::filesystem::exists(machine_file)) {
-        std::cerr << "[Error] Missing machine file: " << machine_file << std::endl;
-        return 1;
-    }
+int main() {
+    std::cout << "=== PID Controller Path Following Test ===" << std::endl;
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
@@ -99,7 +86,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 4; ++i) {
         const auto uuid = std::string("pid_") + std::to_string(i);
         const datapod::Pose spawn_pose = utils::make_pose_2d(spawn_positions[i].x, spawn_positions[i].y, 0.0f);
-        auto &tractor = sim.spawn_agent(machine_file, spawn_pose, uuid, colors[i]);
+        auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", spawn_pose, uuid, colors[i]);
         tractors.push_back(&tractor);
         std::cout << "[Spawn] Tractor " << i << " uuid=" << tractor.uuid() << " at (" << spawn_positions[i].x << ","
                   << spawn_positions[i].y << ")\n";
@@ -116,9 +103,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 4; ++i) {
         auto &tractor = *tractors[i];
 
-        tractor.controls().tracker().set_controller_type(drivekit::TrackerType::PID);
-        tractor.controls().tracker().set_enabled(true);
-        tractor.set_navigation_enabled(true);
+        // Configure PID controller
+        tractor.tracker()->set_controller_type(drivekit::TrackerType::PID);
+        tractor.set_tracker_enabled(true);
 
         auto params = tractor.tracker()->get_controller_params();
         params.linear_kp = 2.5f;

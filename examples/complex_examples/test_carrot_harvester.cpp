@@ -1,41 +1,29 @@
-// Carrot Algorithm Path Following Test (Harvester, LOCAL mode - single process)
-//
-// Migrated from `examples_old/test_carrot_harvester.cpp` to the current Agent/Simulator APIs.
+// Carrot Algorithm Path Following Test (Harvester)
 //
 // Run:
-//   ./build/linux/x86_64/release/test_carrot_harvester_local
+//   ./build/test_carrot_harvester
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <chrono>
 #include <cmath>
-#include <filesystem>
+#include <drivekit.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-
-    std::cout << "=== Carrot Algorithm Path Following Test (Harvester, LOCAL mode) ===" << std::endl;
-
-    std::filesystem::path machine_file = "examples/machines/urdf/oxbo_harvester.urdf";
-    if (!std::filesystem::exists(machine_file)) {
-        std::cerr << "[Error] Missing machine file: " << machine_file << std::endl;
-        return 1;
-    }
+int main() {
+    std::cout << "=== Carrot Algorithm Path Following Test (Harvester) ===" << std::endl;
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500.0f, 500.0f, datum);
 
-    auto &harvester = sim.spawn_agent(machine_file, utils::make_pose_2d(0.0, 0.0, 0.0f), "carrot_harvester_0");
+    auto &harvester = sim.spawn_agent("machines/urdf/oxbo_harvester.urdf", utils::make_pose_2d(0.0, 0.0, 0.0f), "carrot_harvester_0");
     std::cout << "Harvester loaded: " << harvester.name() << " (" << harvester.uuid() << ")\n";
 
-    harvester.controls().tracker().set_controller_type(drivekit::TrackerType::CARROT);
-    harvester.controls().tracker().set_enabled(true);
-    harvester.set_navigation_enabled(true);
+    harvester.tracker()->set_controller_type(drivekit::TrackerType::CARROT);
+    harvester.set_tracker_enabled(true);
 
     auto params = harvester.tracker()->get_controller_params();
     params.carrot_distance = 1.5f;

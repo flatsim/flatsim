@@ -1,31 +1,28 @@
-// Greenhouse fleet navigation demo (LOCAL mode - single process)
-//
-// Migrated from `examples_old/test_greenhouse_fleet.cpp` to the current Agent/Simulator APIs.
+// Greenhouse Fleet Navigation Demo
 //
 // Run:
-//   ./build/linux/x86_64/release/test_greenhouse_fleet_local
+//   ./build/test_greenhouse_fleet
 
+#include "flatsim/agent.hpp"
+#include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
+#include "pigment/pigment.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <drivekit.hpp>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <queue>
 #include <random>
+#include <rerun.hpp>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
-
-#include "flatsim/agent.hpp"
-#include "flatsim/simulator.hpp"
-#include "flatsim/utils.hpp"
-#include "pigment/pigment.hpp"
-#include <rerun.hpp>
 
 // =============================================================================
 // Graph structures (loaded from YAML)
@@ -106,85 +103,45 @@ static NavGraph load_nav_graph(const std::string &filename) {
         line = line.substr(start);
         if (line.empty() || line[0] == '#') continue;
 
-        if (line.find("nodes:") == 0) {
-            current_section = "nodes";
-            continue;
-        }
-        if (line.find("edges:") == 0) {
-            current_section = "edges";
-            continue;
-        }
-        if (line.find("name:") == 0 && current_section.empty()) {
-            graph.name = line.substr(6);
-            continue;
-        }
-        if (line.find("dimensions:") == 0) {
-            current_section = "dimensions";
-            continue;
-        }
+        if (line.find("nodes:") == 0) { current_section = "nodes"; continue; }
+        if (line.find("edges:") == 0) { current_section = "edges"; continue; }
+        if (line.find("name:") == 0 && current_section.empty()) { graph.name = line.substr(6); continue; }
+        if (line.find("dimensions:") == 0) { current_section = "dimensions"; continue; }
+
         if (current_section == "dimensions") {
-            if (line.find("width:") == 0) {
-                graph.width = std::stof(line.substr(7));
-                continue;
-            }
-            if (line.find("length:") == 0) {
-                graph.length = std::stof(line.substr(8));
-                current_section = "";
-                continue;
-            }
+            if (line.find("width:") == 0) { graph.width = std::stof(line.substr(7)); continue; }
+            if (line.find("length:") == 0) { graph.length = std::stof(line.substr(8)); current_section = ""; continue; }
         }
 
         if (current_section == "nodes") {
             if (line[0] == '-') {
-                if (in_node) {
-                    graph.nodes.push_back(current_node);
-                }
+                if (in_node) graph.nodes.push_back(current_node);
                 in_node = true;
                 current_node = GraphNode{};
                 const size_t id_pos = line.find("id:");
-                if (id_pos != std::string::npos) {
-                    current_node.id = std::stoi(line.substr(id_pos + 4));
-                }
+                if (id_pos != std::string::npos) current_node.id = std::stoi(line.substr(id_pos + 4));
             } else if (in_node) {
-                if (line.find("id:") == 0) {
-                    current_node.id = std::stoi(line.substr(4));
-                } else if (line.find("name:") == 0) {
-                    current_node.name = line.substr(6);
-                } else if (line.find("x:") == 0) {
-                    current_node.x = std::stof(line.substr(3));
-                } else if (line.find("y:") == 0) {
-                    current_node.y = std::stof(line.substr(3));
-                }
+                if (line.find("id:") == 0) current_node.id = std::stoi(line.substr(4));
+                else if (line.find("name:") == 0) current_node.name = line.substr(6);
+                else if (line.find("x:") == 0) current_node.x = std::stof(line.substr(3));
+                else if (line.find("y:") == 0) current_node.y = std::stof(line.substr(3));
             }
         }
 
         if (current_section == "edges") {
             if (line[0] == '-') {
-                if (in_edge) {
-                    graph.edges.push_back(current_edge);
-                }
-                if (in_node) {
-                    graph.nodes.push_back(current_node);
-                    in_node = false;
-                }
+                if (in_edge) graph.edges.push_back(current_edge);
+                if (in_node) { graph.nodes.push_back(current_node); in_node = false; }
                 in_edge = true;
                 current_edge = GraphEdge{};
                 const size_t id_pos = line.find("id:");
-                if (id_pos != std::string::npos) {
-                    current_edge.id = std::stoi(line.substr(id_pos + 4));
-                }
+                if (id_pos != std::string::npos) current_edge.id = std::stoi(line.substr(id_pos + 4));
             } else if (in_edge) {
-                if (line.find("id:") == 0) {
-                    current_edge.id = std::stoi(line.substr(4));
-                } else if (line.find("v1:") == 0) {
-                    current_edge.v1 = std::stoi(line.substr(4));
-                } else if (line.find("v2:") == 0) {
-                    current_edge.v2 = std::stoi(line.substr(4));
-                } else if (line.find("bidirectional:") == 0) {
-                    current_edge.bidirectional = (line.find("true") != std::string::npos);
-                } else if (line.find("type:") == 0) {
-                    current_edge.type = line.substr(6);
-                }
+                if (line.find("id:") == 0) current_edge.id = std::stoi(line.substr(4));
+                else if (line.find("v1:") == 0) current_edge.v1 = std::stoi(line.substr(4));
+                else if (line.find("v2:") == 0) current_edge.v2 = std::stoi(line.substr(4));
+                else if (line.find("bidirectional:") == 0) current_edge.bidirectional = (line.find("true") != std::string::npos);
+                else if (line.find("type:") == 0) current_edge.type = line.substr(6);
             }
         }
     }
@@ -204,28 +161,21 @@ class ResourceManager {
   public:
     bool try_claim_edge(int edge_id, int robot_id) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (edge_claims_.count(edge_id) && edge_claims_[edge_id] != robot_id) {
-            return false;
-        }
+        if (edge_claims_.count(edge_id) && edge_claims_[edge_id] != robot_id) return false;
         edge_claims_[edge_id] = robot_id;
         return true;
     }
 
     void release_edge(int edge_id, int robot_id) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (edge_claims_.count(edge_id) && edge_claims_[edge_id] == robot_id) {
-            edge_claims_.erase(edge_id);
-        }
+        if (edge_claims_.count(edge_id) && edge_claims_[edge_id] == robot_id) edge_claims_.erase(edge_id);
     }
 
     void release_all(int robot_id) {
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto it = edge_claims_.begin(); it != edge_claims_.end();) {
-            if (it->second == robot_id) {
-                it = edge_claims_.erase(it);
-            } else {
-                ++it;
-            }
+            if (it->second == robot_id) it = edge_claims_.erase(it);
+            else ++it;
         }
     }
 
@@ -278,9 +228,7 @@ class PathPlanner {
             int current = open_queue.top();
             open_queue.pop();
 
-            if (current == goal_id) {
-                return reconstruct_path(came_from, current);
-            }
+            if (current == goal_id) return reconstruct_path(came_from, current);
             if (closed_set.count(current)) continue;
             closed_set.insert(current);
 
@@ -289,18 +237,11 @@ class PathPlanner {
                 if (closed_set.count(neighbor)) continue;
 
                 const auto *edge = graph_.get_edge(current, neighbor);
+                float tentative_g = g_score[current] + distance(current, neighbor);
                 if (edge && !resource_mgr_.is_edge_available(edge->id, robot_id)) {
-                    float tentative_g = g_score[current] + distance(current, neighbor) + 1000.0f;
-                    if (!g_score.count(neighbor) || tentative_g < g_score[neighbor]) {
-                        came_from[neighbor] = current;
-                        g_score[neighbor] = tentative_g;
-                        f_score[neighbor] = tentative_g + heuristic(neighbor, goal_id);
-                        open_queue.push(neighbor);
-                    }
-                    continue;
+                    tentative_g += 1000.0f; // Penalty for blocked edge
                 }
 
-                float tentative_g = g_score[current] + distance(current, neighbor);
                 if (!g_score.count(neighbor) || tentative_g < g_score[neighbor]) {
                     came_from[neighbor] = current;
                     g_score[neighbor] = tentative_g;
@@ -314,12 +255,10 @@ class PathPlanner {
 
   private:
     float heuristic(int a, int b) const {
-        const auto *node_a = graph_.get_node(a);
-        const auto *node_b = graph_.get_node(b);
-        if (!node_a || !node_b) return 0;
-        const float dx = node_a->x - node_b->x;
-        const float dy = node_a->y - node_b->y;
-        return std::sqrt(dx * dx + dy * dy);
+        const auto *na = graph_.get_node(a);
+        const auto *nb = graph_.get_node(b);
+        if (!na || !nb) return 0;
+        return std::sqrt(std::pow(na->x - nb->x, 2.0f) + std::pow(na->y - nb->y, 2.0f));
     }
     float distance(int a, int b) const { return heuristic(a, b); }
 
@@ -350,11 +289,8 @@ struct RobotTask {
     std::set<int> claimed_edges;
 
     bool has_reached_target() const { return current_path_index >= planned_path.size(); }
-
     int get_next_node() const {
-        if (current_path_index + 1 < planned_path.size()) {
-            return planned_path[current_path_index + 1];
-        }
+        if (current_path_index + 1 < planned_path.size()) return planned_path[current_path_index + 1];
         return -1;
     }
 };
@@ -363,7 +299,6 @@ static std::string generate_uuid() {
     static std::mt19937 gen(std::chrono::steady_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<> dis(0, 15);
     std::uniform_int_distribution<> dis2(8, 11);
-
     std::stringstream ss;
     ss << std::hex;
     for (int i = 0; i < 8; i++) ss << dis(gen);
@@ -384,21 +319,14 @@ static int find_nearest_node(const NavGraph &graph, double x, double y) {
     double best_dist = std::numeric_limits<double>::infinity();
     for (const auto &node : graph.nodes) {
         auto p = graph.to_world(node.x, node.y);
-        const double dx = p.x - x;
-        const double dy = p.y - y;
-        const double d = std::sqrt(dx * dx + dy * dy);
-        if (d < best_dist) {
-            best_dist = d;
-            best_id = node.id;
-        }
+        const double d = std::sqrt(std::pow(p.x - x, 2.0) + std::pow(p.y - y, 2.0));
+        if (d < best_dist) { best_dist = d; best_id = node.id; }
     }
     return best_id;
 }
 
 static void visualize_graph_static(std::shared_ptr<rerun::RecordingStream> rec, const NavGraph &graph) {
     if (!rec) return;
-
-    // Nodes as points.
     std::vector<rerun::Position3D> pts;
     for (const auto &n : graph.nodes) {
         auto p = graph.to_world(n.x, n.y);
@@ -406,7 +334,6 @@ static void visualize_graph_static(std::shared_ptr<rerun::RecordingStream> rec, 
     }
     rec->log_static("graph/nodes", rerun::Points3D(pts).with_radii({0.12f}).with_colors({rerun::Color(200, 200, 200)}));
 
-    // Edges as line strips.
     std::vector<rerun::LineStrip3D> lines;
     for (const auto &e : graph.edges) {
         const auto *n1 = graph.get_node(e.v1);
@@ -417,8 +344,7 @@ static void visualize_graph_static(std::shared_ptr<rerun::RecordingStream> rec, 
         lines.push_back(rerun::LineStrip3D({rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.0f),
                                             rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.0f)}));
     }
-    rec->log_static("graph/edges",
-                    rerun::LineStrips3D(lines).with_radii({0.03f}).with_colors({rerun::Color(100, 100, 100)}));
+    rec->log_static("graph/edges", rerun::LineStrips3D(lines).with_radii({0.03f}).with_colors({rerun::Color(100, 100, 100)}));
 }
 
 static void visualize_edge_claims(std::shared_ptr<rerun::RecordingStream> rec, const NavGraph &graph,
@@ -437,24 +363,19 @@ static void visualize_edge_claims(std::shared_ptr<rerun::RecordingStream> rec, c
         lines.push_back(rerun::LineStrip3D({rerun::Vec3D(static_cast<float>(p1.x), static_cast<float>(p1.y), 0.05f),
                                             rerun::Vec3D(static_cast<float>(p2.x), static_cast<float>(p2.y), 0.05f)}));
         const int owner = claims.at(e.id);
-        const rerun::Color c = (owner % 3 == 0)   ? rerun::Color(255, 80, 80)
-                               : (owner % 3 == 1) ? rerun::Color(80, 255, 80)
-                                                  : rerun::Color(80, 80, 255);
+        const rerun::Color c = (owner % 3 == 0) ? rerun::Color(255, 80, 80) :
+                               (owner % 3 == 1) ? rerun::Color(80, 255, 80) : rerun::Color(80, 80, 255);
         colors.push_back(c);
     }
     rec->log("graph/claims", rerun::LineStrips3D(lines).with_radii({0.08f}).with_colors(colors));
 }
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
+int main() {
+    std::cout << "=== Greenhouse Fleet Navigation Demo ===\n";
 
-    std::cout << "=== Greenhouse Fleet Navigation Demo (LOCAL mode) ===\n";
-
-    // Optional graph file; fall back to a small built-in graph in `examples/greenhouse_blueprint_graph.yaml`.
     std::string graph_path = "examples/greenhouse_blueprint_graph.yaml";
     if (!std::ifstream(graph_path).good()) {
-        std::cout << "[Warn] Missing " << graph_path << " (expected in repo). Aborting.\n";
+        std::cout << "[Warn] Missing " << graph_path << ". Aborting.\n";
         return 1;
     }
 
@@ -465,8 +386,7 @@ int main(int argc, char **argv) {
         std::cerr << "Failed to load graph: " << e.what() << "\n";
         return 1;
     }
-    std::cout << "Loaded graph '" << graph.name << "' nodes=" << graph.nodes.size() << " edges=" << graph.edges.size()
-              << "\n";
+    std::cout << "Loaded graph '" << graph.name << "' nodes=" << graph.nodes.size() << " edges=" << graph.edges.size() << "\n";
 
     auto rec = std::make_shared<rerun::RecordingStream>("greenhouse_fleet", "space");
     (void)rec->connect_grpc("rerun+http://0.0.0.0:9876/proxy");
@@ -477,14 +397,12 @@ int main(int argc, char **argv) {
 
     std::vector<pigment::RGB> colors = {{255, 80, 80}, {80, 255, 80}, {80, 80, 255}};
 
-    // Pick start/goal nodes.
-    std::vector<int> start_nodes;
-    std::vector<int> goal_nodes;
+    std::vector<int> start_nodes, goal_nodes;
     for (const auto &n : graph.nodes) {
         start_nodes.push_back(n.id);
         goal_nodes.push_back(n.id);
     }
-    if (start_nodes.size() < 3 || goal_nodes.size() < 3) {
+    if (start_nodes.size() < 3) {
         std::cerr << "Graph too small for fleet demo\n";
         return 1;
     }
@@ -505,12 +423,11 @@ int main(int argc, char **argv) {
         auto spawn_pos = graph.to_world(start_node->x, start_node->y);
         const std::string uuid = generate_uuid();
 
-        auto &robot = sim.spawn_agent("examples/machines/urdf/husky.urdf",
+        auto &robot = sim.spawn_agent("machines/urdf/husky.urdf",
                                       utils::make_pose_2d(spawn_pos.x, spawn_pos.y, 0.0f), uuid, colors[i]);
         robots.push_back(&robot);
         robot.set_speed(0.3f);
-        robot.controls().tracker().set_enabled(true);
-        robot.set_navigation_enabled(true);
+        robot.set_tracker_enabled(true);
 
         tasks[i].robot_id = i;
         tasks[i].current_node = start_node->id;
@@ -530,10 +447,7 @@ int main(int argc, char **argv) {
     while (true) {
         bool all_completed = true;
         for (const auto &t : tasks) {
-            if (t.state != RobotState::COMPLETED) {
-                all_completed = false;
-                break;
-            }
+            if (t.state != RobotState::COMPLETED) { all_completed = false; break; }
         }
         if (all_completed) {
             std::cout << "All robots completed their tasks\n";
@@ -559,9 +473,7 @@ int main(int argc, char **argv) {
                     std::vector<datapod::Point> waypoints;
                     for (int node_id : path) {
                         const auto *node = graph.get_node(node_id);
-                        if (node) {
-                            waypoints.push_back(graph.to_world(node->x, node->y));
-                        }
+                        if (node) waypoints.push_back(graph.to_world(node->x, node->y));
                     }
 
                     auto params = robot.tracker()->get_controller_params();
@@ -569,10 +481,8 @@ int main(int argc, char **argv) {
                     params.angular_kp = 0.8f;
                     params.lookahead_distance = 1.0f;
                     robot.tracker()->set_controller_params(params);
-                    robot.controls().tracker().set_controller_type(drivekit::TrackerType::CARROT);
-                    robot.controls().tracker().set_enabled(true);
-                    robot.set_navigation_enabled(true);
-
+                    robot.tracker()->set_controller_type(drivekit::TrackerType::CARROT);
+                    robot.set_tracker_enabled(true);
                     robot.tracker()->set_path(drivekit::PathGoal(waypoints, 0.09f, 0.09f, false));
                 }
                 break;
@@ -582,15 +492,10 @@ int main(int argc, char **argv) {
                 const int nearest = find_nearest_node(graph, pos.point.x, pos.point.y);
 
                 if (nearest != task.current_node && nearest >= 0) {
-                    for (int edge_id : task.claimed_edges) {
-                        resource_mgr.release_edge(edge_id, i);
-                    }
+                    for (int edge_id : task.claimed_edges) resource_mgr.release_edge(edge_id, i);
                     task.claimed_edges.clear();
                     for (size_t idx = task.current_path_index; idx < task.planned_path.size(); idx++) {
-                        if (task.planned_path[idx] == nearest) {
-                            task.current_path_index = idx;
-                            break;
-                        }
+                        if (task.planned_path[idx] == nearest) { task.current_path_index = idx; break; }
                     }
                     task.current_node = nearest;
                 }
@@ -601,8 +506,7 @@ int main(int argc, char **argv) {
                     if (edge) {
                         if (!resource_mgr.try_claim_edge(edge->id, i)) {
                             const int owner = resource_mgr.get_edge_owner(edge->id);
-                            std::cout << "Robot " << i << ": Edge " << edge->id << " blocked by robot " << owner
-                                      << ", waiting...\n";
+                            std::cout << "Robot " << i << ": Edge " << edge->id << " blocked by robot " << owner << ", waiting...\n";
                             robot.tracker()->clear_path();
                             task.state = RobotState::WAITING;
                             task.wait_counter = 30;
@@ -625,9 +529,7 @@ int main(int argc, char **argv) {
             }
             case RobotState::WAITING:
                 task.wait_counter--;
-                if (task.wait_counter <= 0) {
-                    task.state = RobotState::PLANNING;
-                }
+                if (task.wait_counter <= 0) task.state = RobotState::PLANNING;
                 break;
             case RobotState::IDLE:
             case RobotState::COMPLETED:
@@ -638,9 +540,7 @@ int main(int argc, char **argv) {
         sim.tick(dt);
         sim.tock();
 
-        if (step_count++ % 30 == 0) {
-            visualize_edge_claims(rec, graph, resource_mgr);
-        }
+        if (step_count++ % 30 == 0) visualize_edge_claims(rec, graph, resource_mgr);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }

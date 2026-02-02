@@ -1,32 +1,20 @@
-// PID Controller Stress Test: 30 Robots (LOCAL mode)
-//
-// Migrated from `examples_old/test_pid_stress_30.cpp` to the current Agent/Simulator APIs.
+// PID Controller Stress Test: 30 Robots
 //
 // Run:
-//   ./build/linux/x86_64/release/test_pid_stress_30_local
+//   ./build/test_pid_stress_30
 
 #include "flatsim/agent.hpp"
-#include "flatsim/utils.hpp"
 #include "flatsim/simulator.hpp"
 #include "flatsim/utils.hpp"
 #include <algorithm>
-#include "flatsim/utils.hpp"
 #include <chrono>
-#include "flatsim/utils.hpp"
 #include <cmath>
-#include "flatsim/utils.hpp"
 #include <cstdint>
-#include "flatsim/utils.hpp"
+#include <drivekit.hpp>
 #include <iostream>
-#include "flatsim/utils.hpp"
-#include <numbers>
-#include "flatsim/utils.hpp"
 #include <random>
-#include "flatsim/utils.hpp"
 #include <thread>
-#include "flatsim/utils.hpp"
 #include <vector>
-#include "flatsim/utils.hpp"
 
 static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset_y, float scale = 1.0f) {
     std::vector<datapod::Point> path;
@@ -34,16 +22,14 @@ static std::vector<datapod::Point> generate_s_shape(float offset_x, float offset
     for (int i = 0; i <= 20; ++i) {
         const float t = i / 20.0f;
         const float x = offset_x + t * 40.0f * scale;
-        const float y = offset_y + 15.0f * scale * std::sin(t * 2.0f * static_cast<float>(std::numbers::pi));
+        const float y = offset_y + 15.0f * scale * std::sin(t * 2.0f * static_cast<float>(M_PI));
         path.push_back({x, y});
     }
     return path;
 }
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-    std::cout << "=== PID Controller Stress Test: 30 Robots (LOCAL mode) ===" << std::endl;
+int main() {
+    std::cout << "=== PID Controller Stress Test: 30 Robots ===" << std::endl;
 
     datapod::Geo datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(800.0f, 800.0f, datum);
@@ -56,8 +42,7 @@ int main(int argc, char **argv) {
 
     std::mt19937 rng(42);
     std::uniform_int_distribution<int> color_dis(0, 255);
-    std::uniform_real_distribution<float> angle_dis(-static_cast<float>(std::numbers::pi),
-                                                    static_cast<float>(std::numbers::pi));
+    std::uniform_real_distribution<float> angle_dis(-static_cast<float>(M_PI), static_cast<float>(M_PI));
 
     std::vector<agent::Agent *> tractors;
     tractors.reserve(kNumRobots);
@@ -78,25 +63,30 @@ int main(int argc, char **argv) {
                                  static_cast<uint8_t>(color_dis(rng))};
 
         const std::string uuid = "tractor_" + std::to_string(i);
-        auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", utils::make_pose_2d(sx, sy, yaw), uuid, color);
+        auto &tractor = sim.spawn_agent("machines/urdf/tractor.urdf", utils::make_pose_2d(sx, sy, yaw), uuid, color);
         tractors.push_back(&tractor);
     }
 
+    std::cout << "Spawned " << kNumRobots << " tractors\n";
+
     for (int i = 0; i < kNumRobots; ++i) {
         auto &tractor = *tractors[i];
+
+        tractor.tracker()->set_controller_type(drivekit::TrackerType::PID);
+        tractor.set_tracker_enabled(true);
+
         auto params = tractor.tracker()->get_controller_params();
         params.linear_kp = 2.5f;
         params.angular_kp = 1.8f;
         params.angular_kd = 0.2f;
         tractor.tracker()->set_controller_params(params);
 
-        tractor.controls().tracker().set_controller_type(drivekit::TrackerType::PID);
-        tractor.controls().tracker().set_enabled(true);
-        tractor.set_navigation_enabled(true);
-
         const auto path = generate_s_shape(static_cast<float>(path_starts[i].x), static_cast<float>(path_starts[i].y));
         tractor.tracker()->set_path(drivekit::PathGoal(path, 2.0f, 2.5f, false));
     }
+
+    std::cout << "Configured all tractors with PID + S-shape paths\n";
+    std::cout << "\n[Run] Starting stress test...\n" << std::endl;
 
     const float dt = 0.016f;
     auto start_time = std::chrono::steady_clock::now();
@@ -109,7 +99,7 @@ int main(int argc, char **argv) {
         const auto now = std::chrono::steady_clock::now();
         const auto elapsed_s = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
         if (elapsed_s > 300) {
-            std::cout << "[Run] Timeout reached" << std::endl;
+            std::cout << "[Run] Timeout reached\n";
             break;
         }
 
@@ -119,8 +109,7 @@ int main(int argc, char **argv) {
             sim.tock();
         }
         const auto tick_end = std::chrono::high_resolution_clock::now();
-        const auto tick_us =
-            std::chrono::duration_cast<std::chrono::microseconds>(tick_end - tick_start).count();
+        const auto tick_us = std::chrono::duration_cast<std::chrono::microseconds>(tick_end - tick_start).count();
 
         bool all_completed = true;
         int completed_count = 0;
@@ -143,18 +132,18 @@ int main(int argc, char **argv) {
         if (step_count % 120 == 0) {
             std::cout << "\n[Run] " << (step_count / 60) << "s"
                       << " tick=" << (tick_us / 1000.0f) << "ms"
-                      << " completed=" << completed_count << "/" << kNumRobots << std::endl;
+                      << " completed=" << completed_count << "/" << kNumRobots << "\n";
 
             for (int i = 0; i < std::min(5, kNumRobots); ++i) {
                 const bool completed = tractors[i]->tracker()->is_path_completed();
                 const float avg_error = (error_samples[i] > 0) ? (total_errors[i] / error_samples[i]) : 0.0f;
                 std::cout << "  Robot " << i << ": " << (completed ? "completed" : "running")
-                          << " avg_error=" << avg_error << "m" << std::endl;
+                          << " avg_error=" << avg_error << "m\n";
             }
         }
 
         if (all_completed) {
-            std::cout << "[Run] All robots completed their paths" << std::endl;
+            std::cout << "[Run] All robots completed their paths\n";
             break;
         }
 
@@ -183,4 +172,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
