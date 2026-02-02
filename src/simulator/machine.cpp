@@ -4,6 +4,7 @@
 #include <concord/concord.hpp>
 #include <cstdio>
 #include <datapod/adapters.hpp>
+#include <echo/echo.hpp>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -99,7 +100,8 @@ namespace simulator {
         if (!link.collisions.empty()) {
             const auto &geom = link.collisions[0].geom;
             if (geom.is_box()) {
-                return geom.as_box()->size;
+                auto *b = geom.as_box();
+                return b->size;
             }
             if (geom.is_cylinder()) {
                 auto *cyl = geom.as_cylinder();
@@ -109,7 +111,8 @@ namespace simulator {
         if (!link.visuals.empty()) {
             const auto &geom = link.visuals[0].geom;
             if (geom.is_box()) {
-                return geom.as_box()->size;
+                auto *b = geom.as_box();
+                return b->size;
             }
             if (geom.is_cylinder()) {
                 auto *cyl = geom.as_cylinder();
@@ -474,6 +477,7 @@ namespace simulator {
             datapod::Point current_pos{x, y, 0.0};
             concord::frame::ENU enu{current_pos, datum};
             auto wgs_coords = concord::frame::to_wgs(enu);
+
             rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
                                  .with_colors({rerun::Color(config_.color.r(), config_.color.g(), config_.color.b())}));

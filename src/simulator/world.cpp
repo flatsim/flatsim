@@ -1,5 +1,6 @@
 #include "flatsim/simulator/world.hpp"
 #include <algorithm>
+#include <echo/echo.hpp>
 #include <iostream>
 
 namespace simulator {
@@ -19,6 +20,11 @@ namespace simulator {
 
     void World::tock() {
         if (!rec_) return;
+
+        static int tock_counter = 0;
+        if (++tock_counter % 120 == 0) {
+            echo::info("[World] tock border logged");
+        }
 
         // Visualize world boundaries
         float w = static_cast<float>(settings_.get_size().x);

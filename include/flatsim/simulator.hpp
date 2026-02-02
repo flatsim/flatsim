@@ -2,10 +2,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include <filesystem>
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <rerun.hpp>
 #include <thread>
@@ -52,12 +54,21 @@ namespace simulator {
         // agent47 netpipe bridge transport (used in IPC/TCP/SHM modes)
         std::optional<netpipe::Pipe> agent47_listen_pipe_; // Listening pipe for accepting connections
 
+        // Accept loop runs on a background thread because netpipe::Pipe::accept() is blocking.
+        std::atomic<bool> accept_running_{false};
+        std::thread accept_thread_;
+        std::deque<netpipe::Pipe> pending_accepts_;
+        std::mutex pending_accepts_mutex_;
+
         struct Agent47Peer {
             std::optional<netpipe::Pipe> pipe;
             std::unique_ptr<netpipe::Remote<netpipe::Bidirect>> rpc;
             std::mutex cmd_mutex;
             dp::Stamp<agent47::types::Command> last_cmd;
             bool has_cmd = false;
+
+            // Bound robot name (for debugging/UI). Machine uuid stays the peer uuid for now.
+            std::string name;
 
             Agent47Peer() = default;
             Agent47Peer(const Agent47Peer &) = delete;
@@ -80,6 +91,14 @@ namespace simulator {
         };
 
         std::map<std::string, Agent47Peer> agent47_peers_;
+        std::mutex agent47_peers_mutex_;
+
+        struct PendingRobot {
+            std::string peer_uuid;
+            dp::robot::Robot robot;
+        };
+        std::deque<PendingRobot> pending_robots_;
+        std::mutex pending_robots_mutex_;
         std::string address_;
 
         // Physics world with obstacle management
@@ -97,6 +116,7 @@ namespace simulator {
 
         // Heartbeat tracking: uuid -> last heartbeat time (IPC/TCP only)
         std::map<std::string, std::chrono::steady_clock::time_point> last_heartbeat_;
+        std::mutex last_heartbeat_mutex_;
 
         // Next collision group
         uint32_t next_group_ = 1;
@@ -120,6 +140,7 @@ namespace simulator {
         // agent47 netpipe bridge connection management
         void process_agent47_connections();
         void cleanup_stale_connections();
+        void process_pending_robots();
 
         // agent47 protocol
         void register_agent47_handlers(Agent47Peer &peer, const std::string &uuid);

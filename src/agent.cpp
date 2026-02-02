@@ -2,7 +2,6 @@
 #include "datapod/datapod.hpp"
 #include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator/machine.hpp"
-#include "flatsim/tagged_zmq.hpp"
 #include <agent47/model/urdf.hpp>
 #include <chrono>
 #include <cstdlib>
@@ -42,21 +41,6 @@ namespace agent {
     }
 
     static std::string ipc_endpoint(const std::filesystem::path &path) { return "ipc://" + path.string(); }
-
-    // // Constructor for networked mode (IPC/TCP/SHM)
-    // Agent::Agent(const std::string &address) : local_mode_(false), address_(address), rec_(nullptr) {
-    //     // Determine transport type from address
-    //     if (address_.empty()) {
-    //         transport_type_ = flatsim::Endpoint::Type::IPC;
-    //     } else if (address_.starts_with("shm://")) {
-    //         transport_type_ = flatsim::Endpoint::Type::SHM;
-    //     } else {
-    //         transport_type_ = flatsim::Endpoint::Type::TCP;
-    //     }
-    //
-    //     // NEW: Single RpcPeer will be created after spawn
-    //     // Note: peer_ will be initialized in spawn()
-    // }
 
     // Constructor for local mode (owned by Simulator)
     Agent::Agent(const types::Machine &config, std::shared_ptr<rerun::RecordingStream> rec)
@@ -180,7 +164,6 @@ namespace agent {
         }
 
         // Drain sensor packets into flatsim SensorData so Machine can use them.
-        // Note: packet.payload is dp::Mode::WITH_VERSION; we deserialize expected cista types.
         for (int i = 0; i < 16; ++i) {
             agent47::types::SensorPacket pkt;
             if (!agent47_->bridge_->sensor(pkt, 0)) {

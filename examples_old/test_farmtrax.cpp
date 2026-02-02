@@ -3,7 +3,7 @@
 // Features: Robot colors, Collision avoidance with LIDAR, Dubins curves for turns
 //
 // Run:
-//   ./build/test_farmtrax
+//   ./build/linux/x86_64/release/test_farmtrax
 
 #include "flatsim/utils.hpp"
 #include <chrono>
@@ -15,7 +15,9 @@
 
 #include "echo/widget.hpp"
 #include "flatsim/agent.hpp"
+#include "flatsim/agent/sensor/lidar_sensor.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/utils.hpp"
 #include "pigment/pigment.hpp"
 #include "rerun/recording_stream.hpp"
 
@@ -23,6 +25,7 @@
 #include "farmtrax/field.hpp"
 #include "farmtrax/graph.hpp"
 #include "farmtrax/turners/dubins.hpp"
+#include "flatsim/utils.hpp"
 
 // Different colors for each robot
 const std::vector<pigment::RGB> ROBOT_COLORS = {
@@ -188,7 +191,7 @@ int main() {
     }
     rec->log("", rerun::Clear::RECURSIVE);
 
-    // Create simulator with Rerun (LOCAL mode)
+    // Create simulator with Rerun
     datapod::Geo world_datum{51.98954034749562, 5.6584737410504715, 53.801823};
     simulator::Simulator sim(500, 500, world_datum, rec);
 
@@ -271,10 +274,14 @@ int main() {
         // Spawn tractor with unique UUID and color
         std::string uuid = "tractor_" + std::to_string(m);
         datapod::Pose spawn_pose = utils::make_pose_2d(spawn_x, spawn_y, spawn_yaw - 1.5708f);
-        auto &tractor = sim.spawn_agent("examples_old/machines/urdf/tractor.urdf", spawn_pose, uuid,
+        auto &tractor = sim.spawn_agent("examples/machines/urdf/tractor.urdf", spawn_pose, uuid,
                                         ROBOT_COLORS[m % ROBOT_COLORS.size()]);
 
         echo::info("Loaded tractor ", m, " at (", spawn_x, ", ", spawn_y, ") UUID: ", uuid);
+
+        // LIDAR config + presence come from URDF now (dp::robot::Link::sensor).
+        // The simulator will raycast based on machine.lidar config, and the agent receives
+        // LIDAR samples via the sensor stream.
 
         // Configure MPPI controller
         tractor.controls().tracker().set_controller_type(drivekit::TrackerType::MPPI);

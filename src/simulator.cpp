@@ -1,7 +1,6 @@
 #include "flatsim/simulator.hpp"
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator/machine.hpp"
-#include "flatsim/tagged_zmq.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -89,23 +88,31 @@ namespace simulator {
 
         auto map_bg = rerun::blueprint::archetypes::MapBackground{}.with_provider(
             rerun::blueprint::components::MapProvider::MapboxDark);
+        if (blueprint_rec_) {
+            blueprint_rec_->log("mapbox", std::move(map_bg));
+        }
         if (rec_) {
-            rec_->log("mapbox", std::move(map_bg));
             rec_->log("", rerun::Clear::RECURSIVE);
             rec_->log_with_static("", true, rerun::Clear::RECURSIVE);
         }
     }
 
     void Simulator::update_camera_tracking(const std::string &uuid) {
-        if (!rec_ || uuid.empty()) {
+        if ((!rec_ && !blueprint_rec_) || uuid.empty()) {
             return;
         }
         last_joined_agent_uuid_ = uuid;
-        std::string chassis_path = "/" + uuid + "/chassis";
+        // Entity paths are logged as "<uuid>/chassis" (no leading slash).
+        std::string chassis_path = uuid + "/chassis";
         auto eye_controls = rerun::blueprint::archetypes::EyeControls3D().with_tracking_entity(
             rerun::components::EntityPath(chassis_path));
 
-        rec_->log("eye_controls", std::move(eye_controls));
+        // EyeControls3D is a blueprint archetype; log it to the blueprint store.
+        if (blueprint_rec_) {
+            blueprint_rec_->log("eye_controls", std::move(eye_controls));
+        } else if (rec_) {
+            rec_->log("eye_controls", std::move(eye_controls));
+        }
         echo::trace("[Simulator] Camera tracking set to chassis: ", chassis_path);
     }
 
@@ -157,6 +164,29 @@ namespace simulator {
         }
         agent47_listen_pipe_.emplace(std::move(listen_res.value()));
 
+        // Start accept thread (blocking accept).
+        accept_running_.store(true);
+        accept_thread_ = std::thread([this]() {
+            while (accept_running_.load()) {
+                if (!agent47_listen_pipe_.has_value()) {
+                    break;
+                }
+                auto conn_res = agent47_listen_pipe_->accept();
+                if (conn_res.is_err()) {
+                    // If we're shutting down, exit quietly.
+                    if (!accept_running_.load()) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
+                }
+                {
+                    std::lock_guard<std::mutex> g(pending_accepts_mutex_);
+                    pending_accepts_.push_back(std::move(conn_res.value()));
+                }
+            }
+        });
+
         world_ = std::make_unique<World>(rec_);
         world_->init(sim_settings_.datum, datapod::Size(sim_settings_.width, sim_settings_.height, 0.0));
 
@@ -171,11 +201,16 @@ namespace simulator {
         : Simulator(conn, address, SimulatorSettings{width, height, datum}, rec) {}
 
     Simulator::~Simulator() {
-        local_agents_.clear();
+        accept_running_.store(false);
+        if (agent47_listen_pipe_.has_value()) {
+            agent47_listen_pipe_->close();
+        }
+        if (accept_thread_.joinable()) {
+            accept_thread_.join();
+        }
 
         // Close agent47 peers
         if (agent47_listen_pipe_.has_value()) {
-            agent47_listen_pipe_->close();
             agent47_listen_pipe_.reset();
         }
         for (auto &[uuid, peer] : agent47_peers_) {
@@ -198,6 +233,9 @@ namespace simulator {
         auto [it, inserted] = machines_.try_emplace(machine.uuid, rec_, world_->physics_ptr(), machine, group);
         if (inserted) {
             it->second.create();
+            echo::info("[Simulator] machine created uuid=", machine.uuid, " name=", machine.name);
+        } else {
+            echo::warn("[Simulator] machine already exists uuid=", machine.uuid);
         }
     }
 
@@ -322,7 +360,8 @@ namespace simulator {
             fb.value.twist.angular.vz = state.angular_vel;
 
             auto msg = serialize_agent47_feedback(fb);
-            (void)it->second.rpc->call(AGENT47_METHOD_FEEDBACK, msg, 100);
+            // Feedback is streaming; drop frames instead of blocking the sim tick.
+            (void)it->second.rpc->call(AGENT47_METHOD_FEEDBACK, msg, 1);
         }
     }
 
@@ -346,7 +385,7 @@ namespace simulator {
                 auto lidar = state.lidar;
                 pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::LidarData>(lidar);
                 auto msg = serialize_agent47_sensor(pkt);
-                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 1);
             }
 
             if (state.has_gps) {
@@ -356,7 +395,7 @@ namespace simulator {
                 auto gps = state.gps;
                 pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::GpsData>(gps);
                 auto msg = serialize_agent47_sensor(pkt);
-                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 1);
             }
 
             if (state.has_imu) {
@@ -366,7 +405,7 @@ namespace simulator {
                 auto imu = state.imu;
                 pkt.payload = dp::serialize<dp::Mode::WITH_VERSION, types::ser::ImuData>(imu);
                 auto msg = serialize_agent47_sensor(pkt);
-                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 100);
+                (void)it->second.rpc->call(AGENT47_METHOD_SENSOR, msg, 1);
             }
         }
     }
@@ -463,19 +502,26 @@ namespace simulator {
                                       cmd.value.twist.angular.vz = read_f64();
                                       cmd.value.valid = (read_u8() != 0);
 
-                                      auto it = agent47_peers_.find(uuid);
-                                      if (it != agent47_peers_.end()) {
-                                          std::lock_guard<std::mutex> lock(it->second.cmd_mutex);
-                                          it->second.last_cmd = cmd;
-                                          it->second.has_cmd = true;
+                                      {
+                                          std::lock_guard<std::mutex> g(agent47_peers_mutex_);
+                                          auto it = agent47_peers_.find(uuid);
+                                          if (it != agent47_peers_.end()) {
+                                              std::lock_guard<std::mutex> lock(it->second.cmd_mutex);
+                                              it->second.last_cmd = cmd;
+                                              it->second.has_cmd = true;
+                                          }
                                       }
 
-                                      last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                                      {
+                                          std::lock_guard<std::mutex> g(last_heartbeat_mutex_);
+                                          last_heartbeat_[uuid] = std::chrono::steady_clock::now();
+                                      }
                                       return dp::result::ok(netpipe::Message{});
                                   });
 
         peer.rpc->register_method(AGENT47_METHOD_HEARTBEAT,
                                   [this, uuid](const netpipe::Message &) -> dp::Res<netpipe::Message> {
+                                      std::lock_guard<std::mutex> g(last_heartbeat_mutex_);
                                       last_heartbeat_[uuid] = std::chrono::steady_clock::now();
                                       return dp::result::ok(netpipe::Message{});
                                   });
@@ -494,29 +540,46 @@ namespace simulator {
                     return dp::result::ok(netpipe::Message{});
                 }
 
-                std::string new_uuid = uuid_to_string(robot.id.uuid);
-                if (new_uuid.empty()) {
-                    return dp::result::ok(netpipe::Message{});
-                }
+                echo::info("[Simulator] model received temp_uuid=", uuid, " name=", robot.id.name.c_str());
 
-                // Convert dp model -> legacy machine config and create in world.
-                try {
-                    validate_model_for_flatsim(robot.model);
-                    auto machine_config = machine_from_model(robot.model, datapod::Pose{}, std::nullopt);
-                    machine_config.uuid = new_uuid;
-                    machine_config.name = std::string(robot.id.name.c_str());
-                    create_machine(machine_config);
-                    update_camera_tracking(machine_config.uuid);
-                } catch (const std::exception &e) {
-                    echo::error("[Simulator] model handler error: ", e.what());
-                    return dp::result::ok(netpipe::Message{});
+                {
+                    std::lock_guard<std::mutex> g(pending_robots_mutex_);
+                    pending_robots_.push_back(PendingRobot{uuid, std::move(robot)});
                 }
-
-                bind_agent47_peer_to_uuid(uuid, new_uuid);
-                last_heartbeat_[new_uuid] = std::chrono::steady_clock::now();
 
                 return dp::result::ok(netpipe::Message{});
             });
+    }
+
+    void Simulator::process_pending_robots() {
+        std::deque<PendingRobot> local;
+        {
+            std::lock_guard<std::mutex> g(pending_robots_mutex_);
+            local.swap(pending_robots_);
+        }
+
+        for (auto &p : local) {
+            // Create machine with uuid == peer uuid (stable with method handler captures).
+            try {
+                validate_model_for_flatsim(p.robot.model);
+                auto machine_config =
+                    machine_from_model(p.robot.model, utils::make_pose_2d(0.0f, 0.0f, 0.0f), std::nullopt);
+                machine_config.uuid = p.peer_uuid;
+                machine_config.name = std::string(p.robot.id.name.c_str());
+                create_machine(machine_config);
+                update_camera_tracking(machine_config.uuid);
+
+                {
+                    std::lock_guard<std::mutex> g(agent47_peers_mutex_);
+                    auto it = agent47_peers_.find(p.peer_uuid);
+                    if (it != agent47_peers_.end()) {
+                        it->second.name = machine_config.name;
+                    }
+                }
+            } catch (const std::exception &e) {
+                echo::error("[Simulator] pending model error: ", e.what());
+            }
+        }
     }
 
     void Simulator::bind_agent47_peer_to_uuid(const std::string &old_uuid, const std::string &new_uuid) {
@@ -578,33 +641,34 @@ namespace simulator {
     // ============================================================================
 
     void Simulator::process_agent47_connections() {
-        if (!agent47_listen_pipe_.has_value()) {
-            return;
+        std::deque<netpipe::Pipe> conns;
+        {
+            std::lock_guard<std::mutex> g(pending_accepts_mutex_);
+            conns.swap(pending_accepts_);
         }
 
-        auto conn_res = agent47_listen_pipe_->accept();
-        if (conn_res.is_err()) {
-            return;
+        for (auto &conn : conns) {
+            std::string uuid = "agent_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+
+            Agent47Peer p;
+            p.pipe.emplace(std::move(conn));
+            p.rpc = std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*p.pipe->stream().get(),
+                                                                         /*max_concurrent=*/100,
+                                                                         /*enable_metrics=*/false,
+                                                                         /*recv_timeout_ms=*/100,
+                                                                         /*handler_threads=*/2,
+                                                                         /*max_handler_queue=*/100,
+                                                                         /*handler_timeout_ms=*/0,
+                                                                         /*max_incoming=*/100);
+
+            {
+                std::lock_guard<std::mutex> g(agent47_peers_mutex_);
+                agent47_peers_.try_emplace(uuid, std::move(p));
+                register_agent47_handlers(agent47_peers_.at(uuid), uuid);
+            }
+
+            echo::info("[Simulator] agent47 peer connected uuid=", uuid);
         }
-
-        auto conn = std::move(conn_res.value());
-        std::string uuid = "agent_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-
-        Agent47Peer p;
-        p.pipe.emplace(std::move(conn));
-        p.rpc = std::make_unique<netpipe::Remote<netpipe::Bidirect>>(*p.pipe->stream().get(),
-                                                                     /*max_concurrent=*/100,
-                                                                     /*enable_metrics=*/false,
-                                                                     /*recv_timeout_ms=*/100,
-                                                                     /*handler_threads=*/2,
-                                                                     /*max_handler_queue=*/100,
-                                                                     /*handler_timeout_ms=*/0,
-                                                                     /*max_incoming=*/100);
-
-        agent47_peers_.try_emplace(uuid, std::move(p));
-        register_agent47_handlers(agent47_peers_.at(uuid), uuid);
-
-        echo::info("[Simulator] agent47 peer connected uuid=", uuid);
     }
 
     void Simulator::cleanup_stale_connections() {
@@ -614,26 +678,35 @@ namespace simulator {
         auto now = std::chrono::steady_clock::now();
         std::vector<std::string> to_remove;
 
-        for (const auto &[uuid, last_hb] : last_heartbeat_) {
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_hb).count();
-            if (elapsed > 5) {
-                to_remove.push_back(uuid);
+        {
+            std::lock_guard<std::mutex> g(last_heartbeat_mutex_);
+            for (const auto &[uuid, last_hb] : last_heartbeat_) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_hb).count();
+                if (elapsed > 5) {
+                    to_remove.push_back(uuid);
+                }
             }
         }
 
         for (const auto &uuid : to_remove) {
             // Close peer
-            auto it = agent47_peers_.find(uuid);
-            if (it != agent47_peers_.end()) {
-                if (it->second.rpc) it->second.rpc.reset();
-                if (it->second.pipe.has_value()) {
-                    it->second.pipe->close();
-                    it->second.pipe.reset();
+            {
+                std::lock_guard<std::mutex> g(agent47_peers_mutex_);
+                auto it = agent47_peers_.find(uuid);
+                if (it != agent47_peers_.end()) {
+                    if (it->second.rpc) it->second.rpc.reset();
+                    if (it->second.pipe.has_value()) {
+                        it->second.pipe->close();
+                        it->second.pipe.reset();
+                    }
+                    agent47_peers_.erase(it);
                 }
-                agent47_peers_.erase(it);
             }
 
-            last_heartbeat_.erase(uuid);
+            {
+                std::lock_guard<std::mutex> g(last_heartbeat_mutex_);
+                last_heartbeat_.erase(uuid);
+            }
             destroy_machine(uuid);
 
             echo::warn("[Simulator] Removed stale connection: ", uuid);
@@ -645,6 +718,14 @@ namespace simulator {
     // ============================================================================
 
     void Simulator::tick(float dt) {
+        process_pending_robots();
+
+        static int dbg_tick = 0;
+        if (dbg_tick < 10) {
+            echo::info("[Simulator] tick begin machines=", machines_.size());
+            dbg_tick++;
+        }
+
         static int tick_num = 0;
         tick_num++;
         const uint64_t tick_seq = static_cast<uint64_t>(tick_num);
@@ -716,6 +797,11 @@ namespace simulator {
     }
 
     void Simulator::tock() {
+        static int dbg_tock = 0;
+        if (dbg_tock < 10) {
+            echo::info("[Simulator] tock begin machines=", machines_.size());
+            dbg_tock++;
+        }
         datapod::Geo datum = world_->settings().get_datum();
         for (auto &[uuid, machine] : machines_) {
             machine.tock(datum);
