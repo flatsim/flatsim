@@ -23,7 +23,7 @@ namespace simulator {
 
         static int tock_counter = 0;
         if (++tock_counter % 120 == 0) {
-            echo::info("[World] tock border logged");
+            echo::trace("[World] tock border logged");
         }
 
         // Visualize world boundaries

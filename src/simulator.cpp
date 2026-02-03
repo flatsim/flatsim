@@ -148,14 +148,14 @@ namespace simulator {
             const std::string sock_path = (dir / "agent47_peer.sock").string();
             remove_ipc_socket_file("ipc://" + sock_path);
             ep = netpipe::AnyEndpoint::ipc_endpoint(dp::String(sock_path.c_str()));
-            echo::info("[Simulator] agent47 listening on ipc://", sock_path);
+            echo::trace("[Simulator] agent47 listening on ipc://", sock_path);
         } else if (conn_ == Conn::TCP) {
             const std::string host = address_.empty() ? "0.0.0.0" : address_;
             ep = netpipe::AnyEndpoint::tcp_endpoint(dp::String(host.c_str()), 5556);
-            echo::info("[Simulator] agent47 listening on tcp://", host, ":5556");
+            echo::trace("[Simulator] agent47 listening on tcp://", host, ":5556");
         } else if (conn_ == Conn::SHM) {
             ep = netpipe::AnyEndpoint::shm_endpoint(dp::String("agent47_peer"), 1024 * 1024);
-            echo::info("[Simulator] agent47 listening on shm://agent47_peer:1048576");
+            echo::trace("[Simulator] agent47 listening on shm://agent47_peer:1048576");
         }
 
         auto listen_res = netpipe::Pipe::listen(ep);
@@ -233,7 +233,7 @@ namespace simulator {
         auto [it, inserted] = machines_.try_emplace(machine.uuid, rec_, world_->physics_ptr(), machine, group);
         if (inserted) {
             it->second.create();
-            echo::info("[Simulator] machine created uuid=", machine.uuid, " name=", machine.name);
+            echo::trace("[Simulator] machine created uuid=", machine.uuid, " name=", machine.name);
         } else {
             echo::warn("[Simulator] machine already exists uuid=", machine.uuid);
         }
@@ -540,7 +540,7 @@ namespace simulator {
                     return dp::result::ok(netpipe::Message{});
                 }
 
-                echo::info("[Simulator] model received temp_uuid=", uuid, " name=", robot.id.name.c_str());
+                echo::trace("[Simulator] model received temp_uuid=", uuid, " name=", robot.id.name.c_str());
 
                 {
                     std::lock_guard<std::mutex> g(pending_robots_mutex_);
@@ -650,7 +650,7 @@ namespace simulator {
                 register_agent47_handlers(agent47_peers_.at(uuid), uuid);
             }
 
-            echo::info("[Simulator] agent47 peer connected uuid=", uuid);
+            echo::trace("[Simulator] agent47 peer connected uuid=", uuid);
         }
     }
 
@@ -705,7 +705,7 @@ namespace simulator {
 
         static int dbg_tick = 0;
         if (dbg_tick < 10) {
-            echo::info("[Simulator] tick begin machines=", machines_.size());
+            echo::trace("[Simulator] tick begin machines=", machines_.size());
             dbg_tick++;
         }
 
@@ -783,7 +783,7 @@ namespace simulator {
     void Simulator::tock() {
         static int dbg_tock = 0;
         if (dbg_tock < 10) {
-            echo::info("[Simulator] tock begin machines=", machines_.size());
+            echo::trace("[Simulator] tock begin machines=", machines_.size());
             dbg_tock++;
         }
         datapod::Geo datum = world_->settings().get_datum();

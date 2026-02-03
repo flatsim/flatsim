@@ -20,22 +20,22 @@ def read_gps_shm(shm_path):
     try:
         with open(shm_path, 'rb') as f:
             mm = mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ)
-            
+
             # Read header (16 bytes)
             seq = struct.unpack('<Q', mm[0:8])[0]
             ts_ns = struct.unpack('<Q', mm[8:16])[0]
             data_size = struct.unpack('<I', mm[16:20])[0]
-            
+
             if data_size > 0 and data_size < 2048:
                 nmea_bytes = mm[24:24+data_size]
                 nmea = nmea_bytes.decode('ascii', errors='ignore').strip()
                 mm.close()
                 return seq, ts_ns, nmea
-            
+
             mm.close()
     except Exception:
         pass
-    
+
     return None, None, None
 
 
@@ -46,22 +46,22 @@ def monitor_gps(shm_path, show_all=False):
     print(f"Robot ID: {robot_id}")
     print(f"Mode: {'Full output' if show_all else 'Summary only'}")
     print(f"Press Ctrl+C to stop\n")
-    
+
     last_seq = 0
     frame_count = 0
     start_time = time.time()
-    
+
     while True:
         seq, ts_ns, nmea = read_gps_shm(shm_path)
-        
+
         if seq is not None and nmea and seq != last_seq:
             frame_count += 1
             lines = [l for l in nmea.split('\n') if l.strip()]
-            
+
             # Calculate rate
             elapsed = time.time() - start_time
             rate = frame_count / elapsed if elapsed > 0 else 0
-            
+
             if show_all:
                 # Show all NMEA sentences
                 print(f"=== Frame {frame_count:5d} | Seq {seq:6d} | {len(lines)} sentences | Rate: {rate:.1f} Hz ===")
@@ -77,28 +77,28 @@ def monitor_gps(shm_path, show_all=False):
                     gga_line = next((l for l in lines if 'GGA' in l), None)
                     rmc_line = next((l for l in lines if 'RMC' in l), None)
                     phtg_line = next((l for l in lines if 'PHTG' in l), None)
-                    
+
                     lat = lon = fix = speed = heading = phtg_status = "?"
-                    
+
                     if gga_line:
                         fields = gga_line.split(',')
                         lat = fields[2] if len(fields) > 2 else "?"
                         lon = fields[4] if len(fields) > 4 else "?"
                         fix = fields[6] if len(fields) > 6 else "?"
-                    
+
                     if rmc_line:
                         fields = rmc_line.split(',')
                         speed = fields[7] if len(fields) > 7 else "?"  # Speed in knots
                         heading = fields[8] if len(fields) > 8 else "?"  # Track/heading in degrees
-                    
+
                     if phtg_line:
                         fields = phtg_line.split(',')
                         phtg_status = fields[5] if len(fields) > 5 else "?"  # AuthResult field (0 or 1) - field 6
-                    
+
                     print(f"Frame {frame_count:5d} | Seq {seq:6d} | Rate: {rate:.1f} Hz | Lat: {lat} Lon: {lon} Fix: {fix} | Speed: {speed} kts | Heading: {heading}° | PHTG: {phtg_status}")
-            
+
             last_seq = seq
-        
+
         time.sleep(0.001)  # 1ms sleep
 
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('robot_uuid', nargs='?', help='Robot UUID (optional)')
     parser.add_argument('--all', '-a', action='store_true', help='Show all NMEA sentences')
     args = parser.parse_args()
-    
+
     # Find GPS shared memory
     if args.robot_uuid:
         shm_path = f"/dev/shm/flatsim_{args.robot_uuid}_GPS"
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             print("Make sure test_gps_nmea is running")
             sys.exit(1)
         shm_path = shm_files[0]
-    
+
     try:
         monitor_gps(shm_path, show_all=args.all)
     except KeyboardInterrupt:

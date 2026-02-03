@@ -17,8 +17,8 @@ namespace simulator {
         this->bound = robo.bound;
         this->color = robo.color;
 
-        echo::info("[Chassis] init uuid=", robo.uuid, " pose x=", bound.pose.point.x, " y=", bound.pose.point.y,
-                   " yaw=", utils::get_yaw(bound.pose));
+        echo::trace("[Chassis] init uuid=", robo.uuid, " pose x=", bound.pose.point.x, " y=", bound.pose.point.y,
+                    " yaw=", utils::get_yaw(bound.pose));
 
         float w = bound.size.x; // usually 0.5
         float h = bound.size.y; // usually 2 * w
@@ -122,8 +122,8 @@ namespace simulator {
             const bool has_body = (body != nullptr);
             const double x = has_body ? body->GetPosition().x : 0.0;
             const double y = has_body ? body->GetPosition().y : 0.0;
-            echo::info("[Chassis] tock uuid=", robot_info->uuid, " online=", robot_state->online,
-                       " rec=", (rec != nullptr), " x=", x, " y=", y, " w=", bound.size.x, " h=", bound.size.y);
+            echo::trace("[Chassis] tock uuid=", robot_info->uuid, " online=", robot_state->online,
+                        " rec=", (rec != nullptr), " x=", x, " y=", y, " w=", bound.size.x, " h=", bound.size.y);
             dbg_tock++;
         }
 
