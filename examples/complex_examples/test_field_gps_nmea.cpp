@@ -263,8 +263,6 @@ int main(int argc, char **argv) {
     tractor.tracker()->smoothen(25.0f);
 
     echo::separator();
-    echo::box("GPS outputting NMEA - Press Ctrl+C to stop", echo::BoxStyle::Dashed);
-    echo::info("Monitor with: cat ", link_path);
 
     // ------------------------------------------------------------------------
     // Main loop
@@ -304,14 +302,13 @@ int main(int argc, char **argv) {
         if (step_count % 600 == 0 && step_count > 0) {
             phtg = !phtg;
             gnss->phtg = phtg;
-            echo::info("PHTG status: ", phtg ? "ON" : "OFF");
-        }
-
-        // Print position every 2 seconds
-        if (step_count % 120 == 0) {
-            echo::info("Pos: (", std::fixed, std::setprecision(2), tractor.get_position().point.x, ", ",
-                       tractor.get_position().point.y, ") -> GPS: (", std::setprecision(8), agent.geopos.latitude, ", ",
-                       agent.geopos.longitude, ")");
+            echo::format::String fmt;
+            if (phtg) {
+                fmt = echo::format::String("[ 1 ]").black().on_green();
+            } else {
+                fmt = echo::format::String("[ 0 ]").black().on_red();
+            }
+            echo::info("PHTG status: ", fmt).inplace();
         }
 
         // Restart path when near completion
@@ -325,7 +322,6 @@ int main(int argc, char **argv) {
             tractor.tracker()->set_path(drivekit::PathGoal(path, 2.0f, 2.0f, false));
             tractor.tracker()->smoothen(25.0f);
             last_reset_step = step_count;
-            echo::info("Path reset - starting new lap");
         }
 
         step_count++;
