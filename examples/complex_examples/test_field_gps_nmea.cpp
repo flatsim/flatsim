@@ -11,6 +11,7 @@
 
 #include "flatsim/agent.hpp"
 #include "flatsim/simulator.hpp"
+#include "flatsim/simulator/machine.hpp"
 #include "flatsim/utils.hpp"
 
 #include <chrono>
@@ -278,25 +279,50 @@ int main(int argc, char **argv) {
             std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
 
         sim.tick(dt);
-        sim.tock();
 
-        // Update agent47 with current pose for coordinate conversion
+        // Update agent47 with the current physics pose for coordinate conversion.
+        // NOTE: In LOCAL mode, the flatsim Agent state is updated at the start of Simulator::tick()
+        // (before the physics step), so using tractor.get_position() here lags by one tick.
+        auto *machine = sim.get_machine(tractor.uuid());
+        if (!machine) {
+            echo::error("Failed to find machine for agent uuid: ", tractor.uuid());
+            return 1;
+        }
+
+        const auto ms = machine->get_state();
+        const float speed = machine->speed_mps();
+        const double track_deg = machine->track_deg();
+        const auto vel_enu = machine->velocity_enu_mps();
+
         agent47::types::Feedback fb;
-        fb.pose = tractor.get_position();
-        fb.twist.linear.vx = tractor.get_linear_velocity();
-        fb.twist.angular.vz = tractor.get_angular_velocity();
+        fb.pose = ms.pose.to_datapod();
+        fb.twist.linear.vx = speed;
+        fb.twist.angular.vz = ms.angular_vel;
         agent.update(fb);
+
+        echo::info("Agent47 position: ", agent.geopos.latitude, " ", agent.geopos.longitude);
 
         // Update GNSS pod with converted coordinates
         gnss->latitude = agent.geopos.latitude;
         gnss->longitude = agent.geopos.longitude;
         gnss->altitude = agent.geopos.altitude;
 
+        // Also publish velocity + course so the NMEA output (RMC) includes them.
+        // velocity_neu = {vn, ve, vu} [m/s], where our sim frame is ENU: x=East, y=North.
+        gnss->velocity_neu[0] = static_cast<double>(vel_enu.y);
+        gnss->velocity_neu[1] = static_cast<double>(vel_enu.x);
+        gnss->velocity_neu[2] = 0.0;
+        gnss->speed_mps = static_cast<double>(speed);
+        gnss->track_deg = track_deg;
+
         // Push sensor data (outputs NMEA via serial)
         auto push_res = agent.nonsens_.push_all();
         if (!push_res.is_ok()) {
             echo::warn("Failed to push sensor data: ", push_res.error().message.c_str());
         }
+
+        // Visualization/logging (Machine position is printed from Simulator::tock())
+        sim.tock();
 
         // Toggle PHTG status every 10 seconds (600 steps at ~60 FPS)
         if (step_count % 600 == 0 && step_count > 0) {

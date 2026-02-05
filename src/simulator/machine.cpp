@@ -553,12 +553,15 @@ namespace simulator {
         chassis_->tock(label);
 
         // GPS coordinates visualization - use current body position
+
         if (chassis_->body) {
             auto x = chassis_->body->GetPosition().x;
             auto y = chassis_->body->GetPosition().y;
             datapod::Point current_pos{x, y, 0.0};
             concord::frame::ENU enu{current_pos, datum};
             auto wgs_coords = concord::frame::to_wgs(enu);
+
+            echo::info("Machine:          ", wgs_coords.latitude, " ", wgs_coords.longitude);
 
             rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
@@ -582,6 +585,37 @@ namespace simulator {
         }
 
         return ms;
+    }
+
+    float Machine::heading_rad() const {
+        if (!chassis_ || !chassis_->body) {
+            return 0.0f;
+        }
+        // IMPORTANT: The physics body's angle 0 = +X direction, but the model's forward is +Y.
+        // So we add M_PI/2 to convert body angle to heading.
+        return chassis_->body->GetAngle() + static_cast<float>(M_PI / 2.0);
+    }
+
+    flywheel::Vec2 Machine::velocity_enu_mps() const {
+        if (!chassis_ || !chassis_->body) {
+            return flywheel::Vec2{0.0f, 0.0f};
+        }
+        return chassis_->body->GetLinearVelocity();
+    }
+
+    float Machine::speed_mps() const {
+        const auto v = velocity_enu_mps();
+        return std::sqrt(v.x * v.x + v.y * v.y);
+    }
+
+    double Machine::track_deg() const {
+        // Heading is already in NMEA convention: 0 = North, 90 = East.
+        double deg = static_cast<double>(heading_rad()) * (180.0 / M_PI);
+        deg = std::fmod(deg, 360.0);
+        if (deg < 0.0) {
+            deg += 360.0;
+        }
+        return deg;
     }
 
     Hitch *Machine::find_hitch(const std::string &name) {

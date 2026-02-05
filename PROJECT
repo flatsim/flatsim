@@ -26,8 +26,9 @@ echo|https://github.com/bresilla/echo.git|0.0.25
 scan|https://github.com/bresilla/scan.git|0.0.10
 datapod|https://github.com/robolibs/datapod.git|0.0.51
 pkg::rerun_sdk
+nonsens|https://github.com/robolibs/nonsens.git|0.0.10
 wirebit|https://github.com/robolibs/wirebit.git|0.0.14
-agent47|https://github.com/robolibs/agent47.git|0.0.17
+agent47|https://github.com/robolibs/agent47.git|0.0.18
 concord|https://github.com/robolibs/concord.git|0.0.7
 pigment|https://github.com/robolibs/pigment.git|0.0.6
 entropy|https://github.com/robolibs/entropy.git|0.0.6

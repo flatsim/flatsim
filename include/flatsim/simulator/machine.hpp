@@ -71,6 +71,25 @@ namespace simulator {
         // Get state for feedback
         types::ser::MachineState get_state() const;
 
+        // =====================================================================================
+        // Motion helpers
+        // =====================================================================================
+
+        /// Heading in world frame [rad].
+        /// Convention: 0 = North (+Y), pi/2 = East (+X).
+        float heading_rad() const;
+
+        /// Linear velocity in world ENU frame [m/s].
+        /// x = East, y = North.
+        flywheel::Vec2 velocity_enu_mps() const;
+
+        /// Speed over ground (horizontal) [m/s].
+        float speed_mps() const;
+
+        /// Course over ground [deg] in NMEA convention.
+        /// 0 = North, 90 = East.
+        double track_deg() const;
+
         // Get sensor data (filled by update_sensors)
         const types::SensorData &get_sensor_data() const { return sensor_data_; }
 
