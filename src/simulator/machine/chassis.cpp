@@ -139,7 +139,7 @@ namespace simulator {
         auto th = body->GetRotation().GetAngle();
         auto w = float(bound.size.x);
         auto h = float(bound.size.y);
-        const float z = 0.3f;
+        const float z = 0.0f;
         rec->log_static(
             robot_info->uuid + "/chassis",
             rerun::Boxes3D::from_centers_and_sizes({{x, y, 0.1f}}, {{w, h, z}})

@@ -561,8 +561,6 @@ namespace simulator {
             concord::frame::ENU enu{current_pos, datum};
             auto wgs_coords = concord::frame::to_wgs(enu);
 
-            echo::info("Machine:          ", wgs_coords.latitude, " ", wgs_coords.longitude);
-
             rec_->log_static(config_.uuid + "/gps",
                              rerun::GeoPoints({{wgs_coords.latitude, wgs_coords.longitude}})
                                  .with_colors({rerun::Color(config_.color.r(), config_.color.g(), config_.color.b())}));
